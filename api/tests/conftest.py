@@ -7,6 +7,7 @@ app connection is the real `tallyquo_app` role under test: no BYPASSRLS,
 subject to every policy, which is what production traffic uses.
 """
 
+import os
 from collections.abc import AsyncIterator
 from uuid import UUID
 
@@ -15,8 +16,18 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-ADMIN_DSN = "postgresql+asyncpg://postgres:postgres@localhost:5435/tallyquo"
-APP_DSN = "postgresql+asyncpg://tallyquo_app:tallyquo_app@localhost:5435/tallyquo"
+# Defaults match CI's Postgres service container (standard port 5432).
+# Override locally via env vars if your own docker-compose maps to a
+# different host port (e.g. to avoid colliding with another project's
+# local Postgres) -- never hardcode a personal-machine port here.
+ADMIN_DSN = os.environ.get(
+    "TEST_DATABASE_ADMIN_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/tallyquo",
+)
+APP_DSN = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://tallyquo_app:tallyquo_app@localhost:5432/tallyquo",
+)
 
 
 @pytest_asyncio.fixture
