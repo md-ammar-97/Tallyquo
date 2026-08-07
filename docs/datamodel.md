@@ -364,7 +364,48 @@ CREATE TABLE tax_threshold (
 -- seed: CA / small_supplier / 30000.00 / 1991-01-01
 ```
 
-Income tax brackets and CPP parameters live in analogous effective-dated tables (`income_tax_bracket`, `cpp_parameter`) used only by the projection module. They never touch invoice computation.
+**Shipped 2026-08-07 (Phase 3, `implementation_plan.md` 3.1): `income_tax_bracket` and `cpp_parameter`.** Same effective-dated shape as `tax_rate` above, used only by the Phase 3 projection module — they never touch invoice-level tax computation, which stays on `tax_rate` alone.
+
+```sql
+CREATE TABLE income_tax_bracket (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  jurisdiction  text NOT NULL,           -- 'federal' or a 2-letter province/territory code
+  income_from   numeric(14,2) NOT NULL,
+  income_to     numeric(14,2),           -- NULL = top, unbounded bracket
+  rate          numeric(7,5) NOT NULL,
+  effective_from date NOT NULL,
+  effective_to  date,
+  source_url    text NOT NULL,
+  EXCLUDE USING gist (
+    jurisdiction WITH =,
+    numrange(income_from, income_to) WITH &&,
+    daterange(effective_from, effective_to) WITH &&
+  )
+);
+
+CREATE TABLE cpp_parameter (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  basic_exemption numeric(12,2) NOT NULL,   -- 3,500.00, unchanged for years
+  ympe          numeric(12,2) NOT NULL,     -- year's maximum pensionable earnings (tier 1 ceiling)
+  yampe         numeric(12,2) NOT NULL,     -- year's additional maximum pensionable earnings (CPP2 ceiling)
+  employee_rate numeric(6,5) NOT NULL,
+  self_employed_rate numeric(6,5) NOT NULL, -- 2x employee_rate: both halves
+  cpp2_employee_rate numeric(6,5) NOT NULL,
+  cpp2_self_employed_rate numeric(6,5) NOT NULL,
+  effective_from date NOT NULL,
+  effective_to  date,
+  source_url    text NOT NULL,
+  EXCLUDE USING gist (daterange(effective_from, effective_to) WITH &&)
+);
+```
+
+**Modelling choice:** the basic personal amount (BPA) is not a separate column or table — it's represented as a synthetic `$0`-to-`BPA` bracket at a `0.00000` rate, prepended to each jurisdiction's real brackets. This is exact, not an approximation: it's mathematically identical to applying the BPA as a credit at the lowest marginal rate, which is how every jurisdiction seeded here actually defines it.
+
+**Coverage:** federal plus the 12 non-Quebec provinces/territories, for 2025 (historical) and 2026 (current, `effective_to` NULL). Quebec is absent — QPP replaces CPP entirely and Quebec runs its own income tax system, out of scope until `implementation_plan.md` 4.4. Every row's `source_url` is the specific per-jurisdiction TaxTips.ca page it was verified against, not one shared URL — cross-checked individually per jurisdiction after an initial batch fetch produced internally inconsistent numbers (rows shuffled between provinces), which is documented in migration `0016_seed_income_tax_cpp.py` as the reason single-page verification was used instead.
+
+Known, deliberate simplifications (all documented once, in the migration, rather than per-row): no federal high-income BPA phase-out band, no provincial surtaxes (Ontario, PEI), Yukon's BPA uses the federal maximum rather than its own income-reduced figure.
+
+Both tables carry the same grant shape as `tax_rate` (§10): `SELECT` only for `tallyquo_app`, no writes from the running API — changes only ever land through a reviewed migration.
 
 ---
 

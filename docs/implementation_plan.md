@@ -136,13 +136,15 @@ Two Phase-1-deferred open questions resolve here per the doc's own recommendatio
 
 ## 5. Phase 3 — The answer
 
+**Status: in progress, started 2026-08-07.** 3.1 built as specified below.
+
 **Scope (from `problem-statement.md` §10):** income and set-aside projection, CPP estimate, GST/HST net-owing by filing period, small-supplier threshold tracker, instalment warnings, year-end accountant pack.
 
 Note that a **narrow** version of GST/HST position (§12 Q3 tier (a), sales-tax-only) is mechanically available from Phase 1 since the tax engine already computes it per invoice — what's new here is the **aggregated, filing-period view** plus income tax/CPP (tier (b)) and instalment scheduling groundwork (tier (c) proper lands in Phase 4).
 
 | # | Workstream | Depends on | Size |
 |---|---|---|---|
-| 3.1 | `income_tax_bracket` and `cpp_parameter` effective-dated reference tables (federal + province of residence), modelled the same way as `tax_rate` — data with a lifetime, never hardcoded | Phase 0 | M |
+| 3.1 | ✅ `income_tax_bracket` and `cpp_parameter` effective-dated reference tables: federal + 12 non-Quebec provinces/territories, 2025 (historical) and 2026 (current), each row individually verified after a batch fetch produced inconsistent data (`datamodel.md` §6) | Phase 0 | M |
 | 3.2 | Projection engine as a module separate from the tax engine — consumes P&L output, never touches invoice-level computation (architecture principle: the tax engine stays pure and untouched) | 3.1, Phase 2 | M |
 | 3.3 | Derived income mode: extrapolation from issued + scheduled-recurring invoices, clearly labelled low-confidence in the first year (P1 edge case row) | 3.2, 2.6 | M |
 | 3.4 | Declared income mode: user-entered annual target, actual-vs-declared variance shown without silently preferring one (P3) | 3.2 | S |
