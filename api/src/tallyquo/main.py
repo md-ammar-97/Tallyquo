@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from tallyquo.core.config import get_settings
 from tallyquo.core.logging import configure_logging, get_logger
 from tallyquo.core.middleware import RequestContextMiddleware
+from tallyquo.billing.clients_router import router as clients_router
+from tallyquo.identity.profile_router import router as profile_router
+from tallyquo.identity.router import router as identity_router
+from tallyquo.tax.router import router as tax_router
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -18,6 +22,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(identity_router)
+app.include_router(profile_router)
+app.include_router(clients_router)
+app.include_router(tax_router)
 
 
 @app.get("/health")
