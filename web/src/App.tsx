@@ -1,48 +1,39 @@
-import { useEffect, useState } from 'react'
+import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
+import { isAuthenticated } from './api'
+import Login from './pages/Login'
+import Shell from './pages/Shell'
+import Dashboard from './pages/Dashboard'
+import Profile from './pages/Profile'
+import Clients from './pages/Clients'
+import InvoiceBuilder from './pages/InvoiceBuilder'
+import Ledger from './pages/Ledger'
 
-// Phase 0 only proves the environment wiring works end to end (SPA -> API).
-// The real design system (block primitives, tokens, badges) is Phase 1
-// workstream 1.22 (implementation-plan.md) -- deliberately not built here.
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
-
-type HealthState =
-  | { status: 'checking' }
-  | { status: 'ok' }
-  | { status: 'error'; message: string }
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  if (!isAuthenticated()) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
 
 function App() {
-  const [health, setHealth] = useState<HealthState>({ status: 'checking' })
-
-  useEffect(() => {
-    let cancelled = false
-    fetch(`${API_BASE_URL}/health`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then(() => {
-        if (!cancelled) setHealth({ status: 'ok' })
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setHealth({ status: 'error', message: err.message })
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>Tallyquo</h1>
-      <p>Phase 0 environment check — API connectivity from the SPA.</p>
-      <p>
-        API ({API_BASE_URL}):{' '}
-        {health.status === 'checking' && 'checking…'}
-        {health.status === 'ok' && '✓ reachable'}
-        {health.status === 'error' && `✗ ${health.message}`}
-      </p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <Shell />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="clients" element={<Clients />} />
+          <Route path="invoices" element={<Ledger />} />
+          <Route path="invoices/new" element={<InvoiceBuilder />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 
