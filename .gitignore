@@ -1,0 +1,15 @@
+# Python
+api/.venv/
+**/__pycache__/
+*.pyc
+
+# Env files (committed: .env.example only)
+api/.env
+web/.env
+
+# Node
+web/node_modules/
+web/dist/
+
+# Editor / OS
+.DS_Store

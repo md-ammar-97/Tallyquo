@@ -1,0 +1,27 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from tallyquo.core.config import get_settings
+from tallyquo.core.logging import configure_logging, get_logger
+from tallyquo.core.middleware import RequestContextMiddleware
+
+settings = get_settings()
+configure_logging(settings.log_level)
+logger = get_logger(__name__)
+
+app = FastAPI(title="Tallyquo API", version="0.1.0")
+app.add_middleware(RequestContextMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    """Liveness only — no DB round trip. A tenant-scoped `/health/db` style
+    check is unnecessary before there's a tenant to scope it to."""
+    return {"status": "ok"}

@@ -1,0 +1,59 @@
+name: API CI
+
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  test:
+    name: Migrate + adversarial RLS suite (merge gate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    services:
+      postgres:
+        # Matches Supabase's engine version (architecture.md principle 5:
+        # every generated artifact/behaviour should be reproducible).
+        image: postgres:17
+        env:
+          POSTGRES_DB: tallyquo
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://tallyquo_app:tallyquo_app@localhost:5432/tallyquo
+      DATABASE_ADMIN_URL: postgresql+psycopg://postgres:postgres@localhost:5432/tallyquo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Apply migrations (creates tallyquo_app role, RLS policies)
+        run: python -m alembic upgrade head
+
+      # Includes the adversarial cross-tenant probe — a merge gate, not a
+      # nightly job (architecture.md §4).
+      - name: Run test suite
+        run: python -m pytest tests/ -v
