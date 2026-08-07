@@ -1,6 +1,10 @@
+import csv
+import io
+from datetime import date
+from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import invoices_service as service
@@ -17,9 +21,67 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 
 @router.get("", response_model=list[InvoiceOut])
-async def list_invoices(db: AsyncSession = Depends(get_db)) -> list[InvoiceOut]:
-    rows = await service.list_invoices(db)
+async def list_invoices(
+    db: AsyncSession = Depends(get_db),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    client_id: UUID | None = None,
+    status: str | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    currency: str | None = None,
+    tax_treatment: str | None = None,
+) -> list[InvoiceOut]:
+    rows = await service.list_invoices(
+        db,
+        date_from=date_from,
+        date_to=date_to,
+        client_id=client_id,
+        status=status,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        currency=currency,
+        tax_treatment=tax_treatment,
+    )
     return [InvoiceOut(**row) for row in rows]
+
+
+@router.get("/export.csv")
+async def export_invoices_csv(
+    db: AsyncSession = Depends(get_db),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    client_id: UUID | None = None,
+    status: str | None = None,
+    currency: str | None = None,
+) -> Response:
+    rows = await service.list_invoices(
+        db, date_from=date_from, date_to=date_to, client_id=client_id, status=status, currency=currency
+    )
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(
+        ["number", "status", "invoice_date", "due_date", "currency", "subtotal", "tax_total", "total", "tax_treatment"]
+    )
+    for row in rows:
+        writer.writerow(
+            [
+                row["number"] or "",
+                row["status"],
+                row["invoice_date"] or "",
+                row["due_date"] or "",
+                row["currency"],
+                row["subtotal"],
+                row["tax_total"],
+                row["total"],
+                row["tax_treatment_snapshot"] or "",
+            ]
+        )
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=invoices.csv"},
+    )
 
 
 @router.post("", response_model=InvoiceOut, status_code=201)
@@ -76,6 +138,18 @@ async def issue_invoice(
     except service.ComplianceError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
     return InvoiceOut(**row)
+
+
+@router.get("/{invoice_id}/pdf")
+async def get_invoice_pdf(
+    invoice_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    pdf_bytes = await service.render_pdf(db, current_user.tenant_id, invoice_id)
+    if pdf_bytes is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return Response(content=pdf_bytes, media_type="application/pdf")
 
 
 @router.post("/{invoice_id}/cancel", status_code=204)

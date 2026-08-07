@@ -73,9 +73,53 @@ async def get_invoice(session: AsyncSession, invoice_id: UUID) -> dict | None:
     return data
 
 
-async def list_invoices(session: AsyncSession) -> list[dict]:
+async def list_invoices(
+    session: AsyncSession,
+    *,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    client_id: UUID | None = None,
+    status: str | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    currency: str | None = None,
+    tax_treatment: str | None = None,
+) -> list[dict]:
+    # design.md §8.3: ledger filters as removable chips -- date range,
+    # client, status, tax treatment, amount range, currency.
+    where = ["1=1"]
+    params: dict = {}
+    if date_from is not None:
+        where.append("invoice_date >= :date_from")
+        params["date_from"] = date_from
+    if date_to is not None:
+        where.append("invoice_date <= :date_to")
+        params["date_to"] = date_to
+    if client_id is not None:
+        where.append("client_id = :client_id")
+        params["client_id"] = client_id
+    if status is not None:
+        where.append("status = :status")
+        params["status"] = status
+    if min_amount is not None:
+        where.append("total >= :min_amount")
+        params["min_amount"] = min_amount
+    if max_amount is not None:
+        where.append("total <= :max_amount")
+        params["max_amount"] = max_amount
+    if currency is not None:
+        where.append("currency = :currency")
+        params["currency"] = currency
+    if tax_treatment is not None:
+        where.append("tax_treatment_snapshot = :tax_treatment")
+        params["tax_treatment"] = tax_treatment
+
     result = await session.execute(
-        text(f"SELECT {_INVOICE_COLUMNS} FROM invoice ORDER BY created_at DESC")
+        text(
+            f"SELECT {_INVOICE_COLUMNS} FROM invoice WHERE {' AND '.join(where)} "
+            "ORDER BY invoice_date DESC NULLS FIRST, created_at DESC"
+        ),
+        params,
     )
     return [dict(row) for row in result.mappings().all()]
 
@@ -436,6 +480,58 @@ async def create_credit_note(
         {"id": credit_note_id},
     )
     return dict(result.mappings().one())
+
+
+async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -> bytes | None:
+    """Renders on demand rather than persisting to storage -- the DB row is
+    the source of truth (architecture.md ADR-005: "any PDF can be
+    regenerated"), and issued invoices use the frozen snapshot so a PDF
+    generated today matches one generated in 2033 byte-for-byte (X4), even
+    if the business profile or client address has since changed."""
+    from tallyquo.templates.pdf_renderer import render_invoice_pdf
+
+    invoice = await get_invoice(session, invoice_id)
+    if invoice is None:
+        return None
+
+    if invoice["status"] == "draft":
+        profile_row = (
+            await session.execute(
+                text(
+                    "SELECT legal_name, operating_name, address_line1, address_line2, city, "
+                    "region_code, postal_code, email, gst_hst_number "
+                    "FROM business_profile WHERE tenant_id = :t"
+                ),
+                {"t": tenant_id},
+            )
+        ).mappings().first()
+        client_row = (
+            await session.execute(
+                text(
+                    "SELECT legal_name, address_line1, address_line2, city, region_code, "
+                    "postal_code, country_code FROM client WHERE id = :id"
+                ),
+                {"id": invoice["client_id"]},
+            )
+        ).mappings().first()
+        supplier = dict(profile_row) if profile_row else {"legal_name": "(business profile not set)"}
+        client = dict(client_row) if client_row else {"legal_name": "(client not found)"}
+    else:
+        snap_result = await session.execute(
+            text("SELECT supplier_snapshot, client_snapshot FROM invoice WHERE id = :id"),
+            {"id": invoice_id},
+        )
+        snap = snap_result.mappings().one()
+        supplier = snap["supplier_snapshot"] or {}
+        client = snap["client_snapshot"] or {}
+
+    return render_invoice_pdf(
+        invoice=invoice,
+        supplier=supplier,
+        client=client,
+        line_items=invoice["line_items"],
+        tax_lines=invoice["tax_lines"],
+    )
 
 
 async def _next_credit_note_seq(session: AsyncSession, invoice_id: UUID) -> int:
