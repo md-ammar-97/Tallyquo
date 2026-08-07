@@ -87,6 +87,7 @@ class InvoiceOut(BaseModel):
     fx_rate_to_cad: Decimal | None
     fx_rate_date: date | None
     fx_rate_source: str | None
+    has_share_link: bool
     line_items: list[InvoiceLineOut] = []
     tax_lines: list[InvoiceTaxLineOut] = []
 
@@ -139,3 +140,7 @@ class CreditNoteOut(BaseModel):
     issued_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ShareLinkOut(BaseModel):
+    token: str

@@ -77,7 +77,13 @@ _INVOICE_COLUMNS = (
     "invoice.tax_total, invoice.total, invoice.amount_paid, invoice.tax_treatment_snapshot, "
     "invoice.tax_jurisdiction_snapshot, invoice.po_reference, invoice.notes, invoice.created_at, "
     "invoice.issued_at, invoice.cancelled_at, invoice.revision, invoice.parent_invoice_id, "
-    "invoice.total_cad, invoice.fx_rate_to_cad, invoice.fx_rate_date, invoice.fx_rate_source"
+    "invoice.total_cad, invoice.fx_rate_to_cad, invoice.fx_rate_date, invoice.fx_rate_source, "
+    # Never the token itself here -- InvoiceOut is a general-purpose read
+    # response, and leaking a live public-access secret into it would
+    # defeat the point of it being revocable/hard-to-guess in the first
+    # place. Just enough to let the UI offer "view" vs. "get" across a
+    # page reload without silently minting a fresh link on every view.
+    "invoice.share_token IS NOT NULL AS has_share_link"
 )
 _INVOICE_FROM = "invoice LEFT JOIN business_profile bp ON bp.tenant_id = invoice.tenant_id"
 

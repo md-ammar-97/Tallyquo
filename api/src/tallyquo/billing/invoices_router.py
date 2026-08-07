@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import invoices_service as service
 from tallyquo.billing import payments_service
+from tallyquo.billing import share_service
 from tallyquo.billing.invoices_schemas import (
     CreditNoteIn,
     CreditNoteOut,
@@ -17,6 +18,7 @@ from tallyquo.billing.invoices_schemas import (
     IssueInvoiceIn,
     PaymentIn,
     PaymentOut,
+    ShareLinkOut,
 )
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
 
@@ -211,3 +213,25 @@ async def create_credit_note(
     if row is None:
         raise HTTPException(status_code=404, detail="Invoice not found or not yet issued")
     return CreditNoteOut(**row)
+
+
+@router.post("/{invoice_id}/share", response_model=ShareLinkOut)
+async def create_share_link(
+    invoice_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ShareLinkOut:
+    try:
+        token = await share_service.get_or_create_share_link(db, current_user.tenant_id, invoice_id)
+    except share_service.InvoiceNotShareable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    if token is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return ShareLinkOut(token=token)
+
+
+@router.delete("/{invoice_id}/share", status_code=204)
+async def revoke_share_link(invoice_id: UUID, db: AsyncSession = Depends(get_db)) -> None:
+    found = await share_service.revoke_share_link(db, invoice_id)
+    if not found:
+        raise HTTPException(status_code=404, detail="No active share link for this invoice")

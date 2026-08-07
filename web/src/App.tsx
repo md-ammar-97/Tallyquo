@@ -10,6 +10,7 @@ import Expenses from './pages/Expenses'
 import InvoiceBuilder from './pages/InvoiceBuilder'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Ledger from './pages/Ledger'
+import PublicInvoice from './pages/PublicInvoice'
 import Recurring from './pages/Recurring'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/share/:token" element={<PublicInvoice />} />
         <Route
           path="/"
           element={

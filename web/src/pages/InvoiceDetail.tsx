@@ -28,6 +28,7 @@ interface Invoice {
   fx_rate_to_cad: string | null
   fx_rate_date: string | null
   fx_rate_source: string | null
+  has_share_link: boolean
   line_items: LineItem[]
 }
 
@@ -61,6 +62,9 @@ export default function InvoiceDetail() {
   const [recurringSaving, setRecurringSaving] = useState(false)
   const [recurringError, setRecurringError] = useState<string | null>(null)
   const [recurringDone, setRecurringDone] = useState(false)
+  const [shareToken, setShareToken] = useState<string | null>(null)
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   function load() {
     if (!id) return
@@ -69,6 +73,29 @@ export default function InvoiceDetail() {
       .then(setInvoice)
       .catch(() => setNotFound(true))
     api.get<Payment[]>(`/invoices/${id}/payments`).then(setPayments)
+  }
+
+  async function handleGetShareLink() {
+    setShareError(null)
+    try {
+      const { token } = await api.post<{ token: string }>(`/invoices/${id}/share`)
+      setShareToken(token)
+    } catch (err) {
+      setShareError(err instanceof ApiError ? err.message : 'Could not create share link.')
+    }
+  }
+
+  async function handleRevokeShareLink() {
+    await api.delete(`/invoices/${id}/share`)
+    setShareToken(null)
+    load()
+  }
+
+  function handleCopyShareLink() {
+    if (!shareToken) return
+    navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
 
   useEffect(load, [id])
@@ -222,7 +249,31 @@ export default function InvoiceDetail() {
               </button>
             )}
             {recurringDone && <span className="caption">Recurring rule created.</span>}
+            {invoice.status !== 'draft' && !shareToken && (
+              <button onClick={handleGetShareLink}>
+                {invoice.has_share_link ? 'View shareable link' : 'Get shareable link'}
+              </button>
+            )}
           </div>
+          {shareError && <p className="error-text">{shareError}</p>}
+          {shareToken && (
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: '1px solid var(--color-border-default)',
+                display: 'flex',
+                gap: 8,
+                alignItems: 'center',
+              }}
+            >
+              <input readOnly value={`${window.location.origin}/share/${shareToken}`} style={{ flex: 1 }} />
+              <button onClick={handleCopyShareLink}>{copied ? 'Copied!' : 'Copy'}</button>
+              <button className="danger" onClick={handleRevokeShareLink}>
+                Revoke
+              </button>
+            </div>
+          )}
           {showRecurringForm && (
             <form
               onSubmit={handleMakeRecurring}
