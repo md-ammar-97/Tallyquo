@@ -1,0 +1,37 @@
+name: Nightly tax snapshot verify
+
+on:
+  schedule:
+    # 08:00 UTC daily -- architecture.md §9's "nightly" integrity check.
+    # Runs against the live Supabase project via the tallyquo_app role
+    # (SNAPSHOT_VERIFY_DATABASE_URL secret), not local/CI-only data.
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  verify:
+    name: Recompute every issued invoice's tax, compare to stored figures
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    env:
+      DATABASE_URL: ${{ secrets.SNAPSHOT_VERIFY_DATABASE_URL }}
+      ENVIRONMENT: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      # A non-zero exit (mismatches found) fails the workflow run, which
+      # GitHub surfaces as a red run + notification -- the P1 alert path
+      # until a dedicated alerting channel exists (architecture.md §13).
+      - name: Run snapshot_verify
+        run: python -m tallyquo.tax.snapshot_verify
