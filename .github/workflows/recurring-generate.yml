@@ -1,0 +1,37 @@
+name: Recurring invoice generation
+
+on:
+  schedule:
+    # Hourly, not a single fixed UTC hour -- architecture.md §15: "Recurring
+    # generation is spread across the day by tenant timezone rather than
+    # firing at a single UTC hour." The job itself computes "today" in each
+    # tenant's own timezone and is idempotent per (rule_id, occurrence_date)
+    # (edgecases.md R3, P1), so hourly polling is safe to run as often as
+    # this and just catches each tenant's local-midnight rollover promptly.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  generate:
+    name: Generate due recurring invoice occurrences
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    env:
+      DATABASE_URL: ${{ secrets.SNAPSHOT_VERIFY_DATABASE_URL }}
+      ENVIRONMENT: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      - name: Run recurring generation
+        run: python -m tallyquo.billing.recurring_service

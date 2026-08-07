@@ -251,7 +251,13 @@ async def _allocate_number(session: AsyncSession, tenant_id: UUID, fmt: str, pre
 
 
 async def issue_invoice(
-    session: AsyncSession, tenant_id: UUID, actor_id: UUID, invoice_id: UUID, confirm_zero_total: bool
+    session: AsyncSession,
+    tenant_id: UUID,
+    actor_id: UUID | None,
+    invoice_id: UUID,
+    confirm_zero_total: bool,
+    *,
+    actor_kind: str = "user",
 ) -> dict:
     # Step 1: load + lock. FOR UPDATE OF invoice scopes the row lock to the
     # invoice table alone -- _INVOICE_FROM's join to business_profile
@@ -447,11 +453,12 @@ async def issue_invoice(
         text(
             "INSERT INTO audit_log (tenant_id, actor_user_id, actor_kind, action, "
             "entity_type, entity_id, after) "
-            "VALUES (:tenant_id, :actor_id, 'user', 'invoice.issued', 'invoice', :entity_id, :after)"
+            "VALUES (:tenant_id, :actor_id, :actor_kind, 'invoice.issued', 'invoice', :entity_id, :after)"
         ),
         {
             "tenant_id": tenant_id,
             "actor_id": actor_id,
+            "actor_kind": actor_kind,
             "entity_id": invoice_id,
             "after": json.dumps({"number": number, "total": str(grand_total)}),
         },

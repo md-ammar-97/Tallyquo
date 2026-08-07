@@ -38,6 +38,7 @@ interface Payment {
 }
 
 const emptyPaymentForm = { amount: '', received_date: new Date().toISOString().slice(0, 10), method: '', reference: '' }
+const emptyRecurringForm = { cadence: 'monthly', day_of_period: '1', next_run_date: '', auto_issue: false }
 
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>()
@@ -48,6 +49,11 @@ export default function InvoiceDetail() {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recurringForm, setRecurringForm] = useState(emptyRecurringForm)
+  const [showRecurringForm, setShowRecurringForm] = useState(false)
+  const [recurringSaving, setRecurringSaving] = useState(false)
+  const [recurringError, setRecurringError] = useState<string | null>(null)
+  const [recurringDone, setRecurringDone] = useState(false)
 
   function load() {
     if (!id) return
@@ -78,6 +84,28 @@ export default function InvoiceDetail() {
       setError(err instanceof ApiError ? err.message : 'Could not record payment.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleMakeRecurring(e: React.FormEvent) {
+    e.preventDefault()
+    setRecurringSaving(true)
+    setRecurringError(null)
+    try {
+      await api.post('/recurring', {
+        client_id: invoice!.client_id,
+        source_invoice_id: id,
+        cadence: recurringForm.cadence,
+        day_of_period: recurringForm.day_of_period ? Number(recurringForm.day_of_period) : null,
+        next_run_date: recurringForm.next_run_date,
+        auto_issue: recurringForm.auto_issue,
+      })
+      setShowRecurringForm(false)
+      setRecurringDone(true)
+    } catch (err) {
+      setRecurringError(err instanceof ApiError ? err.message : 'Could not create recurring rule.')
+    } finally {
+      setRecurringSaving(false)
     }
   }
 
@@ -168,7 +196,60 @@ export default function InvoiceDetail() {
                 Cancel invoice
               </button>
             )}
+            {invoice.status !== 'draft' && !recurringDone && (
+              <button onClick={() => setShowRecurringForm((s) => !s)}>
+                {showRecurringForm ? 'Cancel' : 'Make recurring'}
+              </button>
+            )}
+            {recurringDone && <span className="caption">Recurring rule created.</span>}
           </div>
+          {showRecurringForm && (
+            <form
+              onSubmit={handleMakeRecurring}
+              style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-default)' }}
+            >
+              <div className="field-row">
+                <div className="field">
+                  <label>Cadence</label>
+                  <select
+                    value={recurringForm.cadence}
+                    onChange={(e) => setRecurringForm({ ...recurringForm, cadence: e.target.value })}
+                  >
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Biweekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="semiannual">Semiannual</option>
+                    <option value="annual">Annual</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Next run date</label>
+                  <input
+                    type="date"
+                    required
+                    value={recurringForm.next_run_date}
+                    onChange={(e) => setRecurringForm({ ...recurringForm, next_run_date: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label>
+                  <input
+                    type="checkbox"
+                    style={{ width: 'auto', marginRight: 8 }}
+                    checked={recurringForm.auto_issue}
+                    onChange={(e) => setRecurringForm({ ...recurringForm, auto_issue: e.target.checked })}
+                  />
+                  Auto-issue (default: create a draft and leave it for you to review)
+                </label>
+              </div>
+              {recurringError && <p className="error-text">{recurringError}</p>}
+              <button type="submit" className="primary" disabled={recurringSaving}>
+                {recurringSaving ? 'Saving…' : 'Create recurring rule'}
+              </button>
+            </form>
+          )}
         </div>
       </div>
 

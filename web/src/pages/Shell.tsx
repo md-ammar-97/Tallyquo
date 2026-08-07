@@ -18,6 +18,7 @@ export default function Shell() {
         </NavLink>
         <NavLink to="/invoices">Invoices</NavLink>
         <NavLink to="/expenses">Expenses</NavLink>
+        <NavLink to="/recurring">Recurring</NavLink>
         <NavLink to="/clients">Clients</NavLink>
         <NavLink to="/profile">Business profile</NavLink>
         <div style={{ marginTop: 24 }}>

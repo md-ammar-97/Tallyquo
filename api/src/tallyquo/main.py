@@ -6,6 +6,7 @@ from tallyquo.core.logging import configure_logging, get_logger
 from tallyquo.core.middleware import RequestContextMiddleware
 from tallyquo.billing.clients_router import router as clients_router
 from tallyquo.billing.invoices_router import router as invoices_router
+from tallyquo.billing.recurring_router import router as recurring_router
 from tallyquo.billing.reports_router import router as reports_router
 from tallyquo.expenses.router import router as expenses_router
 from tallyquo.identity.profile_router import router as profile_router
@@ -34,6 +35,7 @@ app.include_router(tax_router)
 app.include_router(invoices_router)
 app.include_router(reports_router)
 app.include_router(expenses_router)
+app.include_router(recurring_router)
 
 
 @app.get("/health")
