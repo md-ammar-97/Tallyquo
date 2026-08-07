@@ -63,6 +63,11 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    # Receipt OCR (2.8) -- qwen/qwen3.6-27b on Groq's free tier. Empty in
+    # local dev/CI until set; expenses_service falls straight to manual
+    # entry with no error if OCR is called without a key (E3).
+    groq_api_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

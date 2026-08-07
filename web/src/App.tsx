@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
+import Expenses from './pages/Expenses'
 import InvoiceBuilder from './pages/InvoiceBuilder'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Ledger from './pages/Ledger'
@@ -35,6 +36,7 @@ function App() {
           <Route path="invoices" element={<Ledger />} />
           <Route path="invoices/new" element={<InvoiceBuilder />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
+          <Route path="expenses" element={<Expenses />} />
         </Route>
       </Routes>
     </BrowserRouter>

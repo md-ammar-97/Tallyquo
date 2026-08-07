@@ -17,6 +17,7 @@ export default function Shell() {
           Dashboard
         </NavLink>
         <NavLink to="/invoices">Invoices</NavLink>
+        <NavLink to="/expenses">Expenses</NavLink>
         <NavLink to="/clients">Clients</NavLink>
         <NavLink to="/profile">Business profile</NavLink>
         <div style={{ marginTop: 24 }}>
