@@ -33,6 +33,7 @@ export default function InvoiceBuilder() {
   const [clients, setClients] = useState<Client[]>([])
   const [clientId, setClientId] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10))
+  const [currency, setCurrency] = useState('CAD')
   const [lines, setLines] = useState<LineItem[]>([emptyLine()])
   const [preview, setPreview] = useState<TaxPreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -93,6 +94,7 @@ export default function InvoiceBuilder() {
       const draft = await api.post<{ id: string }>('/invoices', {
         client_id: clientId,
         invoice_date: invoiceDate,
+        currency,
         line_items: lines
           .filter((l) => l.amount)
           .map((l) => ({
@@ -126,7 +128,7 @@ export default function InvoiceBuilder() {
             </p>
             <h2>{issuedInvoice.number}</h2>
             <p className="caption" style={{ margin: '8px 0 16px' }}>
-              Total: CAD {issuedInvoice.total}
+              Total: {currency} {issuedInvoice.total}
             </p>
             <button
               className="primary"
@@ -181,6 +183,13 @@ export default function InvoiceBuilder() {
               <div className="field">
                 <label>Invoice date</label>
                 <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Currency</label>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                  <option value="CAD">CAD</option>
+                  <option value="USD">USD</option>
+                </select>
               </div>
             </div>
           )}
@@ -241,7 +250,7 @@ export default function InvoiceBuilder() {
               </p>
               {preview.lines.map((l, i) => (
                 <p key={i} className="caption">
-                  {l.display_note ? `GST/HST: ${l.display_note}` : `${l.label}: CAD ${l.amount}`}
+                  {l.display_note ? `GST/HST: ${l.display_note}` : `${l.label}: ${currency} ${l.amount}`}
                 </p>
               ))}
               {preview.warnings.map((w, i) => (
@@ -253,18 +262,18 @@ export default function InvoiceBuilder() {
                 <tbody>
                   <tr>
                     <td>Subtotal</td>
-                    <td className="amount">CAD {preview.subtotal}</td>
+                    <td className="amount">{currency} {preview.subtotal}</td>
                   </tr>
                   <tr>
                     <td>Tax</td>
-                    <td className="amount">CAD {preview.tax_total}</td>
+                    <td className="amount">{currency} {preview.tax_total}</td>
                   </tr>
                   <tr>
                     <td>
                       <strong>Total</strong>
                     </td>
                     <td className="amount">
-                      <strong>CAD {preview.total}</strong>
+                      <strong>{currency} {preview.total}</strong>
                     </td>
                   </tr>
                 </tbody>

@@ -43,28 +43,56 @@ def _aging_bucket(due_date: date | None, today: date) -> str | None:
 
 async def client_period_rollup(session: AsyncSession, client_id: UUID) -> list[dict]:
     # design.md §8.4: "month / invoices / billed / collected / outstanding".
-    # Mirrors mv_period_summary's aggregation exactly (billed/count exclude
-    # cancelled invoices; collected sums amount_paid across everything
-    # non-draft, since a payment recorded before a cancellation still
-    # happened).
-    result = await session.execute(
+    # Mirrors mv_period_summary's aggregation (billed/count exclude
+    # cancelled invoices; collected counts a payment recorded before a
+    # cancellation), but sums total_cad/payment.amount_cad directly rather
+    # than falling back to the native-currency total/amount_paid when a
+    # CAD figure is missing (C6) -- a foreign-currency invoice whose FX
+    # fetch failed at issue silently omits from these totals instead of
+    # being added in as if its USD amount were CAD.
+    billed_result = await session.execute(
         text(
             """
             SELECT date_trunc('month', invoice_date)::date AS period,
-                   count(*) FILTER (WHERE status <> 'cancelled')                                    AS invoice_count,
-                   COALESCE(sum(COALESCE(total_cad, total)) FILTER (WHERE status <> 'cancelled'), 0) AS billed_cad,
-                   COALESCE(sum(amount_paid), 0)                                                     AS collected_cad
+                   count(*)             AS invoice_count,
+                   COALESCE(sum(total_cad), 0) AS billed_cad
             FROM invoice
-            WHERE client_id = :client_id AND status <> 'draft'
+            WHERE client_id = :client_id AND status NOT IN ('draft', 'cancelled')
             GROUP BY 1
-            ORDER BY 1 DESC
             """
         ),
         {"client_id": client_id},
     )
-    rows = [dict(r) for r in result.mappings().all()]
-    for r in rows:
-        r["outstanding_cad"] = r["billed_cad"] - r["collected_cad"]
+    billed_by_period = {row.period: (row.invoice_count, row.billed_cad) for row in billed_result.all()}
+
+    collected_result = await session.execute(
+        text(
+            """
+            SELECT date_trunc('month', i.invoice_date)::date AS period,
+                   COALESCE(sum(p.amount_cad), 0) AS collected_cad
+            FROM invoice i JOIN payment p ON p.invoice_id = i.id
+            WHERE i.client_id = :client_id AND i.status <> 'draft'
+            GROUP BY 1
+            """
+        ),
+        {"client_id": client_id},
+    )
+    collected_by_period = {row.period: row.collected_cad for row in collected_result.all()}
+
+    periods = sorted(set(billed_by_period) | set(collected_by_period), reverse=True)
+    rows = []
+    for period in periods:
+        invoice_count, billed = billed_by_period.get(period, (0, Decimal("0")))
+        collected = collected_by_period.get(period, Decimal("0"))
+        rows.append(
+            {
+                "period": period,
+                "invoice_count": invoice_count,
+                "billed_cad": billed,
+                "collected_cad": collected,
+                "outstanding_cad": billed - collected,
+            }
+        )
     return rows
 
 
@@ -73,16 +101,29 @@ async def _outstanding_invoices(session: AsyncSession, *, client_id: UUID | None
     # overdue/paid are never stored, so every non-cancelled, non-draft,
     # not-fully-paid invoice is still literally 'issued' in the column.
     # Filtering on outstanding balance > 1c does the "not paid" filtering
-    # that a stored status column would otherwise be asked to do.
-    where = "i.status = 'issued' AND (i.total - i.amount_paid) > 0.01"
+    # that a stored status column would otherwise be asked to do. That
+    # check compares the invoice's own total/amount_paid (same currency as
+    # each other, so it's a valid comparison regardless of what currency
+    # that is) -- but what gets bucketed for the aggregate report is
+    # outstanding_cad specifically (total_cad minus actual CAD received
+    # per payment, C6), and invoices without a CAD figure (FX unavailable
+    # at issue, edgecases.md C2) are excluded rather than having their
+    # foreign total added in as if it were CAD.
+    where = "i.status = 'issued' AND (i.total - i.amount_paid) > 0.01 AND i.total_cad IS NOT NULL"
     params: dict = {}
     if client_id is not None:
         where += " AND i.client_id = :client_id"
         params["client_id"] = client_id
     result = await session.execute(
         text(
-            f"SELECT i.client_id, c.legal_name AS client_name, i.due_date, i.total, i.amount_paid "
-            f"FROM invoice i JOIN client c ON c.id = i.client_id WHERE {where}"
+            f"""
+            SELECT i.client_id, c.legal_name AS client_name, i.due_date,
+                   i.total_cad - COALESCE(
+                     (SELECT sum(p.amount_cad) FROM payment p WHERE p.invoice_id = i.id), 0
+                   ) AS outstanding_cad
+            FROM invoice i JOIN client c ON c.id = i.client_id
+            WHERE {where}
+            """
         ),
         params,
     )
@@ -95,7 +136,7 @@ async def client_aging(session: AsyncSession, client_id: UUID) -> dict[str, Deci
     for row in await _outstanding_invoices(session, client_id=client_id):
         bucket = _aging_bucket(row["due_date"], today)
         if bucket:
-            buckets[bucket] += row["total"] - row["amount_paid"]
+            buckets[bucket] += row["outstanding_cad"]
     return buckets
 
 
@@ -110,7 +151,7 @@ async def tenant_aging_report(session: AsyncSession) -> list[dict]:
             row["client_id"],
             {"client_id": row["client_id"], "client_name": row["client_name"], **_empty_buckets()},
         )
-        entry[bucket] += row["total"] - row["amount_paid"]
+        entry[bucket] += row["outstanding_cad"]
     rows = list(by_client.values())
     for entry in rows:
         entry["total_outstanding"] = sum((entry[b] for b in _AGING_BUCKETS), start=Decimal("0"))

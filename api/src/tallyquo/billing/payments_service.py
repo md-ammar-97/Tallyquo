@@ -1,6 +1,12 @@
 """Payment recording. edgecases.md §7 (L10-L12) -- payments never mutate
 the invoice's frozen tax snapshot, only amount_paid, which
-invoices_service.py's effective-status expression reads back."""
+invoices_service.py's effective-status expression reads back.
+
+C3/C4: each payment captures its own FX rate at its own received_date --
+never the invoice's issue-time rate -- and fx_gain_loss is computed once
+here and stored, isolating the FX movement as its own explicit figure
+rather than letting it get silently absorbed into revenue.
+"""
 
 from datetime import date
 from decimal import Decimal
@@ -9,7 +15,14 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tallyquo.billing import fx
+
 OVERPAYMENT_TOLERANCE = Decimal("0.01")
+
+_PAYMENT_COLUMNS = (
+    "id, invoice_id, amount, currency, amount_cad, fx_rate_to_cad, fx_gain_loss, "
+    "received_date, method, reference, note, created_at"
+)
 
 
 class PaymentError(Exception):
@@ -21,7 +34,10 @@ async def record_payment(
 ) -> dict:
     invoice_row = (
         await session.execute(
-            text("SELECT status, total, amount_paid, currency FROM invoice WHERE id = :id"),
+            text(
+                "SELECT status, total, amount_paid, currency, fx_rate_to_cad "
+                "FROM invoice WHERE id = :id"
+            ),
             {"id": invoice_id},
         )
     ).mappings().first()
@@ -46,13 +62,34 @@ async def record_payment(
         )
 
     payment_id = uuid4()
-    amount_cad = data["amount"] if invoice_row["currency"] == "CAD" else None
+    amount_cad: Decimal | None
+    fx_rate_to_cad: Decimal | None
+    fx_gain_loss: Decimal | None
+    if invoice_row["currency"] == "CAD":
+        amount_cad, fx_rate_to_cad, fx_gain_loss = data["amount"], None, None
+    else:
+        # C2's "never block" applies here too, for consistency: a payment
+        # still records if the FX source is down when it's entered, just
+        # without a CAD figure or gain/loss until it's revisited.
+        fx_result = await fx.fetch_rate(invoice_row["currency"], data["received_date"])
+        if fx_result is None:
+            amount_cad, fx_rate_to_cad, fx_gain_loss = None, None, None
+        else:
+            fx_rate_to_cad = fx_result.rate
+            amount_cad = fx.convert(data["amount"], fx_result.rate)
+            fx_gain_loss = None
+            if invoice_row["fx_rate_to_cad"] is not None:
+                # C3: this payment's actual CAD value vs. what it would
+                # have been worth at the invoice's frozen issue-time rate.
+                at_invoice_rate = fx.convert(data["amount"], invoice_row["fx_rate_to_cad"])
+                fx_gain_loss = amount_cad - at_invoice_rate
+
     await session.execute(
         text(
             "INSERT INTO payment (id, tenant_id, invoice_id, amount, currency, amount_cad, "
-            "received_date, method, reference, note) "
+            "fx_rate_to_cad, fx_gain_loss, received_date, method, reference, note) "
             "VALUES (:id, :tenant_id, :invoice_id, :amount, :currency, :amount_cad, "
-            ":received_date, :method, :reference, :note)"
+            ":fx_rate_to_cad, :fx_gain_loss, :received_date, :method, :reference, :note)"
         ),
         {
             "id": payment_id,
@@ -60,6 +97,8 @@ async def record_payment(
             "invoice_id": invoice_id,
             "currency": invoice_row["currency"],
             "amount_cad": amount_cad,
+            "fx_rate_to_cad": fx_rate_to_cad,
+            "fx_gain_loss": fx_gain_loss,
             **data,
         },
     )
@@ -83,10 +122,7 @@ async def record_payment(
 
     row = (
         await session.execute(
-            text(
-                "SELECT id, invoice_id, amount, currency, received_date, method, reference, note, created_at "
-                "FROM payment WHERE id = :id"
-            ),
+            text(f"SELECT {_PAYMENT_COLUMNS} FROM payment WHERE id = :id"),
             {"id": payment_id},
         )
     ).mappings().one()
@@ -96,8 +132,8 @@ async def record_payment(
 async def list_payments(session: AsyncSession, invoice_id: UUID) -> list[dict]:
     result = await session.execute(
         text(
-            "SELECT id, invoice_id, amount, currency, received_date, method, reference, note, created_at "
-            "FROM payment WHERE invoice_id = :id ORDER BY received_date DESC, created_at DESC"
+            f"SELECT {_PAYMENT_COLUMNS} FROM payment "
+            "WHERE invoice_id = :id ORDER BY received_date DESC, created_at DESC"
         ),
         {"id": invoice_id},
     )

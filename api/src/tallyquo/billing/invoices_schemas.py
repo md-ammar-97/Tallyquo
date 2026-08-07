@@ -2,7 +2,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+SUPPORTED_CURRENCIES = {"CAD", "USD"}
 
 
 class InvoiceLineIn(BaseModel):
@@ -31,6 +33,13 @@ class InvoiceDraftIn(BaseModel):
     template_id: UUID | None = None
     include_provincial_sales_tax: bool = False
     line_items: list[InvoiceLineIn] = []
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: str) -> str:
+        if v not in SUPPORTED_CURRENCIES:
+            raise ValueError(f"currency must be one of {sorted(SUPPORTED_CURRENCIES)}")
+        return v
 
 
 class InvoiceLineOut(InvoiceLineIn):
@@ -74,6 +83,10 @@ class InvoiceOut(BaseModel):
     cancelled_at: datetime | None
     revision: int
     parent_invoice_id: UUID | None
+    total_cad: Decimal | None
+    fx_rate_to_cad: Decimal | None
+    fx_rate_date: date | None
+    fx_rate_source: str | None
     line_items: list[InvoiceLineOut] = []
     tax_lines: list[InvoiceTaxLineOut] = []
 
@@ -103,6 +116,9 @@ class PaymentOut(BaseModel):
     invoice_id: UUID
     amount: Decimal
     currency: str
+    amount_cad: Decimal | None
+    fx_rate_to_cad: Decimal | None
+    fx_gain_loss: Decimal | None
     received_date: date
     method: str | None
     reference: str | None

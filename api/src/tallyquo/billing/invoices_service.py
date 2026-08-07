@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tallyquo.billing import fx
 from tallyquo.tax.context_builder import build_supply_context
 from tallyquo.tax.engine import MissingJurisdiction, NoRateForDate, compute
 from tallyquo.tax.loader import load_rate_table
@@ -75,7 +76,8 @@ _INVOICE_COLUMNS = (
     "invoice.due_date, invoice.currency, invoice.subtotal, invoice.discount_amount, "
     "invoice.tax_total, invoice.total, invoice.amount_paid, invoice.tax_treatment_snapshot, "
     "invoice.tax_jurisdiction_snapshot, invoice.po_reference, invoice.notes, invoice.created_at, "
-    "invoice.issued_at, invoice.cancelled_at, invoice.revision, invoice.parent_invoice_id"
+    "invoice.issued_at, invoice.cancelled_at, invoice.revision, invoice.parent_invoice_id, "
+    "invoice.total_cad, invoice.fx_rate_to_cad, invoice.fx_rate_date, invoice.fx_rate_source"
 )
 _INVOICE_FROM = "invoice LEFT JOIN business_profile bp ON bp.tenant_id = invoice.tenant_id"
 
@@ -351,6 +353,24 @@ async def issue_invoice(
     tax_total = tax_result.tax_total
     grand_total = total + tax_total
 
+    # C1/C2/C7: captured once, at issue, and frozen -- never re-derived on
+    # a later read. A source failure never blocks issuing; it just leaves
+    # the invoice without a CAD figure until someone revisits it (the NULL
+    # itself is the "marked for review" signal -- fx_rate_source records
+    # why rather than adding a second flag column for the same fact).
+    fx_rate_to_cad = fx_rate_date = fx_rate_source = total_cad = None
+    if invoice["currency"] == "CAD":
+        total_cad = grand_total
+    else:
+        fx_result = await fx.fetch_rate(invoice["currency"], invoice_date)
+        if fx_result is not None:
+            fx_rate_to_cad = fx_result.rate
+            fx_rate_date = fx_result.rate_date
+            fx_rate_source = fx_result.source
+            total_cad = fx.convert(grand_total, fx_result.rate)
+        else:
+            fx_rate_source = "unavailable_at_issue"
+
     # Template pin: default to the tenant's default system template if none chosen.
     template_row = (
         await session.execute(
@@ -396,7 +416,9 @@ async def issue_invoice(
             "UPDATE invoice SET "
             "number = :number, status = 'issued', invoice_date = :invoice_date, "
             "due_date = :due_date, subtotal = :subtotal, tax_total = :tax_total, "
-            "total = :total, total_cad = :total_cad, tax_treatment_snapshot = :treatment, "
+            "total = :total, total_cad = :total_cad, fx_rate_to_cad = :fx_rate_to_cad, "
+            "fx_rate_date = :fx_rate_date, fx_rate_source = :fx_rate_source, "
+            "tax_treatment_snapshot = :treatment, "
             "tax_jurisdiction_snapshot = :jurisdiction, tax_version_id = :version_id, "
             "template_id = :template_id, template_version = :template_version, "
             "supplier_snapshot = :supplier_snapshot, client_snapshot = :client_snapshot, "
@@ -417,10 +439,10 @@ async def issue_invoice(
             "template_version": template_row["version"] if template_row else None,
             "supplier_snapshot": json.dumps(supplier_snapshot, default=str),
             "client_snapshot": json.dumps(client_snapshot, default=str),
-            # CAD-normalized total for the roll-up/aging report (2.3). Real
-            # FX conversion is 2.4 -- until then, CAD invoices are already
-            # in CAD and non-CAD invoices leave this NULL rather than guess.
-            "total_cad": grand_total if invoice["currency"] == "CAD" else None,
+            "total_cad": total_cad,
+            "fx_rate_to_cad": fx_rate_to_cad,
+            "fx_rate_date": fx_rate_date,
+            "fx_rate_source": fx_rate_source,
             "id": invoice_id,
         },
     )
@@ -493,6 +515,11 @@ async def create_credit_note(
     if invoice is None or invoice["status"] not in ("issued", "partially_paid", "paid", "overdue"):
         return None
 
+    # C8: a foreign-currency credit note uses the original invoice's rate,
+    # not today's -- satisfied by never fetching a fresh one here at all.
+    # credit_note has no fx columns of its own; any future CAD reporting
+    # need must join through invoice.fx_rate_to_cad, not call fx.fetch_rate
+    # again for "today".
     credit_note_id = uuid4()
     number = f"{invoice['number']}-CN{await _next_credit_note_seq(session, invoice_id)}"
     await session.execute(

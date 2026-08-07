@@ -24,6 +24,10 @@ interface Invoice {
   total: string
   amount_paid: string
   tax_treatment_snapshot: string | null
+  total_cad: string | null
+  fx_rate_to_cad: string | null
+  fx_rate_date: string | null
+  fx_rate_source: string | null
   line_items: LineItem[]
 }
 
@@ -31,6 +35,9 @@ interface Payment {
   id: string
   amount: string
   currency: string
+  amount_cad: string | null
+  fx_rate_to_cad: string | null
+  fx_gain_loss: string | null
   received_date: string
   method: string | null
   reference: string | null
@@ -185,6 +192,19 @@ export default function InvoiceDetail() {
               </tr>
             </tbody>
           </table>
+          {invoice.currency !== 'CAD' && (
+            <p className="caption" style={{ marginTop: 8 }}>
+              {invoice.total_cad ? (
+                <>
+                  CAD {invoice.total_cad} at {invoice.fx_rate_to_cad} ({invoice.fx_rate_date})
+                </>
+              ) : (
+                <span style={{ color: 'var(--color-status-attention)' }}>
+                  No CAD conversion available -- the FX rate source was unavailable at issue. Needs review.
+                </span>
+              )}
+            </p>
+          )}
           <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
             {invoice.status !== 'draft' && (
               <button onClick={() => downloadFile(`/invoices/${invoice.id}/pdf`, `${invoice.number}.pdf`)}>
@@ -335,6 +355,7 @@ export default function InvoiceDetail() {
               <th>Method</th>
               <th>Reference</th>
               <th className="amount">Amount</th>
+              {invoice.currency !== 'CAD' && <th className="amount">FX gain/loss</th>}
               <th></th>
             </tr>
           </thead>
@@ -346,7 +367,17 @@ export default function InvoiceDetail() {
                 <td>{p.reference ?? '—'}</td>
                 <td className="amount">
                   {p.currency} {p.amount}
+                  {p.currency !== 'CAD' && p.amount_cad && (
+                    <span className="caption"> (CAD {p.amount_cad})</span>
+                  )}
                 </td>
+                {invoice.currency !== 'CAD' && (
+                  <td className="amount">
+                    {p.fx_gain_loss === null
+                      ? '—'
+                      : `${Number(p.fx_gain_loss) >= 0 ? '+' : ''}${p.fx_gain_loss}`}
+                  </td>
+                )}
                 <td>
                   <button className="danger" onClick={() => handleReverse(p.id)}>
                     Reverse
@@ -356,7 +387,7 @@ export default function InvoiceDetail() {
             ))}
             {payments.length === 0 && (
               <tr>
-                <td colSpan={5} className="caption" style={{ padding: 24 }}>
+                <td colSpan={invoice.currency !== 'CAD' ? 6 : 5} className="caption" style={{ padding: 24 }}>
                   No payments recorded yet.
                 </td>
               </tr>
