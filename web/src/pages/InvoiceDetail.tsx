@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, ApiError, downloadFile } from '../api'
+import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
 
 interface LineItem {
   id: string
@@ -45,8 +45,59 @@ interface Payment {
   note: string | null
 }
 
+interface EmailAccount {
+  id: string
+  label: string
+  from_name: string
+  from_address: string
+  is_default: boolean
+}
+
 const emptyPaymentForm = { amount: '', received_date: new Date().toISOString().slice(0, 10), method: '', reference: '' }
 const emptyRecurringForm = { cadence: 'monthly', day_of_period: '1', next_run_date: '', auto_issue: false }
+
+function ChipInput({
+  values,
+  onChange,
+  placeholder,
+}: {
+  values: string[]
+  onChange: (values: string[]) => void
+  placeholder?: string
+}) {
+  const [draft, setDraft] = useState('')
+
+  function commit() {
+    const trimmed = draft.trim()
+    if (trimmed && !values.includes(trimmed)) onChange([...values, trimmed])
+    setDraft('')
+  }
+
+  return (
+    <div className="chip-input">
+      {values.map((v) => (
+        <span key={v} className="chip">
+          {v}
+          <button type="button" onClick={() => onChange(values.filter((x) => x !== v))}>
+            &times;
+          </button>
+        </span>
+      ))}
+      <input
+        value={draft}
+        placeholder={values.length === 0 ? placeholder : ''}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+            if (draft.trim()) e.preventDefault()
+            commit()
+          }
+        }}
+        onBlur={commit}
+      />
+    </div>
+  )
+}
 
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>()
@@ -65,6 +116,19 @@ export default function InvoiceDetail() {
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [shareError, setShareError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([])
+  const [emailAccountId, setEmailAccountId] = useState('')
+  const [emailTo, setEmailTo] = useState<string[]>([])
+  const [emailCc, setEmailCc] = useState<string[]>([])
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
+  const [attachPdf, setAttachPdf] = useState(true)
+  const [extraFiles, setExtraFiles] = useState<File[]>([])
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailResult, setEmailResult] = useState<string | null>(null)
 
   function load() {
     if (!id) return
@@ -96,6 +160,84 @@ export default function InvoiceDetail() {
     navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  async function handleOpenEmailModal() {
+    setEmailError(null)
+    setEmailResult(null)
+    const accounts = await api.get<EmailAccount[]>('/email-accounts')
+    setEmailAccounts(accounts)
+    const defaultAccount = accounts.find((a) => a.is_default) ?? accounts[0]
+    setEmailAccountId(defaultAccount?.id ?? '')
+
+    let clientEmail = ''
+    if (invoice) {
+      try {
+        const client = await api.get<{ email: string | null }>(`/clients/${invoice.client_id}`)
+        clientEmail = client.email ?? ''
+      } catch {
+        // no-op -- To still starts empty and the user can type a recipient in
+      }
+    }
+    setEmailTo(clientEmail ? [clientEmail] : [])
+    setEmailCc([])
+    setEmailSubject(invoice ? `Invoice ${invoice.number ?? ''}` : '')
+    setEmailBody(
+      invoice
+        ? `Hi,\n\nPlease find invoice ${invoice.number ?? ''} attached, for a total of ${invoice.currency} ${invoice.total}.\n\nThanks,`
+        : '',
+    )
+    setAttachPdf(true)
+    setExtraFiles([])
+    setShowEmailModal(true)
+  }
+
+  async function handleSendEmail(e: React.FormEvent) {
+    e.preventDefault()
+    // O5: a reminder-only email with nothing invoice-related attached is
+    // legitimate, but never sent silently empty-handed -- confirmed explicitly.
+    if (!attachPdf && extraFiles.length === 0) {
+      if (!window.confirm('Send this email with no attachments?')) return
+    }
+    setEmailSending(true)
+    setEmailError(null)
+    setEmailResult(null)
+    try {
+      const body = new FormData()
+      body.append('to_addresses', emailTo.join(','))
+      body.append('cc_addresses', emailCc.join(','))
+      body.append('subject', emailSubject)
+      body.append('body', emailBody)
+      body.append('attach_invoice_pdf', String(attachPdf))
+      if (emailAccountId) body.append('email_account_id', emailAccountId)
+      for (const file of extraFiles) body.append('extra_files', file)
+
+      const token = localStorage.getItem('access_token')
+      const res = await fetch(`${API_BASE_URL}/invoices/${id}/email`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new ApiError(res.status, data.detail ?? 'Could not send this email.')
+
+      if (data.status === 'failed') {
+        setEmailError(data.error_detail ?? 'Could not send this email.')
+      } else if (Object.keys(data.refused ?? {}).length > 0) {
+        setEmailResult(
+          `Sent to ${data.accepted.join(', ')}. Refused: ${Object.entries(data.refused)
+            .map(([addr, reason]) => `${addr} (${reason})`)
+            .join(', ')}`,
+        )
+      } else {
+        setEmailResult(`Sent to ${data.accepted.join(', ')}.`)
+        setShowEmailModal(false)
+      }
+    } catch (err) {
+      setEmailError(err instanceof ApiError ? err.message : 'Could not send this email.')
+    } finally {
+      setEmailSending(false)
+    }
   }
 
   useEffect(load, [id])
@@ -254,8 +396,10 @@ export default function InvoiceDetail() {
                 {invoice.has_share_link ? 'View shareable link' : 'Get shareable link'}
               </button>
             )}
+            {invoice.status !== 'draft' && <button onClick={handleOpenEmailModal}>Email invoice</button>}
           </div>
           {shareError && <p className="error-text">{shareError}</p>}
+          {emailResult && <p className="caption">{emailResult}</p>}
           {shareToken && (
             <div
               style={{
@@ -446,6 +590,111 @@ export default function InvoiceDetail() {
           </tbody>
         </table>
       </div>
+
+      {showEmailModal && (
+        <div className="modal-backdrop" onClick={() => setShowEmailModal(false)}>
+          <div className="block modal" onClick={(e) => e.stopPropagation()}>
+            <div className="block-header">
+              <h2>Email invoice</h2>
+            </div>
+            {emailAccounts.length === 0 ? (
+              <div className="block-body">
+                <p className="caption">
+                  No email account configured yet.{' '}
+                  <Link to="/email-accounts" style={{ color: 'var(--color-text-link)' }}>
+                    Add one
+                  </Link>{' '}
+                  to send from your own address.
+                </p>
+                <button onClick={() => setShowEmailModal(false)} style={{ marginTop: 12 }}>
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <div className="block-body">
+                  <div className="field">
+                    <label>From</label>
+                    <select value={emailAccountId} onChange={(e) => setEmailAccountId(e.target.value)}>
+                      {emailAccounts.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.label} ({a.from_address})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>To</label>
+                    <ChipInput values={emailTo} onChange={setEmailTo} placeholder="client@example.com" />
+                  </div>
+                  <div className="field">
+                    <label>Cc</label>
+                    <ChipInput values={emailCc} onChange={setEmailCc} placeholder="optional" />
+                  </div>
+                  <div className="field">
+                    <label>Subject</label>
+                    <input required value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Body</label>
+                    <textarea
+                      required
+                      rows={8}
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Attachments</label>
+                    <div>
+                      <span className="chip">
+                        {attachPdf ? '📎 ' : ''}
+                        {invoice.number ?? 'invoice'}.pdf
+                        <button type="button" onClick={() => setAttachPdf((v) => !v)}>
+                          {attachPdf ? '×' : '+'}
+                        </button>
+                      </span>
+                      {extraFiles.map((f, i) => (
+                        <span key={i} className="chip">
+                          {f.name}
+                          <button
+                            type="button"
+                            onClick={() => setExtraFiles((files) => files.filter((_, idx) => idx !== i))}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <label style={{ display: 'inline-block', marginTop: 8 }}>
+                      <input
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={(e) =>
+                          setExtraFiles((files) => [...files, ...Array.from(e.target.files ?? [])])
+                        }
+                      />
+                      <span style={{ color: 'var(--color-text-link)', cursor: 'pointer', fontSize: 12 }}>
+                        + Add attachment
+                      </span>
+                    </label>
+                  </div>
+                  {emailError && <p className="error-text">{emailError}</p>}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" onClick={() => setShowEmailModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="primary" disabled={emailSending || emailTo.length === 0}>
+                    {emailSending ? 'Sending…' : 'Send'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -43,6 +43,9 @@ export default function Shell() {
         <NavLink to="/profile" onClick={handleNavClick}>
           Business profile
         </NavLink>
+        <NavLink to="/email-accounts" onClick={handleNavClick}>
+          Email accounts
+        </NavLink>
         <div style={{ marginTop: 24 }}>
           <button onClick={handleLogout} style={{ width: '100%' }}>
             Sign out

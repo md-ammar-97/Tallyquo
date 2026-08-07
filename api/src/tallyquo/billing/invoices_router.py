@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import invoices_service as service
@@ -21,6 +21,10 @@ from tallyquo.billing.invoices_schemas import (
     ShareLinkOut,
 )
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
+from tallyquo.notifications import send_service
+from tallyquo.notifications.schemas import InvoiceEmailLogOut, SendResultOut
+
+_MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024  # O6: a reasonable cap most SMTP servers share
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -235,3 +239,73 @@ async def revoke_share_link(invoice_id: UUID, db: AsyncSession = Depends(get_db)
     found = await share_service.revoke_share_link(db, invoice_id)
     if not found:
         raise HTTPException(status_code=404, detail="No active share link for this invoice")
+
+
+@router.get("/{invoice_id}/email-log", response_model=list[InvoiceEmailLogOut])
+async def list_email_log(invoice_id: UUID, db: AsyncSession = Depends(get_db)) -> list[InvoiceEmailLogOut]:
+    rows = await send_service.list_email_log(db, invoice_id)
+    return [InvoiceEmailLogOut(**row) for row in rows]
+
+
+@router.post("/{invoice_id}/email", response_model=SendResultOut)
+async def send_invoice_email(
+    invoice_id: UUID,
+    to_addresses: str = Form(...),
+    cc_addresses: str = Form(""),
+    subject: str = Form(...),
+    body: str = Form(...),
+    attach_invoice_pdf: bool = Form(True),
+    email_account_id: UUID | None = Form(None),
+    extra_files: list[UploadFile] = File(default=[]),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SendResultOut:
+    to_list = [a.strip() for a in to_addresses.split(",") if a.strip()]
+    cc_list = [a.strip() for a in cc_addresses.split(",") if a.strip()]
+    if not to_list:
+        raise HTTPException(status_code=422, detail="At least one recipient is required.")
+
+    extra_attachments = []
+    total_bytes = 0
+    for f in extra_files:
+        content = await f.read()
+        total_bytes += len(content)
+        if total_bytes > _MAX_TOTAL_ATTACHMENT_BYTES:
+            # O6: rejected at attach time, before a send is even attempted.
+            raise HTTPException(status_code=422, detail="Attachments exceed the 20MB combined size limit.")
+        extra_attachments.append(
+            send_service.ExtraAttachment(
+                filename=f.filename or "attachment",
+                content=content,
+                mime_type=f.content_type or "application/octet-stream",
+            )
+        )
+
+    try:
+        outcome = await send_service.send_invoice_email(
+            db,
+            current_user.tenant_id,
+            current_user.user_id,
+            invoice_id,
+            email_account_id=email_account_id,
+            to_addresses=to_list,
+            cc_addresses=cc_list,
+            subject=subject,
+            body=body,
+            attach_invoice_pdf=attach_invoice_pdf,
+            extra_attachments=extra_attachments,
+        )
+    except send_service.InvoiceNotShareable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except send_service.NoEmailAccount as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    # O10: the send attempt is already logged inside send_invoice_email,
+    # in the same transaction as this request. Raising an HTTPException
+    # here -- even for a "failed" outcome -- would propagate out through
+    # tenant_session()'s `async with session.begin()` and roll that log
+    # entry back along with it. A failed send is reported as a normal
+    # 200 with status="failed" instead, exactly like a partial refusal.
+    return SendResultOut(
+        status=outcome.status, accepted=outcome.accepted, refused=outcome.refused, error_detail=outcome.error_detail
+    )

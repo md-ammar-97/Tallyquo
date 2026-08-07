@@ -273,7 +273,7 @@ Every figure carries a visible "estimate — not tax advice; assumptions: [...]"
 - CSV: invoices, expenses, clients, P&L.
 - **Year-end accountant pack**: a single zip — invoice PDFs, expense CSV mapped to T2125 lines, all receipt images, GST/HST summary by period, P&L. If this one artifact is good, the product retains users through every March.
 - **Public shareable link** (shipped Phase 2): a durable, revocable, unauthenticated view/download URL per issued invoice — the "share it yourself" complement to download-and-send-yourself.
-- **Email, via the user's own SMTP** (planned, not yet built — see Q4): a compose window on an issued invoice, always requiring an explicit send, never automatic.
+- **Email, via the user's own SMTP** (shipped Phase 2, see Q4): a compose window on an issued invoice, always requiring an explicit send, never automatic.
 
 ---
 
@@ -387,7 +387,7 @@ These change the shape of the build materially. Ordered by blast radius.
 
 **Resolved twice over, differently each time.** Phase 2 shipped without a "verified sender domain" at all — by direct user decision, download, on-platform view, and a durable, revocable **public shareable link** per invoice replaced sending entirely (`implementation_plan.md` 2.12). That sidesteps the domain-authentication/deliverability problem completely rather than solving it.
 
-A second, separate pivot is now planned (not yet built, scoped 2026-08-07): **user-configured SMTP**. Each tenant connects their own outgoing mail server — their own Gmail, Outlook, or custom SMTP host — so any email sent carries their own sender reputation, not the platform's. This avoids the verified-sender-domain problem a different way: there's no platform-level sending identity to authenticate at all. "Email invoice" becomes available once an invoice is issued, but **never sends automatically** — it opens a compose window (editable subject and body, To/CC, the invoice PDF attached by default but removable, extra attachments addable) that requires an explicit send action every time. See `implementation_plan.md` 2.16/2.17 and `edgecases.md` §8.
+A second, separate pivot shipped the same day (2026-08-07): **user-configured SMTP**. Each tenant connects their own outgoing mail server — their own Gmail, Outlook, or custom SMTP host — so any email sent carries their own sender reputation, not the platform's. This avoids the verified-sender-domain problem a different way: there's no platform-level sending identity to authenticate at all. "Email invoice" is available once an invoice is issued, but **never sends automatically** — it opens a compose window (editable subject and body, To/CC, the invoice PDF attached by default but removable, extra attachments addable) that requires an explicit send action every time. See `implementation_plan.md` 2.16/2.17 and `edgecases.md` §8.
 
 **Q5 — Sole proprietors only, or also single-member corporations?** Incorporated users need corporate tax rates, dividend/salary decisions, and a fiscal year that isn't the calendar year. This is a different product, not a setting. *Recommendation: sole proprietors only through Phase 3.*
 

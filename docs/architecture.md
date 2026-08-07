@@ -59,7 +59,7 @@ These are the constraints every decision below is derived from. When a trade-off
 | Dependency | Purpose | Failure mode | Mitigation |
 |---|---|---|---|
 | Transactional email | OTP delivery only | User cannot log in | Second provider on standby; OTP is the only critical path |
-| User-configured SMTP *(planned, not yet built)* | Invoice delivery — **not a platform-level provider**. Each tenant connects their own mail server; there is no shared sending identity to authenticate | One tenant's outgoing mail breaks | Isolated per tenant by construction; a failure never affects another tenant or any other feature. See `datamodel.md` §4, `edgecases.md` §8 |
+| User-configured SMTP *(shipped 2026-08-07)* | Invoice delivery — **not a platform-level provider**. Each tenant connects their own mail server; there is no shared sending identity to authenticate | One tenant's outgoing mail breaks | Isolated per tenant by construction; a failure never affects another tenant or any other feature. See `datamodel.md` §4, `edgecases.md` §8 |
 | Object storage | Logos, receipts, generated PDFs | Cannot render or retrieve | Regenerate PDFs from stored invoice data (source of truth is the DB, not the file) |
 | OCR provider — **Groq (`qwen/qwen3.6-27b`, free tier)** | Receipt extraction | Degrades to manual entry | Always allow manual entry; OCR is an accelerator, never a gate |
 | Bank of Canada Valet API | Daily rate for USD invoices. Free, public, no key | Cannot compute CAD equivalent | Cache last known rate, flag invoice for review, never block issuing |
@@ -335,12 +335,17 @@ DELETE /invoices/:id/share     (revoke; regenerating after issues a genuinely ne
 GET    /public/invoices/:token             (no auth — resolves token -> tenant, edgecases.md §2 bootstrap pattern)
 GET    /public/invoices/:token/pdf         (no auth)
 
-POST   /invoices/:id/email     *(planned, not yet built)* — opens the compose payload
-                                 (subject/body defaults, recipients, attachments); the
-                                 actual send is a second, explicit confirming call, never
-                                 implicit in this one (`edgecases.md` §8, O1)
-GET    /email-accounts         POST /email-accounts   *(planned)* — user-configured SMTP,
-                                 `datamodel.md` §4
+POST   /invoices/:id/email     *(shipped 2026-08-07)* — the compose window's Send action;
+                                 recipients/subject/body/attachments are all caller-supplied,
+                                 never defaulted server-side, and the send is always a direct
+                                 result of this one explicit call, never scheduled or implicit
+                                 (`edgecases.md` §8, O1). Draft invoices are rejected (409).
+GET    /invoices/:id/email-log *(shipped 2026-08-07)* — append-only send history for one invoice
+
+GET    /email-accounts         POST /email-accounts          *(shipped 2026-08-07)*
+POST   /email-accounts/:id/verify   DELETE /email-accounts/:id *(shipped 2026-08-07)*
+                                 user-configured SMTP, `datamodel.md` §4. verify connects and
+                                 authenticates only — no message sent, no password ever returned
 
 GET    /recurring              POST /recurring
 PATCH  /recurring/:id          POST /recurring/:id/skip

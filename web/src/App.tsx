@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
+import EmailAccounts from './pages/EmailAccounts'
 import Expenses from './pages/Expenses'
 import InvoiceBuilder from './pages/InvoiceBuilder'
 import InvoiceDetail from './pages/InvoiceDetail'
@@ -41,6 +42,7 @@ function App() {
           <Route path="invoices/:id" element={<InvoiceDetail />} />
           <Route path="expenses" element={<Expenses />} />
           <Route path="recurring" element={<Recurring />} />
+          <Route path="email-accounts" element={<EmailAccounts />} />
         </Route>
       </Routes>
     </BrowserRouter>

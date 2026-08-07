@@ -100,7 +100,7 @@ The tax engine is the highest-blast-radius component in the whole product (§5.1
 
 ## 4. Phase 2 — The record
 
-**Status: shipped 2026-08-07.** 2.1–2.11 and 2.14–2.15 built as specified below. 2.12/2.13 shipped in a materially different shape than originally planned — see the note under that row — and a further, not-yet-started addition (2.16/2.17) was scoped afterward per direct user request. Deviations from the original plan are called out inline rather than silently folded in, so this table stays an accurate record of what actually happened, not just what was intended.
+**Status: shipped 2026-08-07, extended 2026-08-07.** 2.1–2.12 and 2.14–2.17 built as specified below; 2.13 remains explicitly not built (see its row). 2.12 shipped in a materially different shape than originally planned, and 2.16/2.17 were scoped and then built as a same-day follow-up per direct user request. Deviations from the original plan are called out inline rather than silently folded in, so this table stays an accurate record of what actually happened, not just what was intended.
 
 **Scope (from `problem-statement.md` §10):** client roll-up view, expenses with receipt upload and OCR, T2125 categorization, recurring invoices, payment tracking and aging, CSV exports.
 
@@ -123,14 +123,14 @@ Two Phase-1-deferred open questions resolve here per the doc's own recommendatio
 | 2.13 | ⏸️ Payment reminder job — **not built.** Depended on 2.12's original email-sending shape, which didn't happen; a reminder needs a delivery channel to notify through. Revisit once 2.17 (below) ships | 2.12, 2.1 | S |
 | 2.14 | ✅ CSV exports: invoices, expenses, clients, P&L (the **year-end zip pack** is Phase 3 — this is the per-entity export only). P&L income is `subtotal - discount_amount`, deliberately never the tax-inclusive total — collected GST/HST is held for the CRA, not revenue | 2.3, 2.9 | S |
 | 2.15 | ✅ Responsive PWA polish + camera capture flow for receipts on mobile web (Q7 recommendation: PWA now, native only if receipt capture proves to be the core loop). Installable manifest + a minimal service worker that deliberately never caches API responses (a stale invoice/payment figure from a cache is worse than none) | 1.22, 2.8 | M |
-| 2.16 | 🔜 **Not started — planned, scoped 2026-08-07, build deferred by explicit request.** User-configured SMTP: tenant adds their own outgoing mail server (host/port/security/username/password or app-password), verified with a test send. Credentials column-encrypted, same pattern as `payment_instruction.fields_encrypted` (`datamodel.md` §4). Multiple accounts per tenant permitted; one marked default | 1.4 (encryption pattern) | M |
-| 2.17 | 🔜 **Not started — planned, scoped 2026-08-07.** "Email invoice" action on an issued invoice opens a compose window — **never sends automatically**. Editable subject and body (sensible defaults pre-filled), To/CC recipient management, the invoice PDF attached by default but **removable**, and arbitrary extra attachments addable. See `edgecases.md` §8 (O1–O10) for the full edge-case set this must close before shipping | 2.16 | M |
+| 2.16 | ✅ User-configured SMTP: `email_account` (tenant's own outgoing mail server, credentials column-encrypted via the same `encrypt_fields`/`decrypt_fields` helper as `payment_instruction.fields_encrypted`), a real connect-and-authenticate `verify` action (no message sent), multiple accounts per tenant with one marked default. Sends via `aiosmtplib`, a per-tenant SMTP relay — no platform-level sending identity | 1.4 (encryption pattern) | M |
+| 2.17 | ✅ "Email invoice" compose window on an issued invoice — **never sends automatically**, always ends on an explicit Send. Editable subject/body (sensible defaults pre-filled from the invoice and client), To/Cc as chip inputs, the invoice PDF attached by default but removable, arbitrary extra attachments addable (logged by filename/size only, not persisted to object storage — works even without the Supabase Storage keys 2.8 is still missing). `invoice_email_log` is the durable append-only send record (O10). Full O1–O10 edge-case set closed — see `edgecases.md` §8 | 2.16 | M |
 
 **Exit criteria:**
 - P1 edge cases green: **R3, R8, E7**, plus the full C1–C8 currency set. All confirmed green as of the 2026-08-07 ship.
 - `snapshot_verify` extended to cover FX-bearing invoices with no new mismatches. Confirmed.
 - Success metric instrumented: % of active users logging ≥1 expense with a receipt (§9 — the real retention hook, not invoice volume).
-- 2.16/2.17 are explicitly **not** exit-blocking for the rest of Phase 2, which shipped without them.
+- 2.16/2.17 shipped same-day as a follow-up, verified end-to-end against a real local SMTP server (not just mocked) — a compose-and-send round trip with a real message landing, correctly formed, with its attachment.
 
 ---
 

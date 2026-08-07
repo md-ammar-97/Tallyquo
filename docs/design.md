@@ -359,13 +359,19 @@ Left: block list with drag handles and visibility toggles. Centre: live document
 
 The **compliance block is pinned, marked with a lock icon, and cannot be reordered out or hidden.** Its tooltip explains why: *"Required on every invoice — your client's accountant needs these fields."* Constraint stated as a service to the user rather than as a restriction imposed on them.
 
-### 8.7 Send invoice (compose window) *(planned, not yet built — `implementation_plan.md` 2.16/2.17)*
+### 8.7 Send invoice (compose window) *(shipped 2026-08-07 — `implementation_plan.md` 2.16/2.17)*
 
 A modal, opened from "Email invoice" on an issued invoice's detail view. Never a silent action — opening it never sends anything, and it always ends on an explicit **Send** press, never an implicit one on close.
 
-Layout, top to bottom: **From** (the tenant's configured SMTP account — a select if more than one is set up, with a link to add one if none are), **To** and **Cc** as chip inputs defaulting to the client's on-file email, **Subject** (pre-filled, editable), **Body** (pre-filled plain-text default, editable, generous height), then an **attachments row** — the invoice PDF as a removable chip (checked by default, per `edgecases.md` O5), plus an "Add attachment" control for arbitrary extra documents. Sticky footer: **Cancel** and **Send**, the same irreversibility weight as the invoice builder's issue footer (§8.2) — sending is a real action, styled with the same intent as issuing, not a throwaway toast-dismiss button.
+Layout, top to bottom: **From** (the tenant's configured SMTP account — a select if more than one is set up), **To** and **Cc** as chip inputs (To defaults to the client's on-file email), **Subject** (pre-filled, editable), **Body** (pre-filled plain-text default, editable, generous height), then an **attachments row** — the invoice PDF as a removable chip (checked by default, per `edgecases.md` O5), plus an "Add attachment" control for arbitrary extra documents. Sticky footer: **Cancel** and **Send**, the same irreversibility weight as the invoice builder's issue footer (§8.2) — sending is a real action, styled with the same intent as issuing, not a throwaway toast-dismiss button.
 
-No SMTP account configured: the modal doesn't open on a dead end — it routes straight to the "add an email account" flow first, with the invoice context preserved so the user lands back in compose once done.
+No SMTP account configured: the modal still opens, but the From/To/Cc/Subject/Body fields are replaced with a single message — "No email account configured yet" plus a link to the Email accounts settings page (§8.8) — rather than opening on a dead-end compose form with nowhere to send from.
+
+Unchecking the PDF with no other attachments added doesn't silently send an empty-handed email: **Send** asks for confirmation first (`edgecases.md` O5) — a reminder-only email is legitimate, but never sent without the user seeing that's what's about to happen.
+
+### 8.8 Email accounts (settings) *(shipped 2026-08-07 — `implementation_plan.md` 2.16/2.17)*
+
+A settings page, not part of the invoice flow — reachable from the main nav ("Email accounts") independent of any single invoice. Lists configured SMTP accounts as a table: label, from address, server, and a verified/unverified badge, each row with **Test** (connects and authenticates, sends nothing — the mechanism for confirming a saved password still works, since it is never shown again) and **Remove**. Below the list, an add-account form: label, from name/address, SMTP host/port/security/username, password, and a "default account" checkbox. Credentials are write-only from the moment they're saved — see `edgecases.md` O4.
 
 ---
 

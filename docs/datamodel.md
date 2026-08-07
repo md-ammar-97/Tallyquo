@@ -180,12 +180,12 @@ Banking fields are stored encrypted at the column level, not in plaintext JSON. 
 
 **`registration_effective_date` is load-bearing.** Invoices dated before it must render "not charged"; invoices on or after must charge tax. This is derived automatically, never toggled by hand.
 
-**Planned, not yet built (scoped 2026-08-07): user-configured SMTP for invoice sending.** `implementation_plan.md` 2.16/2.17, `edgecases.md` §8.
+**Shipped 2026-08-07: user-configured SMTP for invoice sending.** `implementation_plan.md` 2.16/2.17, `edgecases.md` §8. Migration `0014_email_sending`.
 
 ```sql
 CREATE TABLE email_account (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id     uuid NOT NULL REFERENCES tenant(id),
+  tenant_id     uuid NOT NULL,
   label         text NOT NULL,            -- 'My Gmail', 'Work Outlook'
   from_name     text NOT NULL,
   from_address  citext NOT NULL,
@@ -195,9 +195,11 @@ CREATE TABLE email_account (
   smtp_username text NOT NULL,
   credentials_encrypted bytea NOT NULL,    -- password / app-password, column-level encrypted -- same pattern as payment_instruction.fields_encrypted above
   is_default    boolean NOT NULL DEFAULT false,
-  verified_at   timestamptz,               -- last successful test-send; unverified accounts are usable but flagged
+  verified_at   timestamptz,               -- last successful "Test" (connect + authenticate, no message sent); unverified accounts are usable but flagged
   created_at    timestamptz NOT NULL DEFAULT now(),
-  archived_at   timestamptz
+  archived_at   timestamptz,
+  UNIQUE (tenant_id, id),
+  CONSTRAINT email_account_security_check CHECK (smtp_security IN ('starttls', 'tls', 'none'))
 );
 
 CREATE TABLE invoice_email_log (
@@ -210,16 +212,20 @@ CREATE TABLE invoice_email_log (
   subject       text NOT NULL,
   body          text NOT NULL,
   attached_invoice_pdf boolean NOT NULL DEFAULT true,  -- O5: the default attachment is removable
-  extra_attachment_refs jsonb NOT NULL DEFAULT '[]',   -- storage keys, same signed-URL pattern as receipts/logos
+  extra_attachments jsonb NOT NULL DEFAULT '[]',       -- [{filename, byte_size, mime_type}] -- metadata only, not persisted to storage; extra attachments live for the one send and are not retrievable again afterward
   sent_by_user_id uuid,
   status        text NOT NULL,             -- sent | failed
   error_detail  text,
   sent_at       timestamptz NOT NULL DEFAULT now(),
-  FOREIGN KEY (tenant_id, invoice_id) REFERENCES invoice (tenant_id, id)
+  FOREIGN KEY (tenant_id, invoice_id) REFERENCES invoice (tenant_id, id),
+  FOREIGN KEY (tenant_id, email_account_id) REFERENCES email_account (tenant_id, id),
+  CONSTRAINT invoice_email_log_status_check CHECK (status IN ('sent', 'failed'))
 );
 ```
 
-`invoice_email_log` is append-only in spirit (like `audit_log`, §11) — it's the durable answer to "was this invoice emailed, and to whom" (O10), kept distinct from the invoice's own frozen snapshot. Nothing here is ever written by a background job; every row corresponds to one explicit, human-initiated send (O1, O7, O9).
+Both tables carry `FORCE ROW LEVEL SECURITY` and the standard `tenant_isolation` policy (§1). `invoice_email_log` is append-only in spirit (like `audit_log`, §11) — it's the durable answer to "was this invoice emailed, and to whom" (O10), kept distinct from the invoice's own frozen snapshot; its grant is `SELECT, INSERT` only, no `UPDATE`/`DELETE`. Nothing here is ever written by a background job; every row corresponds to one explicit, human-initiated send (O1, O7, O9) — and a row is written whether that send fully succeeded, partially succeeded, or failed outright, all in the same transaction as the attempt.
+
+`email_account.credentials_encrypted` is never decrypted back to the client once saved — there's no reveal endpoint for it at all (unlike `payment_instruction`, where a human occasionally needs to re-see banking details). Confirming a saved password still works is what the "Test" action is for.
 
 ---
 
