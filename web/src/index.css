@@ -282,4 +282,78 @@ td {
   flex: 1;
   padding: var(--space-6);
   max-width: 1000px;
+  min-width: 0; /* a flex child otherwise won't shrink below its content's natural width */
+}
+
+/* Wide tables scroll within their own block on narrow viewports rather
+   than overflowing the page or squishing unreadably. */
+.block > table,
+.block-body > table {
+  display: block;
+  overflow-x: auto;
+}
+
+.mobile-topbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 var(--space-4);
+    background: var(--color-bg-default);
+    border-bottom: 1px solid var(--color-border-default);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .mobile-topbar button {
+    height: 40px;
+    width: 40px;
+    padding: 0;
+  }
+  .sidebar {
+    position: fixed;
+    inset: 52px 0 0 0;
+    width: 100%;
+    z-index: 10;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    overflow-y: auto;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main {
+    padding: var(--space-4);
+    max-width: 100%;
+  }
+  /* design.md §12: 44x44 minimum touch targets on mobile. */
+  button,
+  input,
+  select {
+    min-height: 44px;
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  /* Block headers (title + filter/action controls) wrap to their own
+     rows instead of squeezing into a fixed 48px strip -- the same
+     block-header markup a page uses on desktop just needs room to grow
+     here rather than a mobile-specific layout. */
+  .block-header {
+    height: auto;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+  }
+  .block-header > div {
+    flex-wrap: wrap;
+  }
 }

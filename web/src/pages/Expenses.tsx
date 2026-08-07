@@ -52,6 +52,7 @@ export default function Expenses() {
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  const cameraInput = useRef<HTMLInputElement>(null)
 
   function load() {
     api.get<Category[]>('/expenses/categories').then(setCategories)
@@ -163,6 +164,14 @@ export default function Expenses() {
               style={{ display: 'none' }}
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
             />
+            <input
+              ref={cameraInput}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+            />
             <p style={{ fontWeight: 600, marginBottom: 4 }}>{uploading ? 'Uploading…' : '⇪ Drop a receipt'}</p>
             <p className="caption">
               or{' '}
@@ -170,6 +179,19 @@ export default function Expenses() {
                 href="#"
                 style={{ color: 'var(--color-text-link)' }}
                 onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  cameraInput.current?.click()
+                }}
+              >
+                take a photo
+              </a>{' '}
+              ·{' '}
+              <a
+                href="#"
+                style={{ color: 'var(--color-text-link)' }}
+                onClick={(e) => {
+                  e.stopPropagation()
                   e.preventDefault()
                   setShowManual(true)
                 }}

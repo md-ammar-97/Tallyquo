@@ -1,0 +1,19 @@
+{
+  "name": "Tallyquo",
+  "short_name": "Tallyquo",
+  "description": "Invoicing and financial record-keeping for Canadian sole proprietors",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#0d99ff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
