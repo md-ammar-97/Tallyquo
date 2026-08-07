@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api, ApiError } from '../api'
 
 interface Client {
@@ -118,7 +119,9 @@ export default function Clients() {
           <tbody>
             {clients.map((c) => (
               <tr key={c.id}>
-                <td>{c.legal_name}</td>
+                <td>
+                  <Link to={`/clients/${c.id}`}>{c.legal_name}</Link>
+                </td>
                 <td>
                   {c.region_code ? `${c.region_code}, ` : ''}
                   {c.country_code}

@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import clients_service as service
-from tallyquo.billing.clients_schemas import ClientEvidenceIn, ClientEvidenceOut, ClientIn, ClientOut
+from tallyquo.billing import rollup_service
+from tallyquo.billing.clients_schemas import (
+    ClientEvidenceIn,
+    ClientEvidenceOut,
+    ClientIn,
+    ClientOut,
+    ClientRollupOut,
+)
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
 
 router = APIRouter(prefix="/clients", tags=["clients"])
@@ -49,6 +56,15 @@ async def archive_client(client_id: UUID, db: AsyncSession = Depends(get_db)) ->
     found = await service.archive_client(db, client_id)
     if not found:
         raise HTTPException(status_code=404, detail="Client not found")
+
+
+@router.get("/{client_id}/rollup", response_model=ClientRollupOut)
+async def get_client_rollup(client_id: UUID, db: AsyncSession = Depends(get_db)) -> ClientRollupOut:
+    if await service.get_client(db, client_id) is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    periods = await rollup_service.client_period_rollup(db, client_id)
+    aging = await rollup_service.client_aging(db, client_id)
+    return ClientRollupOut(periods=periods, aging=aging)
 
 
 @router.get("/{client_id}/evidence", response_model=list[ClientEvidenceOut])

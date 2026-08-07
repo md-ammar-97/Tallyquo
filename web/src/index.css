@@ -185,12 +185,20 @@ td {
   background: var(--color-state-unregistered-bg);
   color: var(--color-state-unregistered);
 }
-.badge.issued,
 .badge.paid {
   background: var(--color-status-paid-bg);
   color: var(--color-status-paid);
 }
-.badge.draft {
+.badge.issued {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-pressed);
+}
+.badge.partially_paid {
+  background: var(--color-status-attention-bg);
+  color: var(--color-status-attention);
+}
+.badge.draft,
+.badge.cancelled {
   background: transparent;
   border: 1px solid var(--color-border-strong);
   color: var(--color-text-secondary);

@@ -33,6 +33,9 @@ export default function Ledger() {
               <option value="">All statuses</option>
               <option value="draft">Draft</option>
               <option value="issued">Issued</option>
+              <option value="partially_paid">Partially paid</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <button onClick={() => downloadFile('/invoices/export.csv', 'invoices.csv')}>Export CSV</button>
@@ -55,10 +58,12 @@ export default function Ledger() {
           <tbody>
             {invoices.map((inv) => (
               <tr key={inv.id}>
-                <td>{inv.number ?? '(draft)'}</td>
+                <td>
+                  <Link to={`/invoices/${inv.id}`}>{inv.number ?? '(draft)'}</Link>
+                </td>
                 <td>{inv.invoice_date ?? '—'}</td>
                 <td>
-                  <span className={`badge ${inv.status}`}>{inv.status}</span>
+                  <span className={`badge ${inv.status}`}>{inv.status.replace(/_/g, ' ')}</span>
                 </td>
                 <td>
                   {inv.tax_treatment_snapshot && (

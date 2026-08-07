@@ -390,7 +390,7 @@ async def issue_invoice(
             "UPDATE invoice SET "
             "number = :number, status = 'issued', invoice_date = :invoice_date, "
             "due_date = :due_date, subtotal = :subtotal, tax_total = :tax_total, "
-            "total = :total, tax_treatment_snapshot = :treatment, "
+            "total = :total, total_cad = :total_cad, tax_treatment_snapshot = :treatment, "
             "tax_jurisdiction_snapshot = :jurisdiction, tax_version_id = :version_id, "
             "template_id = :template_id, template_version = :template_version, "
             "supplier_snapshot = :supplier_snapshot, client_snapshot = :client_snapshot, "
@@ -411,6 +411,10 @@ async def issue_invoice(
             "template_version": template_row["version"] if template_row else None,
             "supplier_snapshot": json.dumps(supplier_snapshot, default=str),
             "client_snapshot": json.dumps(client_snapshot, default=str),
+            # CAD-normalized total for the roll-up/aging report (2.3). Real
+            # FX conversion is 2.4 -- until then, CAD invoices are already
+            # in CAD and non-CAD invoices leave this NULL rather than guess.
+            "total_cad": grand_total if invoice["currency"] == "CAD" else None,
             "id": invoice_id,
         },
     )

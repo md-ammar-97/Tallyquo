@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -75,3 +75,31 @@ class ClientEvidenceOut(BaseModel):
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ClientPeriodOut(BaseModel):
+    period: date
+    invoice_count: int
+    billed_cad: Decimal
+    collected_cad: Decimal
+    outstanding_cad: Decimal
+
+    model_config = {"from_attributes": True}
+
+
+class AgingBucketsOut(BaseModel):
+    bucket_0_30: Decimal
+    bucket_31_60: Decimal
+    bucket_61_90: Decimal
+    bucket_90_plus: Decimal
+
+
+class ClientRollupOut(BaseModel):
+    periods: list[ClientPeriodOut]
+    aging: AgingBucketsOut
+
+
+class AgingReportRowOut(AgingBucketsOut):
+    client_id: UUID
+    client_name: str
+    total_outstanding: Decimal

@@ -5,7 +5,9 @@ import Shell from './pages/Shell'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Clients from './pages/Clients'
+import ClientDetail from './pages/ClientDetail'
 import InvoiceBuilder from './pages/InvoiceBuilder'
+import InvoiceDetail from './pages/InvoiceDetail'
 import Ledger from './pages/Ledger'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -29,8 +31,10 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
           <Route path="clients" element={<Clients />} />
+          <Route path="clients/:id" element={<ClientDetail />} />
           <Route path="invoices" element={<Ledger />} />
           <Route path="invoices/new" element={<InvoiceBuilder />} />
+          <Route path="invoices/:id" element={<InvoiceDetail />} />
         </Route>
       </Routes>
     </BrowserRouter>
