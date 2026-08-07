@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, ApiError, API_BASE_URL } from '../api'
+import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
 
 interface Category {
   id: string
@@ -271,6 +271,7 @@ export default function Expenses() {
       <div className="block">
         <div className="block-header">
           <h2>All expenses</h2>
+          <button onClick={() => downloadFile('/expenses/export.csv', 'expenses.csv')}>Export CSV</button>
         </div>
         <table>
           <thead>

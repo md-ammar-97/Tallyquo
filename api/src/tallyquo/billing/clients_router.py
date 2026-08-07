@@ -1,6 +1,8 @@
+import csv
+import io
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import clients_service as service
@@ -21,6 +23,33 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 async def list_clients(db: AsyncSession = Depends(get_db)) -> list[ClientOut]:
     rows = await service.list_clients(db)
     return [ClientOut(**row) for row in rows]
+
+
+@router.get("/export.csv")
+async def export_clients_csv(db: AsyncSession = Depends(get_db)) -> Response:
+    rows = await service.list_clients(db)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(
+        ["legal_name", "display_name", "email", "country_code", "region_code", "tax_treatment", "default_currency"]
+    )
+    for row in rows:
+        writer.writerow(
+            [
+                row["legal_name"],
+                row["display_name"] or "",
+                row["email"] or "",
+                row["country_code"],
+                row["region_code"] or "",
+                row["tax_treatment"],
+                row["default_currency"],
+            ]
+        )
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=clients.csv"},
+    )
 
 
 @router.post("", response_model=ClientOut, status_code=201)

@@ -116,6 +116,9 @@ async def create_expense(
     data["itc_eligible"] = await _compute_itc_eligible(
         session, tenant_id, data["expense_date"], data["tax_amount"]
     )
+    # CAD-normalized amount for the P&L export (2.14). Real FX conversion
+    # for non-CAD expenses is out of scope here, same as invoice total_cad.
+    data["amount_cad"] = data["amount_net"] if data["currency"] == "CAD" else None
 
     columns = [*data.keys(), "id", "tenant_id"]
     placeholders = ", ".join(f":{c}" for c in columns)
@@ -155,7 +158,9 @@ async def update_expense(session: AsyncSession, tenant_id: UUID, expense_id: UUI
 
     merged_total = data.get("amount_total", existing["amount_total"])
     merged_tax = data.get("tax_amount", existing["tax_amount"])
+    merged_currency = data.get("currency", existing["currency"])
     data["amount_net"] = merged_total - merged_tax
+    data["amount_cad"] = data["amount_net"] if merged_currency == "CAD" else None
     merged_date = data.get("expense_date", existing["expense_date"])
     # E2: OCR/previous values never silently overwrite a user's correction --
     # this recomputes from whatever the caller submits, which for an edit is

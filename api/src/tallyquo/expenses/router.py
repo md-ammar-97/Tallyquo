@@ -1,8 +1,10 @@
+import csv
+import io
 from datetime import date
 from uuid import UUID
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
@@ -38,6 +40,45 @@ async def list_expenses(
         db, date_from=date_from, date_to=date_to, category_id=category_id, client_id=client_id
     )
     return [ExpenseOut(**row) for row in rows]
+
+
+@router.get("/export.csv")
+async def export_expenses_csv(
+    db: AsyncSession = Depends(get_db),
+    date_from: date | None = None,
+    date_to: date | None = None,
+    category_id: UUID | None = None,
+    client_id: UUID | None = None,
+) -> Response:
+    rows = await service.list_expenses(
+        db, date_from=date_from, date_to=date_to, category_id=category_id, client_id=client_id
+    )
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(
+        ["expense_date", "vendor", "category", "t2125_line", "amount_total", "tax_amount",
+         "amount_net", "business_use_pct", "itc_eligible", "is_rebilled"]
+    )
+    for row in rows:
+        writer.writerow(
+            [
+                row["expense_date"],
+                row["vendor"] or "",
+                row["category_name"] or "",
+                row["t2125_line"] or "",
+                row["amount_total"],
+                row["tax_amount"],
+                row["amount_net"],
+                row["business_use_pct"],
+                row["itc_eligible"],
+                row["is_rebilled"],
+            ]
+        )
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=expenses.csv"},
+    )
 
 
 @router.post("", response_model=ExpenseOut, status_code=201)

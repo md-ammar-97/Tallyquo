@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError } from '../api'
+import { api, ApiError, downloadFile } from '../api'
 
 interface Client {
   id: string
@@ -58,9 +58,12 @@ export default function Clients() {
       <div className="block">
         <div className="block-header">
           <h2>All clients</h2>
-          <button className="primary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? 'Cancel' : 'Add client'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => downloadFile('/clients/export.csv', 'clients.csv')}>Export CSV</button>
+            <button className="primary" onClick={() => setShowForm((s) => !s)}>
+              {showForm ? 'Cancel' : 'Add client'}
+            </button>
+          </div>
         </div>
         {showForm && (
           <div className="block-body" style={{ borderBottom: '1px solid var(--color-border-default)' }}>
