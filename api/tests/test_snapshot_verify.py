@@ -72,9 +72,13 @@ async def _issue_one_invoice() -> tuple[str, str]:
 
 @pytest.mark.asyncio
 async def test_snapshot_verify_finds_no_mismatch_for_a_correct_invoice():
-    await _issue_one_invoice()
+    # run() scans every tenant by design (it's the real nightly job, not a
+    # scoped helper) -- so this asserts *this test's* invoice is clean,
+    # not that the whole environment is mismatch-free. A shared local dev
+    # database can legitimately carry unrelated data across test runs.
+    invoice_id, _ = await _issue_one_invoice()
     mismatches = await run()
-    assert mismatches == []
+    assert invoice_id not in {str(m.invoice_id) for m in mismatches}
 
 
 @pytest.mark.asyncio
@@ -89,8 +93,18 @@ async def test_snapshot_verify_detects_a_corrupted_tax_total():
             {"bad": Decimal("999.99"), "id": invoice_id},
         )
 
-    mismatches = await run()
-    assert len(mismatches) == 1
-    assert str(mismatches[0].invoice_id) == invoice_id
-    assert mismatches[0].stored_tax_total == Decimal("999.99")
-    assert mismatches[0].recomputed_tax_total == Decimal("130.00")
+    try:
+        mismatches = await run()
+        by_id = {str(m.invoice_id): m for m in mismatches}
+        assert invoice_id in by_id
+        assert by_id[invoice_id].stored_tax_total == Decimal("999.99")
+        assert by_id[invoice_id].recomputed_tax_total == Decimal("130.00")
+    finally:
+        # Don't leave poisoned data behind for other tests/runs to trip
+        # over -- this row isn't a real invoice, just corruption we
+        # injected on purpose.
+        async with tenant_session(tenant_id) as session:
+            await session.execute(
+                text("UPDATE invoice SET tax_total = :good WHERE id = :id"),
+                {"good": Decimal("130.00"), "id": invoice_id},
+            )
