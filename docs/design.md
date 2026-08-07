@@ -359,6 +359,14 @@ Left: block list with drag handles and visibility toggles. Centre: live document
 
 The **compliance block is pinned, marked with a lock icon, and cannot be reordered out or hidden.** Its tooltip explains why: *"Required on every invoice — your client's accountant needs these fields."* Constraint stated as a service to the user rather than as a restriction imposed on them.
 
+### 8.7 Send invoice (compose window) *(planned, not yet built — `implementation_plan.md` 2.16/2.17)*
+
+A modal, opened from "Email invoice" on an issued invoice's detail view. Never a silent action — opening it never sends anything, and it always ends on an explicit **Send** press, never an implicit one on close.
+
+Layout, top to bottom: **From** (the tenant's configured SMTP account — a select if more than one is set up, with a link to add one if none are), **To** and **Cc** as chip inputs defaulting to the client's on-file email, **Subject** (pre-filled, editable), **Body** (pre-filled plain-text default, editable, generous height), then an **attachments row** — the invoice PDF as a removable chip (checked by default, per `edgecases.md` O5), plus an "Add attachment" control for arbitrary extra documents. Sticky footer: **Cancel** and **Send**, the same irreversibility weight as the invoice builder's issue footer (§8.2) — sending is a real action, styled with the same intent as issuing, not a throwaway toast-dismiss button.
+
+No SMTP account configured: the modal doesn't open on a dead end — it routes straight to the "add an email account" flow first, with the invoice context preserved so the user lands back in compose once done.
+
 ---
 
 ## 9. Invoice document design

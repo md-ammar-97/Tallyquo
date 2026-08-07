@@ -100,32 +100,37 @@ The tax engine is the highest-blast-radius component in the whole product (§5.1
 
 ## 4. Phase 2 — The record
 
+**Status: shipped 2026-08-07.** 2.1–2.11 and 2.14–2.15 built as specified below. 2.12/2.13 shipped in a materially different shape than originally planned — see the note under that row — and a further, not-yet-started addition (2.16/2.17) was scoped afterward per direct user request. Deviations from the original plan are called out inline rather than silently folded in, so this table stays an accurate record of what actually happened, not just what was intended.
+
 **Scope (from `problem-statement.md` §10):** client roll-up view, expenses with receipt upload and OCR, T2125 categorization, recurring invoices, payment tracking and aging, CSV exports.
 
-Two Phase-1-deferred open questions resolve here per the doc's own recommendations: **Q1** (multi-currency: USD in Phase 2) and **Q2** (payment tracking: yes, manual only, no bank connection) and **Q4** (sending invoices: behind a verified sender domain).
+Two Phase-1-deferred open questions resolve here per the doc's own recommendations: **Q1** (multi-currency: USD in Phase 2) and **Q2** (payment tracking: yes, manual only, no bank connection) and **Q4** (sending invoices — see 2.12/2.13's note; the original "verified sender domain" recommendation was superseded twice over).
 
 | # | Workstream | Depends on | Size |
 |---|---|---|---|
-| 2.1 | `payment` table, manual payment recording, invoice status **derived** not stored (`partially_paid`/`paid`/`overdue` computed from `amount_paid` vs `total` vs `due_date` — L15), timezone-correct overdue evaluation (L16) | Phase 1 | M |
-| 2.2 | Payment edge cases: overpayment blocked with 1¢ tolerance + credit offer (L10), payment blocked on cancelled invoices (L11), reversal with reason + audit (L12) | 2.1 | S |
-| 2.3 | Aging report (0–30/31–60/61–90/90+) and client-level roll-up view (`mv_period_summary`, refreshed debounced on mutation) — `design.md` §8.4 | 2.1 | M |
-| 2.4 | Multi-currency: `fx_rate_to_cad` + `fx_rate_date` captured at issue (Bank of Canada daily rate), never blocking issuance on FX-source failure (C2), FX gain/loss recorded explicitly on payment (C3/C4), never chained conversions (C7) | 2.1 | L |
-| 2.5 | Currency edge cases: **C1–C8** — historical currency preserved on client-currency change (C5), CAD-normalized ledger totals with currency always labelled (C6), credit notes use the original invoice's rate (C8) | 2.4 | M |
-| 2.6 | `recurring_rule` + `recurring_run`: daily generation job spread across the day by tenant timezone, draft-and-notify default, `auto_issue` opt-in strictly gated by the same compliance checklist from 1.14 (R8, P1) | Phase 1 | L |
-| 2.7 | Recurring edge cases: day-of-month clamping (R1/R2), idempotency on `(rule_id, occurrence_date)` (R3, P1), missed-run backfill with correct original dates on recovery (R4), client-archive auto-pause (R5) | 2.6 | M |
-| 2.8 | Expenses: receipt-first upload UI (drop zone as the primary surface, not a form), OCR integration with three-field confirmation (vendor/date/amount), manual entry always available as a same-quality fallback, target sub-15-second completion | Phase 0 (0.6) | L |
-| 2.9 | `expense_category` seeded with T2125 line mapping, meals & entertainment 50% limit surfaced not hidden (E9), `business_use_pct`, `itc_eligible` hard-gated on `registered` status at the expense date (E7, P1; E8 — no retroactive eligibility) | 2.8 | M |
-| 2.10 | Expense edge cases: dedup by content hash (E5), orphaned receipts surfaced under "Unprocessed" never silently dropped (E1), OCR-down falls straight to manual with no error dialog (E3), capital purchases flagged and excluded from ordinary deduction — no CCA computation (E11) | 2.8, 2.9 | M |
-| 2.11 | Rebilled expenses: recorded as both an expense and an invoice line without double-counting in the P&L (E12) | 2.9, Phase 1 (1.12) | S |
-| 2.12 | Invoice sending: verified sender domain, transactional email integration, bounce handling; download-only remains available (Q4) | Phase 1 | M |
-| 2.13 | Payment reminder job: configurable pre-due/post-due nudges, skipped if the invoice is paid/cancelled since scheduling | 2.12, 2.1 | S |
-| 2.14 | CSV exports: invoices, expenses, clients, P&L (the **year-end zip pack** is Phase 3 — this is the per-entity export only) | 2.3, 2.9 | S |
-| 2.15 | Responsive PWA polish + camera capture flow for receipts on mobile web (Q7 recommendation: PWA now, native only if receipt capture proves to be the core loop) | 1.22, 2.8 | M |
+| 2.1 | ✅ `payment` table, manual payment recording, invoice status **derived** not stored (`partially_paid`/`paid`/`overdue` computed from `amount_paid` vs `total` vs `due_date` — L15), timezone-correct overdue evaluation (L16) | Phase 1 | M |
+| 2.2 | ✅ Payment edge cases: overpayment blocked with 1¢ tolerance + credit offer (L10), payment blocked on cancelled invoices (L11), reversal with reason + audit (L12) | 2.1 | S |
+| 2.3 | ✅ Aging report (0–30/31–60/61–90/90+) and client-level roll-up view — `design.md` §8.4. **Built as live `GROUP BY` queries, not the `mv_period_summary` materialized view** originally sketched: `REFRESH MATERIALIZED VIEW CONCURRENTLY` can't run inside the RLS-scoped per-request transaction, and a debounced refresh risks showing an outstanding balance that's already been paid. See `datamodel.md` §12 | 2.1 | M |
+| 2.4 | ✅ Multi-currency: `fx_rate_to_cad` + `fx_rate_date` captured at issue via the **Bank of Canada Valet API** (free, public, no key — confirms the plan's own recommendation), never blocking issuance on FX-source failure (C2), FX gain/loss recorded explicitly on payment (C3/C4), never chained conversions (C7) | 2.1 | L |
+| 2.5 | ✅ Currency edge cases: **C1–C8** — historical currency preserved on client-currency change (C5), CAD-normalized ledger totals with currency always labelled (C6), credit notes use the original invoice's rate (C8) | 2.4 | M |
+| 2.6 | ✅ `recurring_rule` + `recurring_run`: generation job spread across the day by tenant timezone, draft-and-notify default, `auto_issue` opt-in strictly gated by the same compliance checklist from 1.14 (R8, P1). **Runs hourly via a scheduled GitHub Actions workflow, not a persistent job-queue worker** (the "Job Queue" component in `architecture.md` §2 isn't built — see §9's note) | Phase 1 | L |
+| 2.7 | ✅ Recurring edge cases: day-of-month clamping (R1/R2), idempotency on `(rule_id, occurrence_date)` (R3, P1), missed-run backfill with correct original dates on recovery (R4), client-archive auto-pause (R5) | 2.6 | M |
+| 2.8 | ✅ Expenses: receipt-first upload UI (drop zone as the primary surface, not a form), OCR integration with three-field confirmation (vendor/date/amount), manual entry always available as a same-quality fallback, target sub-15-second completion. OCR provider is **Groq's `qwen/qwen3.6-27b` vision model** (free tier). Receipt *upload* itself additionally needs Supabase Storage S3 keys, not yet generated — manual entry (this workstream's primary path anyway) is unaffected | Phase 0 (0.6) | L |
+| 2.9 | ✅ `expense_category` seeded with T2125 line mapping, meals & entertainment 50% limit surfaced not hidden (E9), `business_use_pct`, `itc_eligible` hard-gated on `registered` status at the expense date (E7, P1; E8 — no retroactive eligibility) | 2.8 | M |
+| 2.10 | ✅ Expense edge cases: dedup by content hash (E5), orphaned receipts surfaced under "Unprocessed" never silently dropped (E1), OCR-down falls straight to manual with no error dialog (E3), capital purchases flagged and excluded from ordinary deduction — no CCA computation (E11) | 2.8, 2.9 | M |
+| 2.11 | ✅ Rebilled expenses: recorded as both an expense and an invoice line without double-counting in the P&L (E12) | 2.9, Phase 1 (1.12) | S |
+| 2.12 | ✅ **Reframed, not built as originally planned.** The "verified sender domain, transactional email" build was superseded by explicit user direction mid-phase: no email sending at all — download, on-platform view, and a durable but revocable **public shareable link** per invoice instead (`invoice_share_lookup`, mirrors the identity module's bootstrap-lookup pattern). Q4 is answered differently than either original option. See `edgecases.md` §8 for the *next* pivot on this same workstream | Phase 1 | M |
+| 2.13 | ⏸️ Payment reminder job — **not built.** Depended on 2.12's original email-sending shape, which didn't happen; a reminder needs a delivery channel to notify through. Revisit once 2.17 (below) ships | 2.12, 2.1 | S |
+| 2.14 | ✅ CSV exports: invoices, expenses, clients, P&L (the **year-end zip pack** is Phase 3 — this is the per-entity export only). P&L income is `subtotal - discount_amount`, deliberately never the tax-inclusive total — collected GST/HST is held for the CRA, not revenue | 2.3, 2.9 | S |
+| 2.15 | ✅ Responsive PWA polish + camera capture flow for receipts on mobile web (Q7 recommendation: PWA now, native only if receipt capture proves to be the core loop). Installable manifest + a minimal service worker that deliberately never caches API responses (a stale invoice/payment figure from a cache is worse than none) | 1.22, 2.8 | M |
+| 2.16 | 🔜 **Not started — planned, scoped 2026-08-07, build deferred by explicit request.** User-configured SMTP: tenant adds their own outgoing mail server (host/port/security/username/password or app-password), verified with a test send. Credentials column-encrypted, same pattern as `payment_instruction.fields_encrypted` (`datamodel.md` §4). Multiple accounts per tenant permitted; one marked default | 1.4 (encryption pattern) | M |
+| 2.17 | 🔜 **Not started — planned, scoped 2026-08-07.** "Email invoice" action on an issued invoice opens a compose window — **never sends automatically**. Editable subject and body (sensible defaults pre-filled), To/CC recipient management, the invoice PDF attached by default but **removable**, and arbitrary extra attachments addable. See `edgecases.md` §8 (O1–O10) for the full edge-case set this must close before shipping | 2.16 | M |
 
 **Exit criteria:**
-- P1 edge cases green: **R3, R8, E7**, plus the full C1–C8 currency set.
-- `snapshot_verify` extended to cover FX-bearing invoices with no new mismatches.
+- P1 edge cases green: **R3, R8, E7**, plus the full C1–C8 currency set. All confirmed green as of the 2026-08-07 ship.
+- `snapshot_verify` extended to cover FX-bearing invoices with no new mismatches. Confirmed.
 - Success metric instrumented: % of active users logging ≥1 expense with a receipt (§9 — the real retention hook, not invoice volume).
+- 2.16/2.17 are explicitly **not** exit-blocking for the rest of Phase 2, which shipped without them.
 
 ---
 

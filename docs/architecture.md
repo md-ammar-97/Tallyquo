@@ -58,10 +58,11 @@ These are the constraints every decision below is derived from. When a trade-off
 
 | Dependency | Purpose | Failure mode | Mitigation |
 |---|---|---|---|
-| Transactional email | OTP delivery, invoice delivery `[P2]` | User cannot log in | Second provider on standby; OTP is the only critical path |
+| Transactional email | OTP delivery only | User cannot log in | Second provider on standby; OTP is the only critical path |
+| User-configured SMTP *(planned, not yet built)* | Invoice delivery — **not a platform-level provider**. Each tenant connects their own mail server; there is no shared sending identity to authenticate | One tenant's outgoing mail breaks | Isolated per tenant by construction; a failure never affects another tenant or any other feature. See `datamodel.md` §4, `edgecases.md` §8 |
 | Object storage | Logos, receipts, generated PDFs | Cannot render or retrieve | Regenerate PDFs from stored invoice data (source of truth is the DB, not the file) |
-| OCR provider `[P2]` | Receipt extraction | Degrades to manual entry | Always allow manual entry; OCR is an accelerator, never a gate |
-| Bank of Canada FX `[P2]` | Daily noon rate for USD invoices | Cannot compute CAD equivalent | Cache last known rate, flag invoice for review, never block issuing |
+| OCR provider — **Groq (`qwen/qwen3.6-27b`, free tier)** | Receipt extraction | Degrades to manual entry | Always allow manual entry; OCR is an accelerator, never a gate |
+| Bank of Canada Valet API | Daily rate for USD invoices. Free, public, no key | Cannot compute CAD equivalent | Cache last known rate, flag invoice for review, never block issuing |
 | Rate sources (CRA, provincial) | Tax rate change detection | Stale rates | Human-reviewed pipeline; rates change rarely and are announced in advance |
 
 ---
@@ -290,13 +291,15 @@ render_job(invoice_id)
 | Job | Trigger | Idempotency key | Notes |
 |---|---|---|---|
 | `render_invoice` | After issue | invoice_id + template_version | Retry with backoff; regenerable at any time |
-| `generate_recurring` | Daily, tenant timezone | rule_id + occurrence_date | Creates a **draft**, notifies user. Auto-issue only if opted in |
-| `ocr_receipt` `[P2]` | On upload | file_hash | Failure → manual entry, never blocks the expense |
-| `payment_reminder` `[P2]` | Daily | invoice_id + reminder_stage | Skipped if invoice paid or cancelled since scheduling |
+| `generate_recurring` | **Hourly** (GitHub Actions schedule) | rule_id + occurrence_date | Creates a **draft**, notifies user. Auto-issue only if opted in. Hourly rather than once daily so generation lands close to each tenant's own local midnight without needing per-tenant-timezone scheduling (R11) |
+| `ocr_receipt` | **Inline with the upload request, not a separate async job** | file_hash | Failure → manual entry, never blocks the expense. Groq's response time is low enough that this didn't need queueing; revisit if that changes |
+| `payment_reminder` `[P2, not built]` | Daily | invoice_id + reminder_stage | Skipped if invoice paid or cancelled since scheduling. Blocked on the SMTP email feature (`datamodel.md` §4) — a reminder needs a delivery channel |
 | `rate_crawl` | Weekly | crawl_date | Produces review tickets only |
-| `snapshot_verify` | Nightly | invoice_id + date | Recompute-and-compare integrity check |
+| `snapshot_verify` | Nightly (GitHub Actions schedule, 08:00 UTC) | invoice_id + date | Recompute-and-compare integrity check |
 | `projection_refresh` | On invoice/expense mutation, debounced | tenant_id + period | Materializes the projection view |
 | `retention_sweep` | Monthly | — | Enforces retention policy, never hard-deletes financial records |
+
+**As built:** `generate_recurring` and `snapshot_verify` run as scheduled GitHub Actions workflows invoking the job function directly against the live database, not as workers pulling from the persistent "Job Queue" component shown in §2's diagram — that component isn't built. Simpler, and sufficient at the invoice volumes this product targets; revisit if job volume or latency requirements ever justify a real queue.
 
 All jobs are idempotent, run inside a tenant context, and record their outcome to the audit log where they mutate financial data.
 
@@ -322,9 +325,22 @@ PATCH  /invoices/:id           (draft only — 409 if issued)
 POST   /invoices/:id/issue     (the critical transaction)
 POST   /invoices/:id/cancel
 POST   /invoices/:id/credit-note
-POST   /invoices/:id/payments
+POST   /invoices/:id/payments  GET  /invoices/:id/payments
+DELETE /invoices/payments/:id  (reversal, with a reason — L12)
 GET    /invoices/:id/pdf       (signed URL redirect)
 POST   /invoices/preview-tax   (dry run, no persistence — powers live preview)
+
+POST   /invoices/:id/share     (get-or-create a public link — 409 if still a draft)
+DELETE /invoices/:id/share     (revoke; regenerating after issues a genuinely new token)
+GET    /public/invoices/:token             (no auth — resolves token -> tenant, edgecases.md §2 bootstrap pattern)
+GET    /public/invoices/:token/pdf         (no auth)
+
+POST   /invoices/:id/email     *(planned, not yet built)* — opens the compose payload
+                                 (subject/body defaults, recipients, attachments); the
+                                 actual send is a second, explicit confirming call, never
+                                 implicit in this one (`edgecases.md` §8, O1)
+GET    /email-accounts         POST /email-accounts   *(planned)* — user-configured SMTP,
+                                 `datamodel.md` §4
 
 GET    /recurring              POST /recurring
 PATCH  /recurring/:id          POST /recurring/:id/skip

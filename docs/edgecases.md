@@ -140,7 +140,26 @@
 
 ---
 
-## 8. Recurring invoices
+## 8. Invoice sending (user-configured SMTP)
+
+**Not yet built — planned 2026-08-07.** `implementation_plan.md` 2.16/2.17. Supersedes the original "verified sender domain" idea from `problem-statement.md` Q4 a second time: each tenant connects their own outgoing mail server, so the platform never authenticates a sending identity of its own. The one rule every case below serves: **an email only ever leaves because a human clicked send on that exact message**, never because a job scheduled it.
+
+| # | Case | Expected behaviour |
+|---|---|---|
+| O1 | "Email invoice" clicked | Opens a compose window pre-filled with sensible defaults (client's email `To`, a standard subject/body, invoice PDF attached). **Never sends on open.** An explicit send action is always required |
+| O2 | No SMTP account configured | "Email invoice" prompts to configure one first — never hidden without explanation, never silently falls back to a platform sender |
+| O3 | SMTP credentials rejected at send time | Clear, specific error in the compose window; the composed subject/body/recipients/attachment choices are preserved so the user doesn't redo the work. Invoice status is unaffected — sending was always independent of issuing |
+| O4 | SMTP credentials stored | Encrypted at the column level, same pattern as `payment_instruction.fields_encrypted` (`datamodel.md` §4) — never logged, never returned to the client in full, masked with reveal-on-demand only. **P1** |
+| O5 | User unchecks the invoice PDF and adds no other attachment | Permitted (a reminder-only email is legitimate) but confirmed explicitly before sending, not sent silently empty-handed |
+| O6 | Extra attachment exceeds a reasonable size | Rejected at attach time with the limit stated, before a send is attempted — not a bounce discovered after the fact |
+| O7 | Send clicked twice (double-submit) | Idempotent per compose session — one email, not two, regardless of double-clicks or a slow network |
+| O8 | Partial delivery failure (some recipients accepted, some rejected by the SMTP server) | Surfaced per-recipient. Never reported as a blanket success when part of it failed |
+| O9 | Compose window closed without sending | No-op. Nothing is sent, nothing is silently queued for later |
+| O10 | Every send attempt | Logged (recipients, subject, which attachments, which SMTP account, success/failure) so "was this invoice emailed, and to whom" has a durable answer distinct from the invoice's own immutable snapshot |
+
+---
+
+## 9. Recurring invoices
 
 | # | Case | Expected behaviour |
 |---|---|---|
@@ -159,7 +178,7 @@
 
 ---
 
-## 9. Expenses and receipts
+## 10. Expenses and receipts
 
 | # | Case | Expected behaviour |
 |---|---|---|
@@ -181,7 +200,7 @@
 
 ---
 
-## 10. Templates
+## 11. Templates
 
 | # | Case | Expected behaviour |
 |---|---|---|
@@ -199,7 +218,7 @@
 
 ---
 
-## 11. Reporting and projection
+## 12. Reporting and projection
 
 | # | Case | Expected behaviour |
 |---|---|---|
@@ -217,7 +236,7 @@
 
 ---
 
-## 12. Data, input, and platform
+## 13. Data, input, and platform
 
 | # | Case | Expected behaviour |
 |---|---|---|
@@ -239,7 +258,7 @@
 
 ---
 
-## 13. Test priorities
+## 14. Test priorities
 
 If only a subset can be automated first, this is the order.
 

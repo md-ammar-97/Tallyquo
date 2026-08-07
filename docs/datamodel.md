@@ -180,6 +180,47 @@ Banking fields are stored encrypted at the column level, not in plaintext JSON. 
 
 **`registration_effective_date` is load-bearing.** Invoices dated before it must render "not charged"; invoices on or after must charge tax. This is derived automatically, never toggled by hand.
 
+**Planned, not yet built (scoped 2026-08-07): user-configured SMTP for invoice sending.** `implementation_plan.md` 2.16/2.17, `edgecases.md` §8.
+
+```sql
+CREATE TABLE email_account (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id     uuid NOT NULL REFERENCES tenant(id),
+  label         text NOT NULL,            -- 'My Gmail', 'Work Outlook'
+  from_name     text NOT NULL,
+  from_address  citext NOT NULL,
+  smtp_host     text NOT NULL,
+  smtp_port     smallint NOT NULL,
+  smtp_security text NOT NULL DEFAULT 'starttls',  -- starttls | tls | none
+  smtp_username text NOT NULL,
+  credentials_encrypted bytea NOT NULL,    -- password / app-password, column-level encrypted -- same pattern as payment_instruction.fields_encrypted above
+  is_default    boolean NOT NULL DEFAULT false,
+  verified_at   timestamptz,               -- last successful test-send; unverified accounts are usable but flagged
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  archived_at   timestamptz
+);
+
+CREATE TABLE invoice_email_log (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id     uuid NOT NULL,
+  invoice_id    uuid NOT NULL,
+  email_account_id uuid NOT NULL,
+  to_addresses  jsonb NOT NULL,            -- ["client@example.com"]
+  cc_addresses  jsonb NOT NULL DEFAULT '[]',
+  subject       text NOT NULL,
+  body          text NOT NULL,
+  attached_invoice_pdf boolean NOT NULL DEFAULT true,  -- O5: the default attachment is removable
+  extra_attachment_refs jsonb NOT NULL DEFAULT '[]',   -- storage keys, same signed-URL pattern as receipts/logos
+  sent_by_user_id uuid,
+  status        text NOT NULL,             -- sent | failed
+  error_detail  text,
+  sent_at       timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (tenant_id, invoice_id) REFERENCES invoice (tenant_id, id)
+);
+```
+
+`invoice_email_log` is append-only in spirit (like `audit_log`, §11) — it's the durable answer to "was this invoice emailed, and to whom" (O10), kept distinct from the invoice's own frozen snapshot. Nothing here is ever written by a background job; every row corresponds to one explicit, human-initiated send (O1, O7, O9).
+
 ---
 
 ## 5. Clients and projects
@@ -694,6 +735,8 @@ GROUP BY 1,2,3;
 ```
 
 Refreshed on invoice mutation, debounced. Powers the client roll-up view and the P&L.
+
+**As built (2026-08-07): live queries, not this materialized view.** `REFRESH MATERIALIZED VIEW CONCURRENTLY` can't run inside the RLS-scoped per-request transaction (`SET LOCAL app.tenant_id` requires an open transaction; `CONCURRENTLY` forbids one), and a debounced refresh risks showing an outstanding balance that's already been paid — the wrong kind of stale read in a financial product. `billing_cad`/`collected_cad` are computed with a live `GROUP BY` over `invoice.total_cad` and `payment.amount_cad` instead, excluding rows without a CAD figure (an FX fetch failure at issue) rather than falling back to a native-currency amount as if it were CAD. Cheap at the invoice volumes this product targets (a single sole proprietor); revisit if that changes.
 
 **Small supplier threshold** is computed, not stored — a rolling sum over the last four complete calendar quarters of `total_cad` for invoices whose treatment is `taxable` **or** `zero_rated_export`, excluding `exempt`. The inclusion of zero-rated exports is the part users get wrong; encoding it here means the product warns them before the CRA does.
 
