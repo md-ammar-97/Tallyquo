@@ -90,6 +90,28 @@ class CreditNoteIn(BaseModel):
     reason: str
 
 
+class PaymentIn(BaseModel):
+    amount: Decimal
+    received_date: date
+    method: str | None = None
+    reference: str | None = None
+    note: str | None = None
+
+
+class PaymentOut(BaseModel):
+    id: UUID
+    invoice_id: UUID
+    amount: Decimal
+    currency: str
+    received_date: date
+    method: str | None
+    reference: str | None
+    note: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class CreditNoteOut(BaseModel):
     id: UUID
     invoice_id: UUID

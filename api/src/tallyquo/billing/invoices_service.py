@@ -51,18 +51,39 @@ async def _fetch_tax_lines(session: AsyncSession, invoice_id: UUID) -> list[dict
     return [dict(row) for row in result.mappings().all()]
 
 
+# edgecases.md L15: "Overdue status | Computed, not stored -- derived from
+# due_date < today AND amount_paid < total. Never a stale stored flag."
+# The `status` column only ever holds draft/issued/cancelled directly;
+# paid/partially_paid/overdue are derived here at read time, evaluated in
+# the tenant's own timezone (L16), not UTC.
+_EFFECTIVE_STATUS_EXPR = """
+    CASE
+      WHEN invoice.status = 'cancelled' THEN 'cancelled'
+      WHEN invoice.status = 'draft' THEN 'draft'
+      WHEN invoice.amount_paid >= invoice.total AND invoice.total > 0 THEN 'paid'
+      WHEN invoice.amount_paid > 0 THEN 'partially_paid'
+      WHEN invoice.due_date IS NOT NULL
+           AND invoice.due_date < (now() AT TIME ZONE COALESCE(bp.timezone, 'America/Toronto'))::date
+        THEN 'overdue'
+      ELSE 'issued'
+    END
+"""
+
 _INVOICE_COLUMNS = (
-    "id, client_id, number, status, invoice_date, service_period_start, "
-    "service_period_end, due_date, currency, subtotal, discount_amount, "
-    "tax_total, total, amount_paid, tax_treatment_snapshot, "
-    "tax_jurisdiction_snapshot, po_reference, notes, created_at, issued_at, "
-    "cancelled_at, revision, parent_invoice_id"
+    f"invoice.id, invoice.client_id, invoice.number, ({_EFFECTIVE_STATUS_EXPR}) AS status, "
+    "invoice.invoice_date, invoice.service_period_start, invoice.service_period_end, "
+    "invoice.due_date, invoice.currency, invoice.subtotal, invoice.discount_amount, "
+    "invoice.tax_total, invoice.total, invoice.amount_paid, invoice.tax_treatment_snapshot, "
+    "invoice.tax_jurisdiction_snapshot, invoice.po_reference, invoice.notes, invoice.created_at, "
+    "invoice.issued_at, invoice.cancelled_at, invoice.revision, invoice.parent_invoice_id"
 )
+_INVOICE_FROM = "invoice LEFT JOIN business_profile bp ON bp.tenant_id = invoice.tenant_id"
 
 
 async def get_invoice(session: AsyncSession, invoice_id: UUID) -> dict | None:
     result = await session.execute(
-        text(f"SELECT {_INVOICE_COLUMNS} FROM invoice WHERE id = :id"), {"id": invoice_id}
+        text(f"SELECT {_INVOICE_COLUMNS} FROM {_INVOICE_FROM} WHERE invoice.id = :id"),
+        {"id": invoice_id},
     )
     row = result.mappings().first()
     if row is None:
@@ -90,34 +111,37 @@ async def list_invoices(
     where = ["1=1"]
     params: dict = {}
     if date_from is not None:
-        where.append("invoice_date >= :date_from")
+        where.append("invoice.invoice_date >= :date_from")
         params["date_from"] = date_from
     if date_to is not None:
-        where.append("invoice_date <= :date_to")
+        where.append("invoice.invoice_date <= :date_to")
         params["date_to"] = date_to
     if client_id is not None:
-        where.append("client_id = :client_id")
+        where.append("invoice.client_id = :client_id")
         params["client_id"] = client_id
     if status is not None:
-        where.append("status = :status")
+        # Filters against the same derived expression the SELECT exposes as
+        # `status` -- so filtering by "overdue"/"paid" works even though
+        # neither is ever a value the `status` column literally holds.
+        where.append(f"({_EFFECTIVE_STATUS_EXPR}) = :status")
         params["status"] = status
     if min_amount is not None:
-        where.append("total >= :min_amount")
+        where.append("invoice.total >= :min_amount")
         params["min_amount"] = min_amount
     if max_amount is not None:
-        where.append("total <= :max_amount")
+        where.append("invoice.total <= :max_amount")
         params["max_amount"] = max_amount
     if currency is not None:
-        where.append("currency = :currency")
+        where.append("invoice.currency = :currency")
         params["currency"] = currency
     if tax_treatment is not None:
-        where.append("tax_treatment_snapshot = :tax_treatment")
+        where.append("invoice.tax_treatment_snapshot = :tax_treatment")
         params["tax_treatment"] = tax_treatment
 
     result = await session.execute(
         text(
-            f"SELECT {_INVOICE_COLUMNS} FROM invoice WHERE {' AND '.join(where)} "
-            "ORDER BY invoice_date DESC NULLS FIRST, created_at DESC"
+            f"SELECT {_INVOICE_COLUMNS} FROM {_INVOICE_FROM} WHERE {' AND '.join(where)} "
+            "ORDER BY invoice.invoice_date DESC NULLS FIRST, invoice.created_at DESC"
         ),
         params,
     )
@@ -229,9 +253,12 @@ async def _allocate_number(session: AsyncSession, tenant_id: UUID, fmt: str, pre
 async def issue_invoice(
     session: AsyncSession, tenant_id: UUID, actor_id: UUID, invoice_id: UUID, confirm_zero_total: bool
 ) -> dict:
-    # Step 1: load + lock.
+    # Step 1: load + lock. FOR UPDATE OF invoice scopes the row lock to the
+    # invoice table alone -- _INVOICE_FROM's join to business_profile
+    # (for the effective-status timezone calc) must not also lock that row.
     result = await session.execute(
-        text(f"SELECT {_INVOICE_COLUMNS} FROM invoice WHERE id = :id FOR UPDATE"), {"id": invoice_id}
+        text(f"SELECT {_INVOICE_COLUMNS} FROM {_INVOICE_FROM} WHERE invoice.id = :id FOR UPDATE OF invoice"),
+        {"id": invoice_id},
     )
     row = result.mappings().first()
     if row is None:

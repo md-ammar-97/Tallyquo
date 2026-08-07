@@ -8,12 +8,15 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import invoices_service as service
+from tallyquo.billing import payments_service
 from tallyquo.billing.invoices_schemas import (
     CreditNoteIn,
     CreditNoteOut,
     InvoiceDraftIn,
     InvoiceOut,
     IssueInvoiceIn,
+    PaymentIn,
+    PaymentOut,
 )
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
 
@@ -159,6 +162,42 @@ async def cancel_invoice(
     found = await service.cancel_invoice(db, invoice_id, reason)
     if not found:
         raise HTTPException(status_code=404, detail="Invoice not found or cannot be cancelled")
+
+
+@router.get("/{invoice_id}/payments", response_model=list[PaymentOut])
+async def list_payments(invoice_id: UUID, db: AsyncSession = Depends(get_db)) -> list[PaymentOut]:
+    rows = await payments_service.list_payments(db, invoice_id)
+    return [PaymentOut(**row) for row in rows]
+
+
+@router.post("/{invoice_id}/payments", response_model=PaymentOut, status_code=201)
+async def record_payment(
+    invoice_id: UUID,
+    body: PaymentIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaymentOut:
+    try:
+        row = await payments_service.record_payment(
+            db, current_user.tenant_id, invoice_id, current_user.user_id, body.model_dump()
+        )
+    except payments_service.PaymentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return PaymentOut(**row)
+
+
+@router.delete("/payments/{payment_id}", status_code=204)
+async def reverse_payment(
+    payment_id: UUID,
+    reason: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    found = await payments_service.reverse_payment(
+        db, current_user.tenant_id, payment_id, current_user.user_id, reason
+    )
+    if not found:
+        raise HTTPException(status_code=404, detail="Payment not found")
 
 
 @router.post("/{invoice_id}/credit-note", response_model=CreditNoteOut, status_code=201)

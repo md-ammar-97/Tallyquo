@@ -57,6 +57,10 @@ async def _draft(client: httpx.AsyncClient, headers: dict, client_id: str, **ove
     body = {
         "client_id": client_id,
         "invoice_date": "2026-06-01",
+        # Far-future due date so derived status stays "issued" regardless of
+        # when this suite actually runs; tests exercising overdue behavior
+        # override it explicitly.
+        "due_date": "2030-01-01",
         "line_items": [{"description": "Consulting", "unit_rate": "1000.00", "amount": "1000.00"}],
         **overrides,
     }

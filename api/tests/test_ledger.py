@@ -53,6 +53,9 @@ async def test_ledger_filters_by_status_and_date():
             json={
                 "client_id": client_id,
                 "invoice_date": "2026-01-15",
+                # Far-future due date so derived status stays "issued"
+                # regardless of when this suite actually runs.
+                "due_date": "2030-01-01",
                 "line_items": [{"description": "A", "unit_rate": "100", "amount": "100.00"}],
             },
             headers=headers,
