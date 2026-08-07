@@ -94,7 +94,12 @@ def upgrade() -> None:
         """
     )
     # Append-only, same as audit_log -- no UPDATE/DELETE for the app role.
+    # The explicit REVOKE matters: Postgres default privileges on this
+    # database auto-grant tallyquo_app full CRUD on tables created by the
+    # postgres role, so GRANT SELECT, INSERT alone doesn't actually
+    # withhold UPDATE/DELETE -- they have to be revoked back off.
     op.execute("GRANT SELECT, INSERT ON invoice_email_log TO tallyquo_app")
+    op.execute("REVOKE UPDATE, DELETE ON invoice_email_log FROM tallyquo_app")
 
 
 def downgrade() -> None:
