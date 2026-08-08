@@ -300,7 +300,7 @@ async def issue_invoice(
                 "SELECT legal_name, operating_name, address_line1, address_line2, city, "
                 "region_code, postal_code, country_code, email, phone, gst_hst_number, "
                 "registration_status, registration_effective_date, default_payment_terms_days, "
-                "invoice_number_format, invoice_number_prefix "
+                "invoice_number_format, invoice_number_prefix, default_template_id "
                 "FROM business_profile WHERE tenant_id = :t"
             ),
             {"t": tenant_id},
@@ -377,16 +377,29 @@ async def issue_invoice(
         else:
             fx_rate_source = "unavailable_at_issue"
 
-    # Template pin: default to the tenant's default system template if none chosen.
-    template_row = (
-        await session.execute(
-            text(
-                "SELECT id, version FROM template "
-                "WHERE is_system = true AND (tenant_id IS NULL) "
-                "ORDER BY is_default DESC LIMIT 1"
+    # Template pin (X4/L14): the tenant's chosen template (Phase 4, 4.1) if
+    # they've set one, else whichever system template is_default -- either
+    # way this row's id/version is what gets frozen onto the invoice, and
+    # render_pdf() below always re-derives the same theme from that pin,
+    # never from whatever the tenant's default happens to be *today*.
+    template_row = None
+    if profile.get("default_template_id"):
+        template_row = (
+            await session.execute(
+                text("SELECT id, version FROM template WHERE id = :id AND archived_at IS NULL"),
+                {"id": profile["default_template_id"]},
             )
-        )
-    ).mappings().first()
+        ).mappings().first()
+    if template_row is None:
+        template_row = (
+            await session.execute(
+                text(
+                    "SELECT id, version FROM template "
+                    "WHERE is_system = true AND (tenant_id IS NULL) "
+                    "ORDER BY is_default DESC LIMIT 1"
+                )
+            )
+        ).mappings().first()
 
     # Step 6: allocate the number.
     number = await _allocate_number(
@@ -565,6 +578,35 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
     if invoice is None:
         return None
 
+    # Theme: an issued invoice's pin (template_id/template_version, frozen
+    # at issue time) if it has one, else the tenant's current default --
+    # this is what makes X4/L14 non-vacuous now that a chosen template's
+    # theme actually reaches the renderer (it never did before this).
+    if invoice["status"] == "draft":
+        theme_row = (
+            await session.execute(
+                text(
+                    "SELECT t.theme FROM business_profile p "
+                    "LEFT JOIN template t ON t.id = p.default_template_id "
+                    "WHERE p.tenant_id = :t"
+                ),
+                {"t": tenant_id},
+            )
+        ).mappings().first()
+    else:
+        theme_row = (
+            await session.execute(
+                text(
+                    "SELECT theme FROM template WHERE id = ("
+                    "  SELECT template_id FROM invoice WHERE id = :id"
+                    ")"
+                ),
+                {"id": invoice_id},
+            )
+        ).mappings().first()
+    theme = (theme_row["theme"] if theme_row else None) or {}
+    accent_color = theme.get("accent_color", "#0D99FF")
+
     if invoice["status"] == "draft":
         profile_row = (
             await session.execute(
@@ -602,6 +644,7 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         client=client,
         line_items=invoice["line_items"],
         tax_lines=invoice["tax_lines"],
+        accent_color=accent_color,
     )
 
 

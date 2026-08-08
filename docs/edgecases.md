@@ -204,6 +204,8 @@
 
 ## 11. Templates
 
+**M1/M2 shipped 2026-08-08** (`implementation_plan.md` 4.1, import path only — there's still no editor to create or delete a template, so M3–M11, which mostly describe editor/upload behaviour, remain unbuilt and untested). M2 in this codebase is stronger than "injected automatically": `pdf_renderer.py` was never *capable* of omitting the compliance-critical content in the first place (it doesn't read `blocks` at all yet), so import validation's real job is making sure a package would still be safe once 4.2 changes that, not compensating for a renderer that could already drop it.
+
 | # | Case | Expected behaviour |
 |---|---|---|
 | M1 | Imported template from an unknown schema version | Rejected with the reason. Never partially applied |

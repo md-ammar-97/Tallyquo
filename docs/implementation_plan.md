@@ -77,8 +77,8 @@ The tax engine is the highest-blast-radius component in the whole product (§5.1
 | 1.16 | Numbering edge cases: **N1–N8** — concurrent double-issue, rollback-doesn't-consume, year rollover uses invoice date not clock date, format changes apply forward-only | 1.15 | M |
 | 1.17 | Credit note / revision skeleton — required from day one because "issued is immutable" is a Phase 1 rule (§5.3), not a Phase 2 nicety. `credit_note` table, `parent_invoice_id`/`revision` lineage on `invoice` | 1.15 | M |
 | 1.18 | PDF rendering pipeline per ADR-004: isolated process, no network, pinned fonts embedded, fixed timezone/locale, content-hash storage at `tenant_id/invoices/{id}/{hash}.pdf`. Render failure never un-issues the invoice (L13) | 1.15, 0.6 | L |
-| 1.19 | 3 system templates (pick from Classic/Minimal/Modern per `design.md` §9) as structured `{theme, blocks, locked_compliance_block}` — **no raw HTML/CSS authoring surface**. Theme customization only: brand colour, accent, font scale, logo size/position, margins, block show/hide | 1.18 | L |
-| 1.20 | Compliance block locked and non-removable in the template editor (M2); pagination rules for long line-item tables (M5 — totals never split across a page break) | 1.19 | M |
+| 1.19 | ⚠️ **Shipped much narrower than this row describes** (found 2026-08-08, while starting 4.1 — not a new regression, just never annotated before). What actually exists: 3 system template rows (`theme`+`blocks` JSONB) seeded in the DB, but no tenant-facing selection or editor of any kind, and `pdf_renderer.py` doesn't read `blocks` at all — rendering is one fixed reportlab layout. `theme.accent_color` existed as a column but wasn't even wired to the renderer until Phase 4's 4.1 fixed it (`invoices_service.py`: the template pinned on an invoice was never looked up). Brand colour/font scale/logo position/margins/block show-hide customization was never built. Real scope: `design.md` §8.6's drag-and-drop editor is 4.2, not this | 1.18 | L |
+| 1.20 | Compliance block: not literally "locked in an editor" (there is no editor), but structurally guaranteed — `pdf_renderer.py` always renders the compliance-critical content regardless of `blocks`, so there was never a code path that could omit it. Pagination rules for long line-item tables (M5) — not verified either way | 1.19 | M |
 | 1.21 | Ledger view: flat filterable table (date range, client, status, amount, currency, tax treatment), URL-persisted filter state, CSV export of the filtered set (§6.7 ledger half only — client roll-up view is Phase 2) | 1.15 | M |
 | 1.22 | Design system base component library: block primitive, badges (tax-treatment + status), tables, buttons, inputs, tabular-figure money formatting — build once here, reused every phase after | 0.1 | L |
 | 1.23 | Invoice builder UI: split form/live-preview layout, read-only tax block that states derived treatment + jurisdiction + reasoning, sticky issue footer with irreversibility confirmation (`design.md` §8.2) | 1.11, 1.19, 1.22 | L |
@@ -166,13 +166,15 @@ Note that a **narrow** version of GST/HST position (§12 Q3 tier (a), sales-tax-
 
 ## 6. Phase 4 — The ecosystem
 
+**Status: started 2026-08-08.** 4.1 built as specified below (in the process, closed a real, previously-unannotated gap in 1.19 — see that row's update).
+
 **Scope (from `problem-statement.md` §10):** template import/export marketplace, custom template builder, bank feed, accounting-suite integrations, French localization.
 
 This phase is lower-risk to sequence loosely — none of it touches the tax-correctness core, which is deliberate (§11 risk table: "scope creep toward full accounting" is the risk N1–N7 exist to prevent, and Phase 4 is where the product finally has room to extend without threatening that boundary).
 
 | # | Workstream | Depends on | Size |
 |---|---|---|---|
-| 4.1 | Portable `.json` template package format (schema-versioned, embedded/referenced assets), import validation that rejects anything missing the compliance block rather than partially applying it (M1, M2, P1) | Phase 1 (1.19) | M |
+| 4.1 | ✅ Portable `.json` template package format (`package_schema_version`-gated), import validation that rejects — atomically, not partially — anything with an unknown block type, a malformed theme, or a missing compliance-critical block (M1, M2, P1). Also closes the real functional gap surfaced while building this: added `business_profile.default_template_id` (there was no template selection mechanism at all) and fixed `render_pdf` to actually look up an invoice's pinned template and apply its theme, instead of always using a hardcoded accent colour. **Not built**: embedded/referenced assets (a template package is theme+blocks only, no logo/font asset bundling — nothing in the current template system produces or consumes assets to bundle) | Phase 1 (1.19) | M |
 | 4.2 | Custom template builder — still structured blocks + theme tokens, still no raw HTML/CSS input surface (the injection-safety property from Phase 1 must not regress here) | 4.1 | L |
 | 4.3 | Template marketplace / sharing surface | 4.1 | M |
 | 4.4 | Quebec-resident supplier onboarding: QST registration flow, French invoicing (the tax **math** already exists from Phase 1 — this is registration UX, language, and Revenu Québec-specific compliance fields) | Phase 1 (tax engine) | L |

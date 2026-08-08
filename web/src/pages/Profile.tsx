@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, ApiError } from '../api'
+import { useEffect, useRef, useState } from 'react'
+import { api, ApiError, downloadFile } from '../api'
 
 interface BusinessProfile {
   legal_name: string
@@ -11,6 +11,15 @@ interface BusinessProfile {
   registration_status: string
   gst_hst_number: string | null
   registration_effective_date: string | null
+  default_template_id: string | null
+}
+
+interface Template {
+  id: string
+  name: string
+  theme: { accent_color?: string }
+  is_system: boolean
+  is_default: boolean
 }
 
 const emptyProfile = {
@@ -34,6 +43,17 @@ export default function Profile() {
   const [regSaving, setRegSaving] = useState(false)
   const [regError, setRegError] = useState<string | null>(null)
 
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [defaultTemplateId, setDefaultTemplateId] = useState<string | null>(null)
+  const [templateSaving, setTemplateSaving] = useState<string | null>(null)
+  const [templateError, setTemplateError] = useState<string | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
+
+  async function loadTemplates() {
+    const rows = await api.get<Template[]>('/templates')
+    setTemplates(rows)
+  }
+
   useEffect(() => {
     api.get<BusinessProfile | null>('/profile').then((p) => {
       if (p) {
@@ -49,9 +69,40 @@ export default function Profile() {
         setRegStatus(p.registration_status)
         setGstNumber(p.gst_hst_number ?? '')
         setRegDate(p.registration_effective_date ?? '')
+        setDefaultTemplateId(p.default_template_id)
       }
     })
+    loadTemplates()
   }, [])
+
+  async function handleSetDefaultTemplate(templateId: string) {
+    setTemplateSaving(templateId)
+    setTemplateError(null)
+    try {
+      await api.put('/templates/default', { template_id: templateId })
+      setDefaultTemplateId(templateId)
+    } catch (err) {
+      setTemplateError(err instanceof ApiError ? err.message : 'Could not set default template.')
+    } finally {
+      setTemplateSaving(null)
+    }
+  }
+
+  async function handleImportTemplate(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setTemplateError(null)
+    try {
+      const text = await file.text()
+      const pkg = JSON.parse(text)
+      await api.post('/templates/import', pkg)
+      await loadTemplates()
+    } catch (err) {
+      setTemplateError(err instanceof ApiError ? err.message : 'Could not import that file -- check it\'s a valid template package.')
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = ''
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -189,6 +240,73 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      <div className="block">
+        <div className="block-header">
+          <h2>Invoice template</h2>
+        </div>
+        <div className="block-body">
+          <p className="caption" style={{ marginBottom: 12 }}>
+            Choose which template new invoices use. Import a template package (.json) someone shared with you, or
+            export one of yours to share or back up.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Accent</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {templates.map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    <input
+                      type="radio"
+                      name="default_template"
+                      checked={defaultTemplateId === t.id}
+                      disabled={templateSaving !== null}
+                      onChange={() => handleSetDefaultTemplate(t.id)}
+                    />
+                  </td>
+                  <td>
+                    {t.name} {t.is_system && <span className="caption">(system)</span>}
+                  </td>
+                  <td>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 14,
+                        height: 14,
+                        borderRadius: 3,
+                        background: t.theme.accent_color || '#0D99FF',
+                        verticalAlign: 'middle',
+                      }}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="link-button"
+                      onClick={() => downloadFile(`/templates/${t.id}/export`, `${t.name}.tallyquo-template.json`)}
+                    >
+                      Export
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {templateError && <p className="error-text">{templateError}</p>}
+          <div style={{ marginTop: 12 }}>
+            <label>
+              <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportTemplate} />
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

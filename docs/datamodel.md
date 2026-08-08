@@ -639,7 +639,13 @@ CREATE TABLE template_version_history (
 );
 ```
 
+**`template_version_history` is not built.** There is no template editor yet (4.2), so `template.version` has never had a reason to move off `1` -- nothing currently produces a second version to retain history for. Build this alongside 4.2, not before.
+
+**RLS: added 2026-08-08 (`implementation_plan.md` 4.1), previously absent.** Migration 0006 shipped this table with no RLS at all ("only system rows exist in Phase 1, and NULL tenant_id rows must be visible regardless of session context") — true until Phase 4 made tenant-owned rows (imported templates) real. Migration 0019 adds a hybrid policy: system rows (`tenant_id IS NULL`) stay visible to every tenant; tenant-owned rows are visible and writable only by their own tenant; `WITH CHECK` prevents any tenant from writing a `NULL`-tenant row, so "create a fake system template" was never reachable even before RLS existed as a write path. Grants are `SELECT, INSERT, UPDATE` only — no `DELETE`, matching every other soft-delete table (`archived_at`) in this schema; the explicit `REVOKE DELETE` matters for the same reason it did for the Phase 3 reference tables (§6): this database auto-grants the app role full CRUD on new privilege boundaries unless a `REVOKE` says otherwise.
+
 Template versions are retained because issued invoices pin `(template_id, template_version)`. Editing a template must never change how an already-issued invoice re-renders.
+
+**`business_profile.default_template_id uuid REFERENCES template(id)`** — added 2026-08-08, nullable. NULL means "use whichever system template has `is_default = true`" (the only behaviour that existed before this column). This is also the first place a template selection actually reaches a rendered PDF: `render_pdf` was previously hardcoded to one accent colour regardless of any invoice's `template_id` pin, a real gap closed in the same change.
 
 ```sql
 CREATE TABLE expense_category (

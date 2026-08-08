@@ -31,6 +31,7 @@ class BusinessProfileOut(BusinessProfileIn):
     registration_effective_date: date | None
     logo_ref: str | None
     logo_dark_ref: str | None
+    default_template_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

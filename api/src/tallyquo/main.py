@@ -17,6 +17,7 @@ from tallyquo.notifications.router import router as notifications_router
 from tallyquo.projection.router import router as projection_router
 from tallyquo.reporting.router import router as reporting_router
 from tallyquo.tax.router import router as tax_router
+from tallyquo.templates.router import router as templates_router
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -46,6 +47,7 @@ app.include_router(public_router)
 app.include_router(notifications_router)
 app.include_router(projection_router)
 app.include_router(exports_router)
+app.include_router(templates_router)
 
 
 @app.get("/health")

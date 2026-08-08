@@ -19,7 +19,7 @@ _PROFILE_COLUMNS = (
     "default_currency, default_payment_terms_days, invoice_number_format, "
     "invoice_number_prefix, fiscal_year_start_month, timezone, "
     "registration_status, gst_hst_number, registration_effective_date, "
-    "logo_ref, logo_dark_ref, created_at, updated_at, tenant_id"
+    "logo_ref, logo_dark_ref, default_template_id, created_at, updated_at, tenant_id"
 )
 
 

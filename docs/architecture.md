@@ -354,8 +354,22 @@ GET    /expenses               POST /expenses
 POST   /expenses/receipt       (upload first, expense created from it)
 PATCH  /expenses/:id
 
-GET    /templates              POST /templates
-POST   /templates/import       GET  /templates/:id/export
+GET    /templates              *(shipped 2026-08-08)* — system templates + the
+                                 caller's own (RLS hybrid policy, datamodel.md
+                                 §8). No POST /templates (that's 4.2's custom
+                                 builder, not yet built) — the only way a
+                                 tenant-owned row gets created today is import
+POST   /templates/import       *(shipped 2026-08-08)* — validates the portable
+                                 package atomically: unknown package_schema_
+                                 version, malformed theme, unknown block type,
+                                 or a missing compliance-critical block (M1/M2)
+                                 all reject the whole import, nothing partial
+GET    /templates/:id/export   *(shipped 2026-08-08)* — the portable .json
+                                 package for any template the caller can see
+PUT    /templates/default      *(shipped 2026-08-08)* — sets business_profile.
+                                 default_template_id; 404 (never 403) if the
+                                 id doesn't exist or belongs to another tenant
+                                 (implementation_plan.md 4.1)
 
 GET    /reports/pnl            ?period
 
