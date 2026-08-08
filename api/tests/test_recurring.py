@@ -1,7 +1,8 @@
 """Recurring invoices. implementation_plan.md 2.6-2.7, edgecases.md R1-R12."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
@@ -9,6 +10,15 @@ import pytest
 from tallyquo.billing.recurring_service import generate_due_occurrences, next_occurrence
 from tallyquo.identity import service
 from tallyquo.main import app
+
+
+def _today() -> date:
+    # generate_due_occurrences() computes "today" in the tenant's own
+    # timezone (America/Toronto by default), not the test runner's system
+    # timezone -- plain date.today() drifts a day behind/ahead of that in
+    # the UTC hours where Toronto is still on the previous calendar day.
+    # CI runs on UTC runners, so this isn't hypothetical.
+    return datetime.now(ZoneInfo("America/Toronto")).date()
 
 
 async def _tenant_with_source_invoice(*, amount: str = "1000.00") -> tuple[httpx.AsyncClient, dict, str, str]:
@@ -131,7 +141,7 @@ async def test_rejects_invalid_cadence():
 async def test_generates_draft_due_today():
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice()
     try:
-        today = date.today()
+        today = _today()
         r = await client.post(
             "/recurring",
             json={
@@ -165,7 +175,7 @@ async def test_generates_draft_due_today():
 async def test_r3_idempotent_on_repeated_runs():
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice()
     try:
-        today = date.today()
+        today = _today()
         await client.post(
             "/recurring",
             json={
@@ -192,7 +202,7 @@ async def test_r4_backfills_missed_occurrences_with_original_dates():
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice()
     try:
         # Rule hasn't run in ~3 months -- job outage simulation.
-        start = date.today() - timedelta(days=95)
+        start = _today() - timedelta(days=95)
         await client.post(
             "/recurring",
             json={
@@ -214,7 +224,7 @@ async def test_r4_backfills_missed_occurrences_with_original_dates():
         assert len(drafts) >= 2
         dates = sorted(d["invoice_date"] for d in drafts)
         assert dates[0] == start.isoformat()  # first backfilled occurrence keeps its ORIGINAL date
-        assert dates[0] < date.today().isoformat()
+        assert dates[0] < _today().isoformat()
     finally:
         await client.aclose()
 
@@ -223,7 +233,7 @@ async def test_r4_backfills_missed_occurrences_with_original_dates():
 async def test_r5_archived_client_auto_pauses_rule():
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice()
     try:
-        today = date.today()
+        today = _today()
         r = await client.post(
             "/recurring",
             json={
@@ -252,7 +262,7 @@ async def test_r8_auto_issue_falls_back_to_draft_on_compliance_failure():
     # auto-issue) -- P1: never auto-issue a non-compliant invoice.
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice(amount="0.00")
     try:
-        today = date.today()
+        today = _today()
         await client.post(
             "/recurring",
             json={
@@ -279,7 +289,7 @@ async def test_r8_auto_issue_falls_back_to_draft_on_compliance_failure():
 async def test_auto_issue_succeeds_when_compliant():
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice(amount="500.00")
     try:
-        today = date.today()
+        today = _today()
         await client.post(
             "/recurring",
             json={
@@ -307,7 +317,7 @@ async def test_auto_issue_succeeds_when_compliant():
 async def test_r9_occurrences_remaining_reaches_zero_archives_rule():
     client, headers, client_id, invoice_id = await _tenant_with_source_invoice()
     try:
-        today = date.today()
+        today = _today()
         r = await client.post(
             "/recurring",
             json={
@@ -380,6 +390,6 @@ async def test_pause_and_resume():
         assert r3.json()["is_paused"] is False
         # R10: resumed to the next future occurrence, not backfilled to the
         # stale 2026-01-01 date.
-        assert date.fromisoformat(r3.json()["next_run_date"]) >= date.today()
+        assert date.fromisoformat(r3.json()["next_run_date"]) >= _today()
     finally:
         await client.aclose()
