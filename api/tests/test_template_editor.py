@@ -13,6 +13,7 @@ import httpx
 import pytest
 from sqlalchemy import text
 
+from tallyquo.core import storage
 from tallyquo.core.tenant_context import tenant_session
 from tallyquo.identity import service
 from tallyquo.main import app
@@ -298,8 +299,29 @@ async def test_preview_rejects_invalid_theme_without_rendering():
         await client.aclose()
 
 
+def _fake_store(monkeypatch):
+    """Storage isn't configured against real credentials in CI (same
+    situation as test_year_end_pack.py) -- upload/download are
+    monkeypatched to an in-memory dict so logo round-tripping can be
+    tested without real S3 credentials."""
+    files: dict[str, bytes] = {}
+
+    def fake_upload(tenant_id: str, key_parts: list[str], data: bytes):
+        mime = storage.sniff_mime(data)
+        key = storage.build_key(tenant_id, *key_parts)
+        files[key] = data
+        return key, mime
+
+    def fake_download(key: str) -> bytes:
+        return files[key]
+
+    monkeypatch.setattr(storage, "upload", fake_upload)
+    monkeypatch.setattr(storage, "download", fake_download)
+
+
 @pytest.mark.asyncio
-async def test_upload_logo_and_it_appears_in_preview_pdf():
+async def test_upload_logo_and_it_appears_in_preview_pdf(monkeypatch):
+    _fake_store(monkeypatch)
     client, headers = await _tenant()
     try:
         r = await client.post(
@@ -343,7 +365,8 @@ async def test_upload_logo_rejects_non_image_content():
 
 
 @pytest.mark.asyncio
-async def test_upload_logo_dark_variant_writes_the_other_column():
+async def test_upload_logo_dark_variant_writes_the_other_column(monkeypatch):
+    _fake_store(monkeypatch)
     client, headers = await _tenant()
     try:
         r = await client.post(
