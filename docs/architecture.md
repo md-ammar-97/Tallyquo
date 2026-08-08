@@ -358,9 +358,19 @@ GET    /templates              POST /templates
 POST   /templates/import       GET  /templates/:id/export
 
 GET    /reports/pnl            ?period
-GET    /reports/projection
-GET    /reports/gst-position   ?filing_period
-GET    /reports/threshold      (rolling 4-quarter small supplier tracker)
+
+GET    /projection             ?year  *(shipped 2026-08-08)* — set-aside (federal +
+                                 provincial income tax, CPP), quarterly GST/HST
+                                 net-owing, small-supplier threshold, and the
+                                 instalment warning, all in one response rather
+                                 than the three separate /reports/projection,
+                                 /reports/gst-position, /reports/threshold
+                                 endpoints originally sketched here — one
+                                 dashboard load, one round trip
+                                 (implementation_plan.md 3.2-3.9)
+PUT    /projection/declared-income     *(shipped 2026-08-08)* — declared-income mode
+DELETE /projection/declared-income/:year *(shipped 2026-08-08)* — revert to derived
+
 POST   /exports/year-end       (async → downloadable pack)
 GET    /exports/all            (full data export, no lock-in)
 ```

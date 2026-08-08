@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError, downloadFile } from '../api'
+import { todayLocal } from '../dateUtils'
 
 interface Client {
   id: string
@@ -32,7 +33,7 @@ const emptyLine = (): LineItem => ({ description: '', quantity: '1', unit: 'fixe
 export default function InvoiceBuilder() {
   const [clients, setClients] = useState<Client[]>([])
   const [clientId, setClientId] = useState('')
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10))
+  const [invoiceDate, setInvoiceDate] = useState(todayLocal())
   const [currency, setCurrency] = useState('CAD')
   const [lines, setLines] = useState<LineItem[]>([emptyLine()])
   const [preview, setPreview] = useState<TaxPreview | null>(null)

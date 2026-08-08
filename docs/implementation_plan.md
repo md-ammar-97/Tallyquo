@@ -136,7 +136,7 @@ Two Phase-1-deferred open questions resolve here per the doc's own recommendatio
 
 ## 5. Phase 3 — The answer
 
-**Status: in progress, started 2026-08-07.** 3.1 built as specified below.
+**Status: in progress, started 2026-08-07.** 3.1-3.10 and 3.12 built as specified below (3.10 deviates: live-query, not a background job -- see its row). 3.11 (year-end accountant pack) remains.
 
 **Scope (from `problem-statement.md` §10):** income and set-aside projection, CPP estimate, GST/HST net-owing by filing period, small-supplier threshold tracker, instalment warnings, year-end accountant pack.
 
@@ -145,17 +145,17 @@ Note that a **narrow** version of GST/HST position (§12 Q3 tier (a), sales-tax-
 | # | Workstream | Depends on | Size |
 |---|---|---|---|
 | 3.1 | ✅ `income_tax_bracket` and `cpp_parameter` effective-dated reference tables: federal + 12 non-Quebec provinces/territories, 2025 (historical) and 2026 (current), each row individually verified after a batch fetch produced inconsistent data (`datamodel.md` §6) | Phase 0 | M |
-| 3.2 | Projection engine as a module separate from the tax engine — consumes P&L output, never touches invoice-level computation (architecture principle: the tax engine stays pure and untouched) | 3.1, Phase 2 | M |
-| 3.3 | Derived income mode: extrapolation from issued + scheduled-recurring invoices, clearly labelled low-confidence in the first year (P1 edge case row) | 3.2, 2.6 | M |
-| 3.4 | Declared income mode: user-entered annual target, actual-vs-declared variance shown without silently preferring one (P3) | 3.2 | S |
-| 3.5 | Set-aside recommendation block: net business income → estimated income tax + CPP → recommended set-aside %, with assumptions expandable inline, never phrased as "you owe" (P9, `design.md` §8.1 — the signature dashboard element) | 3.3, 3.4 | M |
-| 3.6 | CPP estimate: both self-employed halves, basic exemption, earnings ceiling, components shown not just the total (P8) | 3.1 | S |
-| 3.7 | GST/HST net-owing by filing period: collected − ITCs claimable, held-for-CRA framing, never rendered as revenue (P10) | Phase 2 (expenses/ITC) | M |
-| 3.8 | Small-supplier threshold tracker: rolling four-consecutive-calendar-quarter total including zero-rated exports (S1, P1), 75%/90% escalating warnings with consequence-stated copy, gradual-vs-single-quarter crossing distinguished (S2/S3), cancelled/credit-noted invoices excluded (S7) | 3.7 | M |
-| 3.9 | Quarterly instalment warning once projected net tax owing crosses the CRA threshold | 3.5, 3.7 | S |
-| 3.10 | `projection_refresh` background job: materializes the projection view on invoice/expense mutation, debounced — this is what keeps the dashboard figure live without per-request computation | 3.2 | S |
+| 3.2 | ✅ Projection engine (`projection/engine.py`) as a module separate from the tax engine — pure functions, no I/O, mirrors `tax/engine.py`'s discipline exactly. Consumes aggregated invoice/expense data, never touches invoice-level tax computation | 3.1, Phase 2 | M |
+| 3.3 | ✅ Derived income mode: straight-line extrapolation from year-to-date net income plus scheduled-recurring invoice projection, `is_low_confidence` below 90 days of data (P1) | 3.2, 2.6 | M |
+| 3.4 | ✅ Declared income mode: `income_declaration` table (one row per tenant per year), actual-vs-declared variance shown, neither silently preferred (P3) | 3.2 | S |
+| 3.5 | ✅ Set-aside recommendation block: net business income → estimated federal + provincial income tax + CPP → recommended set-aside %, assumptions expandable inline in place (not a modal), never phrased as "you owe" (P9, `design.md` §8.1) | 3.3, 3.4 | M |
+| 3.6 | ✅ CPP estimate: both self-employed halves, basic exemption, YMPE/YAMPE ceilings including CPP2, components shown not just the total (P8) | 3.1 | S |
+| 3.7 | ✅ GST/HST net-owing by filing period (quarterly): collected − ITCs claimable, held-for-CRA framing, never rendered as revenue (P10). `itc_eligible` is the actual ITC signal, not the optional/often-blank `tax_type` column — a real bug caught and fixed while building this | Phase 2 (expenses/ITC) | M |
+| 3.8 | ✅ Small-supplier threshold tracker: rolling four-consecutive-calendar-quarter total including zero-rated and pre-registration revenue (S1, P1), FX-converted per invoice, credit notes netted out (S7), 75%/90% escalating warnings with consequence-stated copy, second-business disclosure (S9). **Not built**: distinguishing an immediate single-quarter crossing from a gradual one (S2/S3), and persisting "once crossed, stays crossed" even if revenue later dips (S5) — documented as a gap in `edgecases.md` §5 rather than silently shipped | 3.7 | M |
+| 3.9 | ✅ Quarterly instalment warning once projected net income tax + CPP owing crosses the CRA's $3,000 threshold — deliberately excludes GST/HST net-owing, a separate remittance with its own mechanics (a real bug caught while building this: the two were briefly summed together before a test caught it) | 3.5, 3.7 | S |
+| 3.10 | **Deviates from spec**: no `projection_refresh` background job. Everything is computed live on each `GET /projection` — same precedent as 2.3's client roll-up (`rollup_service.py`), and for the same reason: at single-tenant data volumes a handful of aggregate queries per request is cheap, and a debounced cache risks showing a stale figure in a financial product. Revisit if that stops being true | 3.2 | S |
 | 3.11 | Year-end accountant pack: async export job zipping invoice PDFs + expense CSV (T2125-mapped) + receipt images + GST/HST period summary + P&L, signed URL with 7-day TTL | 2.14, 3.7 | M |
-| 3.12 | Fiscal-year vs GST-filing-period calendar separation in the UI; December/January year-boundary handling for the projection view (P5, P11) | 3.2 | S |
+| 3.12 | ✅ Fiscal-year vs GST-filing-period calendar separation: a year selector (← / → one year at a time, `design.md` mockup) drives the income-tax view; the GST section stays quarter-grained underneath it in the same year. December/January boundary (P11) needed no special-casing — the selector already defaults to the current calendar year and the prior year is one click away | 3.2 | S |
 
 **Exit criteria:**
 - P1 threshold edge case **S1** green, plus the full P1–P11 projection edge-case set.

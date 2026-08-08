@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
+import { todayLocal } from '../dateUtils'
 
 interface LineItem {
   id: string
@@ -53,7 +54,7 @@ interface EmailAccount {
   is_default: boolean
 }
 
-const emptyPaymentForm = { amount: '', received_date: new Date().toISOString().slice(0, 10), method: '', reference: '' }
+const emptyPaymentForm = { amount: '', received_date: todayLocal(), method: '', reference: '' }
 const emptyRecurringForm = { cadence: 'monthly', day_of_period: '1', next_run_date: '', auto_issue: false }
 
 function ChipInput({

@@ -279,22 +279,29 @@ Sidebar collapses to icons below `lg` and becomes a bottom tab bar below `md`. T
 
 ## 8. Key screens
 
-### 8.1 Dashboard
+### 8.1 Dashboard *(shipped 2026-08-08 — `implementation_plan.md` 3.2-3.9, 3.12)*
 
-Four metric blocks across the top, then two-column content.
+Metric tiles across the top in a responsive grid, then a quarterly GST/HST table, then Reports.
 
 ```
 ┌──────────┐┌──────────┐┌──────────┐┌──────────┐
-│ Billed   ││ Collected││ Set aside││ Threshold│
-│ YTD      ││          ││ for tax  ││ tracker  │
-│ $84,000  ││ $71,200  ││ $21,400  ││ 72%      │
-│ ↑ 12% ▁▃▅││ 3 unpaid ││ estimate ││ ▓▓▓▓▓░░  │
-└──────────┘└──────────┘└──────────┘└──────────┘
+│ Set aside││ Threshold││ GST/HST  ││Instalment│
+│ for tax  ││ tracker  ││ held for ││ reminder │
+│ $21,400  ││ 72%      ││ CRA      ││(only when│
+│ estimate ││ ▓▓▓▓▓░░  ││ $6,500   ││ it       │
+└──────────┘└──────────┘└──────────┘│ applies) │
+                                     └──────────┘
 ```
 
-The **set-aside block** is the product's signature element. It answers the question the user actually has — *how much of this is mine* — and it is the only place `--text-display` appears. It expands to show its assumptions inline: net business income, estimated income tax, estimated CPP, and a plain statement that this is an estimate. No modal, no separate page. The number and its reasoning occupy the same block, because a number a user cannot interrogate is a number they will not trust.
+Shipped with four tiles built directly from Phase 3's own deliverables (set-aside, threshold, GST/HST net-owing, instalment warning) rather than the two additional revenue tiles (**Billed YTD**, **Collected**) originally sketched here — those read from ordinary invoice/payment aggregates already available elsewhere (Reports, Clients roll-up) and weren't part of what Phase 3 was building. Worth revisiting as a Dashboard polish pass later, not a gap in Phase 3 itself.
 
-The **threshold tracker** uses a progress bar that shifts grey → `--color-status-attention` at 75% → `--color-status-overdue` at 90%, with copy that names the consequence rather than the number: *"$8,400 from the $30,000 registration threshold. Crossing it changes what you must charge."*
+The **set-aside block** is the product's signature element. It answers the question the user actually has — *how much of this is mine* — and it is the only place `--text-display` appears. It expands **in place** (not a modal, not a separate page — the tile grows to full width so the assumptions have room) to show net business income, estimated federal tax, estimated provincial tax, estimated CPP, the recommended set-aside percentage, and a plain accrual-basis / estimate disclaimer. From there, a **declared income** option is always one click away — entering a figure switches the whole block to declared mode, shows the gap against the derived (extrapolated) estimate, and "Use derived instead" reverts it, matching P3's "show both, never silently prefer one."
+
+The **threshold tracker** uses a progress bar that shifts grey → `--color-status-attention` at 75% → `--color-status-overdue` at 90%, with copy that names the consequence rather than the number: *"$8,400 from the $30,000 registration threshold. Crossing it changes what you must charge."* A second line discloses that the figure is this account only (S9) — the threshold is legally shared across any associated businesses the product can't see.
+
+The **instalment reminder** tile only renders when it applies (projected net income tax + CPP owing over the CRA's $3,000 threshold) — it never occupies dashboard space with a "no reminder" state. It is deliberately silent about GST/HST net-owing, which is a separate remittance with its own mechanics, not part of the same $3,000 test.
+
+A **year selector** (← / →) sits above the tiles, defaulting to the current calendar year — this is Phase 3's answer to keeping the income-tax calendar (always calendar-year) and the GST filing calendar (quarterly, shown in the table below the tiles) visibly separate without needing distinct navigation for each.
 
 ### 8.2 Invoice builder
 

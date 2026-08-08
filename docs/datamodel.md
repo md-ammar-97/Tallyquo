@@ -407,6 +407,22 @@ Known, deliberate simplifications (all documented once, in the migration, rather
 
 Both tables carry the same grant shape as `tax_rate` (§10): `SELECT` only for `tallyquo_app`, no writes from the running API — changes only ever land through a reviewed migration.
 
+**Hardening note:** building this surfaced that `GRANT SELECT` alone was never actually sufficient on this database — a pre-existing default-privileges rule auto-grants `tallyquo_app` full CRUD on any new table `postgres` creates, silently undoing the "read-only" intent unless UPDATE/DELETE (and, for `tax_rate`-style tables, INSERT) are explicitly revoked afterward. This had been true of `tax_rate`, `tax_rate_version`, and `tax_threshold` since Phase 0 without anyone noticing. Migration `0017_revoke_reference_table_writes.py` closes it on all five global reference tables, in both local dev and production.
+
+**Shipped 2026-08-08 (Phase 3, 3.4): `income_declaration`.** One row per tenant per calendar year, holding the declared-income-mode target described in §12's projection edge cases (P3).
+
+```sql
+CREATE TABLE income_declaration (
+  tenant_id     uuid NOT NULL,
+  year          smallint NOT NULL,
+  declared_annual_income numeric(14,2) NOT NULL,
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, year)
+);
+```
+
+Ordinary tenant-scoped table (RLS `FORCE`d, `tenant_isolation` policy, full CRUD grant) — unlike the two reference tables above, this one genuinely is written by the running API, one upsert per "declare an income figure" action.
+
 ---
 
 ## 7. Invoices

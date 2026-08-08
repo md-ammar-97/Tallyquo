@@ -55,6 +55,10 @@
   --radius-md: 6px;
   --radius-lg: 8px;
 
+  /* design.md §8.1: the set-aside block is the only place this appears --
+     a hero-sized figure for the one number the dashboard exists to answer. */
+  --text-display: 600 32px/38px var(--font-ui);
+
   color-scheme: light;
   font-family: var(--font-ui);
   font-size: 13px;
@@ -322,6 +326,99 @@ td {
 .caption {
   font: 400 11px/16px var(--font-ui);
   color: var(--color-text-caption);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.metric-tile {
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.metric-tile.expanded {
+  grid-column: 1 / -1;
+}
+.metric-tile .metric-label {
+  font: 500 11px/16px var(--font-ui);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-1);
+}
+.metric-tile .metric-value {
+  font: var(--text-display);
+  color: var(--color-text-primary);
+}
+.metric-tile .metric-value.display {
+  font: var(--text-display);
+}
+.metric-tile .metric-sub {
+  margin-top: var(--space-1);
+}
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-link);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-tertiary);
+  overflow: hidden;
+  margin-top: var(--space-2);
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-xs);
+  background: var(--color-text-tertiary);
+  transition: width 0.2s ease;
+}
+.progress-bar-fill.attention {
+  background: var(--color-status-attention);
+}
+.progress-bar-fill.overdue {
+  background: var(--color-status-overdue);
+}
+
+.assumptions-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-link);
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: var(--space-2);
+}
+.assumptions-list {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+}
+.assumptions-list .row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 12px;
+}
+.assumptions-list .row .label {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.assumptions-list .row span:last-child {
+  white-space: nowrap;
 }
 
 .app-shell {

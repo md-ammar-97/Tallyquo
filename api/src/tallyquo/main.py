@@ -13,6 +13,7 @@ from tallyquo.expenses.router import router as expenses_router
 from tallyquo.identity.profile_router import router as profile_router
 from tallyquo.identity.router import router as identity_router
 from tallyquo.notifications.router import router as notifications_router
+from tallyquo.projection.router import router as projection_router
 from tallyquo.reporting.router import router as reporting_router
 from tallyquo.tax.router import router as tax_router
 
@@ -42,6 +43,7 @@ app.include_router(recurring_router)
 app.include_router(reporting_router)
 app.include_router(public_router)
 app.include_router(notifications_router)
+app.include_router(projection_router)
 
 
 @app.get("/health")

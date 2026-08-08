@@ -88,6 +88,8 @@
 
 ## 5. Small supplier threshold
 
+**Shipped 2026-08-08** (`implementation_plan.md` 3.8). S1, S6, S7, S8, S9 built and verified. S2/S3 (distinguishing an immediate single-quarter crossing from a gradual one, with different CRA timing rules) and S5 (persistent obligation once crossed, even if revenue later dips) are **not yet built** — the current tracker reports one flat rolling-4-quarter percentage with no memory of *how* it got there or whether it was ever higher. Documented here rather than silently shipped as if complete, since S5 in particular risks the tracker implying "you're fine" to someone who already had an obligation.
+
 | # | Case | Expected behaviour |
 |---|---|---|
 | S1 | User bills only US clients (all zero-rated) | Zero-rated exports **count** toward the $30,000 threshold. This is the most expensive misconception in the segment. **P1** |
@@ -219,6 +221,8 @@
 ---
 
 ## 12. Reporting and projection
+
+**Shipped 2026-08-08** (`implementation_plan.md` 3.2-3.9, 3.12). P1-P11 all built and verified, including P6 (an explicit "accrual basis" disclosure next to the estimate) and P11 (the year selector naturally defaults to the current year with no December/January special-casing needed).
 
 | # | Case | Expected behaviour |
 |---|---|---|

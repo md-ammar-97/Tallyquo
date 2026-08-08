@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
+import { todayLocal } from '../dateUtils'
 
 interface Category {
   id: string
@@ -31,7 +32,7 @@ interface OcrResult {
 }
 
 const emptyForm = {
-  expense_date: new Date().toISOString().slice(0, 10),
+  expense_date: todayLocal(),
   vendor: '',
   category_id: '',
   amount_total: '',
