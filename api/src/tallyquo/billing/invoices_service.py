@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import fx
+from tallyquo.identity import profile_service
 from tallyquo.tax.context_builder import build_supply_context
 from tallyquo.tax.engine import MissingJurisdiction, NoRateForDate, compute
 from tallyquo.tax.loader import load_rate_table
@@ -428,6 +429,14 @@ async def issue_invoice(
         "postal_code": client["postal_code"],
         "country_code": client["country_code"],
     }
+    # Frozen for the same reason as supplier/client above (X4/L14): a
+    # client re-downloading an old invoice must see the payment details
+    # they were originally given, never today's, even if the tenant has
+    # since switched bank accounts. None if the tenant hasn't set one up
+    # -- the PDF simply omits the section rather than guessing.
+    payment_instruction_snapshot = await profile_service.get_default_payment_instruction_decrypted(
+        session, tenant_id
+    )
 
     # Step 7: write the frozen snapshot + step 8: transition status.
     await session.execute(
@@ -441,6 +450,7 @@ async def issue_invoice(
             "tax_jurisdiction_snapshot = :jurisdiction, tax_version_id = :version_id, "
             "template_id = :template_id, template_version = :template_version, "
             "supplier_snapshot = :supplier_snapshot, client_snapshot = :client_snapshot, "
+            "payment_instruction_snapshot = :payment_instruction_snapshot, "
             "issued_at = now() "
             "WHERE id = :id"
         ),
@@ -458,6 +468,9 @@ async def issue_invoice(
             "template_version": template_row["version"] if template_row else None,
             "supplier_snapshot": json.dumps(supplier_snapshot, default=str),
             "client_snapshot": json.dumps(client_snapshot, default=str),
+            "payment_instruction_snapshot": json.dumps(payment_instruction_snapshot, default=str)
+            if payment_instruction_snapshot
+            else None,
             "total_cad": total_cad,
             "fx_rate_to_cad": fx_rate_to_cad,
             "fx_rate_date": fx_rate_date,
@@ -578,17 +591,28 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
     if invoice is None:
         return None
 
-    # Theme: an issued invoice's pin (template_id/template_version, frozen
-    # at issue time) if it has one, else the tenant's current default --
-    # this is what makes X4/L14 non-vacuous now that a chosen template's
-    # theme actually reaches the renderer (it never did before this).
+    # Theme + blocks: an issued invoice's pin (template_id/template_version,
+    # frozen at issue time) if it has one, else the tenant's current
+    # default -- this is what makes X4/L14 non-vacuous now that a chosen
+    # template's theme actually reaches the renderer (it never did before
+    # this). `blocks` gates the payment-instructions and footer/notes
+    # sections below -- the only two blocks that are genuinely optional;
+    # the compliance-critical ones are unconditional, same as always.
     if invoice["status"] == "draft":
+        # A tenant who hasn't explicitly chosen a template yet must still
+        # preview the same blocks/theme the invoice will actually issue
+        # with (whichever system template is_default) -- falling back to
+        # an empty blocks list here would hide payment instructions in
+        # the preview only to have them reappear once issued, which is
+        # both confusing and the wrong direction to be wrong in.
         theme_row = (
             await session.execute(
                 text(
-                    "SELECT t.theme FROM business_profile p "
-                    "LEFT JOIN template t ON t.id = p.default_template_id "
-                    "WHERE p.tenant_id = :t"
+                    "SELECT theme, blocks FROM template WHERE id = COALESCE("
+                    "  (SELECT default_template_id FROM business_profile WHERE tenant_id = :t),"
+                    "  (SELECT id FROM template WHERE is_system = true AND tenant_id IS NULL "
+                    "   ORDER BY is_default DESC LIMIT 1)"
+                    ")"
                 ),
                 {"t": tenant_id},
             )
@@ -597,7 +621,7 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         theme_row = (
             await session.execute(
                 text(
-                    "SELECT theme FROM template WHERE id = ("
+                    "SELECT theme, blocks FROM template WHERE id = ("
                     "  SELECT template_id FROM invoice WHERE id = :id"
                     ")"
                 ),
@@ -606,6 +630,7 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         ).mappings().first()
     theme = (theme_row["theme"] if theme_row else None) or {}
     accent_color = theme.get("accent_color", "#0D99FF")
+    blocks = (theme_row["blocks"] if theme_row else None) or []
 
     if invoice["status"] == "draft":
         profile_row = (
@@ -629,14 +654,19 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         ).mappings().first()
         supplier = dict(profile_row) if profile_row else {"legal_name": "(business profile not set)"}
         client = dict(client_row) if client_row else {"legal_name": "(client not found)"}
+        payment_instruction = await profile_service.get_default_payment_instruction_decrypted(session, tenant_id)
     else:
         snap_result = await session.execute(
-            text("SELECT supplier_snapshot, client_snapshot FROM invoice WHERE id = :id"),
+            text(
+                "SELECT supplier_snapshot, client_snapshot, payment_instruction_snapshot "
+                "FROM invoice WHERE id = :id"
+            ),
             {"id": invoice_id},
         )
         snap = snap_result.mappings().one()
         supplier = snap["supplier_snapshot"] or {}
         client = snap["client_snapshot"] or {}
+        payment_instruction = snap["payment_instruction_snapshot"]
 
     return render_invoice_pdf(
         invoice=invoice,
@@ -645,6 +675,8 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         line_items=invoice["line_items"],
         tax_lines=invoice["tax_lines"],
         accent_color=accent_color,
+        payment_instruction=payment_instruction if "payment" in blocks else None,
+        notes_visible="footer" in blocks,
     )
 
 

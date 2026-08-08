@@ -11,6 +11,12 @@ name/address, tax breakdown, GST/HST number when registered) is always
 rendered -- there is no code path that omits it, matching architecture.md
 §12 ("no user-authored HTML/CSS/JS ... no injection surface because there
 is no HTML input").
+
+Payment instructions and the notes/footer section are the two genuinely
+optional blocks (invoices_service.py gates both on whether the resolved
+template's `blocks` array actually lists them) -- design.md §9's layout
+order is "then payment instructions, then footer", so that's where they
+land here too.
 """
 
 from decimal import Decimal
@@ -43,6 +49,8 @@ def render_invoice_pdf(
     line_items: list[dict],
     tax_lines: list[dict],
     accent_color: str = "#0D99FF",
+    payment_instruction: dict | None = None,
+    notes_visible: bool = True,
 ) -> bytes:
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -163,7 +171,23 @@ def render_invoice_pdf(
     story.append(totals_table)
     story.append(Spacer(1, 10 * mm))
 
-    if invoice.get("notes"):
+    # --- payment instructions (optional block, gated by the caller) --------
+    if payment_instruction:
+        lines = [f"<b>Payment instructions</b> ({payment_instruction['currency']})"]
+        method = payment_instruction.get("method")
+        if method:
+            lines.append(method.replace("_", " ").title())
+        if payment_instruction.get("provider"):
+            lines.append(payment_instruction["provider"])
+        if payment_instruction.get("account_holder"):
+            lines.append(f"Account holder: {payment_instruction['account_holder']}")
+        for key, value in (payment_instruction.get("fields") or {}).items():
+            if value:
+                lines.append(f"{key.replace('_', ' ').title()}: {value}")
+        story.append(Paragraph("<br/>".join(lines), body_style))
+        story.append(Spacer(1, 6 * mm))
+
+    if notes_visible and invoice.get("notes"):
         story.append(Paragraph(f"<b>Notes</b><br/>{invoice['notes']}", body_style))
 
     doc.build(story)

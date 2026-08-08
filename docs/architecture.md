@@ -14,7 +14,7 @@ These are the constraints every decision below is derived from. When a trade-off
 2. **Financial records are append-only.** Issued invoices, tax snapshots, and audit entries are never updated in place. Corrections are new rows.
 3. **Tax rates are data with a lifetime, not constants.** Every computed tax figure is reproducible from `(invoice_date, jurisdiction, rate_table_version)`.
 4. **Boring, single-region, modular monolith.** A one-person-business product with month-end spikes does not need microservices. It needs correctness and cheap operations.
-5. **Every generated artifact is deterministic.** The same invoice re-rendered in two years must be byte-identical.
+5. **Every generated artifact is deterministic.** The same invoice re-rendered in two years must be byte-identical, *in content* — reportlab embeds a wall-clock creation timestamp in every PDF's metadata regardless of input, so two renders of the same invoice a moment apart already differ by a few bytes (confirmed 2026-08-08). Nothing in the codebase hashes or byte-compares rendered PDFs for correctness; the guarantee that matters is the frozen snapshot data (tax, template, supplier/client/payment-instruction) never changing, which is content-level, not byte-level.
 
 ---
 

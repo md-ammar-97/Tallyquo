@@ -176,7 +176,7 @@ CREATE TABLE payment_instruction (
 );
 ```
 
-Banking fields are stored encrypted at the column level, not in plaintext JSON. They are decrypted only in the render process, and never returned to the client in full — the UI shows masked values with an explicit reveal action.
+Banking fields are stored encrypted at the column level, not in plaintext JSON. They are decrypted only in the render process, and never returned to the client in full — the UI shows masked values with an explicit reveal action. This render-process decryption was aspirational until 2026-08-08 (migration 0020): nothing actually called it before then, so every invoice issued up to that point carried no payment details at all. See `invoice.payment_instruction_snapshot` above and `implementation_plan.md` 1.4.
 
 **`registration_effective_date` is load-bearing.** Invoices dated before it must render "not charged"; invoices on or after must charge tax. This is derived automatically, never toggled by hand.
 
@@ -470,6 +470,18 @@ CREATE TABLE invoice (
   template_version integer,
   supplier_snapshot jsonb,              -- name, address, BN at time of issue
   client_snapshot   jsonb,              -- name, address at time of issue
+  payment_instruction_snapshot jsonb,   -- decrypted fields of the tenant's
+                                         -- default payment_instruction at
+                                         -- issue time (migration 0020, added
+                                         -- 2026-08-08 -- 1.4 shipped without
+                                         -- this; see implementation_plan.md
+                                         -- 1.4). NULL if none configured.
+                                         -- Same X4/L14 discipline as the two
+                                         -- snapshots above: the client who
+                                         -- was told to pay a given account
+                                         -- must keep seeing that account on
+                                         -- re-download, even after the
+                                         -- tenant switches banks.
 
   po_reference  text,
   description   text,

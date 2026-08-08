@@ -132,6 +132,34 @@ async def reveal_payment_instruction(session: AsyncSession, tenant_id: UUID, ins
     }
 
 
+async def get_default_payment_instruction_decrypted(session: AsyncSession, tenant_id: UUID) -> dict | None:
+    """For the invoice PDF only -- the one place this product decrypts a
+    payment instruction for something other than the owning tenant's own
+    "reveal" action. The document is going to a third party who needs the
+    real numbers to pay; a masked value on the invoice itself would defeat
+    the point of putting it there at all."""
+    result = await session.execute(
+        text(
+            "SELECT label, method, provider, account_holder, currency, fields_encrypted "
+            "FROM payment_instruction "
+            "WHERE tenant_id = :t AND is_default = true AND archived_at IS NULL"
+        ),
+        {"t": tenant_id},
+    )
+    row = result.mappings().first()
+    if row is None:
+        return None
+    blob = row["fields_encrypted"]
+    return {
+        "label": row["label"],
+        "method": row["method"],
+        "provider": row["provider"],
+        "account_holder": row["account_holder"],
+        "currency": row["currency"],
+        "fields": decrypt_fields(blob) if blob else {},
+    }
+
+
 async def archive_payment_instruction(session: AsyncSession, tenant_id: UUID, instruction_id: UUID) -> bool:
     result = await session.execute(
         text(

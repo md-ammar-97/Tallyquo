@@ -65,7 +65,7 @@
 | X1 | Client in Alberta, supplier in Ontario | **5% GST**, not 13% HST. Place of supply follows the recipient. **P1** |
 | X2 | Invoice dated 2025-03-15 for a Nova Scotia client | **15%** (pre-change rate), even though today's rate is 14%. **P1** |
 | X3 | Invoice dated 2025-04-01 for a Nova Scotia client | **14%**. Boundary is inclusive of the effective date |
-| X4 | Historical invoice re-rendered in 2030 | Uses the frozen snapshot, not the live table. Byte-identical output. **P1** |
+| X4 | Historical invoice re-rendered in 2030 | Uses the frozen snapshot, not the live table. Content-identical output (same tax figures, template, supplier/client/payment-instruction snapshot) — not literally byte-identical, since reportlab stamps a wall-clock creation timestamp into every PDF's metadata regardless of content (confirmed 2026-08-08; see `architecture.md` §1.5). Nothing in the codebase relies on byte-hash comparison. **P1** |
 | X5 | Zero-rated export vs. not registered | Different `invoice_tax_line` rows, different display strings, different threshold and ITC consequences. Never collapsed into "0%". **P1** |
 | X6 | Supplier becomes registered mid-year | Invoices before `registration_effective_date` render "not charged"; on/after charge tax. Automatic, from the invoice date |
 | X7 | User backdates an invoice to before their registration date | Warn explicitly and apply the pre-registration treatment. Do not silently charge tax |
@@ -139,6 +139,7 @@
 | L14 | Template edited after invoices used it | Issued invoices pin the template version and re-render identically. **P1** |
 | L15 | Overdue status | Computed, not stored — derived from `due_date < today AND amount_paid < total`. Never a stale stored flag |
 | L16 | Timezone at a day boundary | Overdue evaluated in the business profile's timezone, not UTC |
+| L17 | Tenant switches default payment account, then an old invoice is re-downloaded | The old invoice still shows the account the client was originally given (`invoice.payment_instruction_snapshot`, frozen at issue, same discipline as L14/X4) — never today's default. If no default was ever configured, the PDF simply omits the section rather than guessing. Fixed 2026-08-08 (migration 0020); before that, issuance never read `payment_instruction` at all and no invoice this product issued had a payment section |
 
 ---
 
