@@ -33,10 +33,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import invoices_service
 from tallyquo.core import storage
+from tallyquo.core.logging import get_logger
 from tallyquo.expenses import service as expenses_service
 from tallyquo.identity import profile_service
 from tallyquo.projection import gst_service
 from tallyquo.reporting import service as reporting_service
+
+logger = get_logger(__name__)
 
 YEAR_END_PACK_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days, per implementation_plan.md 3.11 --
 # deliberately longer than the 5-minute default every other signed URL in
@@ -184,6 +187,12 @@ async def create_year_end_pack_url(session: AsyncSession, tenant_id: UUID, year:
         )
         url = storage.signed_url(key, ttl_seconds=YEAR_END_PACK_TTL_SECONDS)
     except (RuntimeError, botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as exc:
+        # The client only ever sees the generic message below -- this is
+        # the one place the real cause (bad credentials, network, bucket
+        # policy) gets recorded at all, since converting to a clean
+        # HTTPException upstream means Starlette never logs a traceback
+        # for it (it's a handled exception, not a crash).
+        logger.error("year_end_pack_storage_upload_failed", error=str(exc), error_type=type(exc).__name__)
         raise PackStorageUnavailable(
             "Could not save the year-end pack -- storage is temporarily unavailable. Try again shortly."
         ) from exc
