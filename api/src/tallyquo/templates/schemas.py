@@ -31,3 +31,16 @@ class TemplatePackage(BaseModel):
 
 class SetDefaultTemplateIn(BaseModel):
     template_id: UUID
+
+
+class TemplateIn(BaseModel):
+    """4.2: create or update a tenant-owned custom template."""
+
+    name: str
+    theme: dict
+    blocks: list[str]
+
+
+class TemplatePreviewIn(BaseModel):
+    theme: dict
+    blocks: list[str]

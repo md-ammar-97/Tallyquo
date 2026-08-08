@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api, ApiError, downloadFile } from '../api'
 
 interface BusinessProfile {
@@ -484,8 +485,9 @@ export default function Profile() {
         </div>
         <div className="block-body">
           <p className="caption" style={{ marginBottom: 12 }}>
-            Choose which template new invoices use. Import a template package (.json) someone shared with you, or
-            export one of yours to share or back up.
+            Choose which template new invoices use, or build your own: reorder the payment/notes sections, pick a
+            font size, upload a logo. Import a template package (.json) someone shared with you, or export one of
+            yours to share or back up.
           </p>
           <table>
             <thead>
@@ -493,6 +495,7 @@ export default function Profile() {
                 <th></th>
                 <th>Name</th>
                 <th>Accent</th>
+                <th></th>
                 <th></th>
               </tr>
             </thead>
@@ -532,12 +535,26 @@ export default function Profile() {
                       Export
                     </button>
                   </td>
+                  <td>
+                    {t.is_system ? (
+                      <Link className="link-button" to={`/templates/new?clone=${t.id}`}>
+                        Customize
+                      </Link>
+                    ) : (
+                      <Link className="link-button" to={`/templates/${t.id}/edit`}>
+                        Edit
+                      </Link>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           {templateError && <p className="error-text">{templateError}</p>}
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, display: 'flex', gap: 16, alignItems: 'center' }}>
+            <Link className="link-button" to="/templates/new">
+              + New custom template
+            </Link>
             <label>
               <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportTemplate} />
             </label>

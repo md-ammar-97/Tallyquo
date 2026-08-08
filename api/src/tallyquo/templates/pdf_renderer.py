@@ -8,15 +8,23 @@ extra infrastructure.
 
 The compliance block (supplier name/address, invoice number/date, client
 name/address, tax breakdown, GST/HST number when registered) is always
-rendered -- there is no code path that omits it, matching architecture.md
-§12 ("no user-authored HTML/CSS/JS ... no injection surface because there
-is no HTML input").
+rendered, in this fixed relative order -- there is no code path that
+omits or reorders it, matching architecture.md §12 ("no user-authored
+HTML/CSS/JS ... no injection surface because there is no HTML input")
+and design.md §8.6 ("the compliance block is pinned ... cannot be
+reordered out or hidden").
 
 Payment instructions and the notes/footer section are the two genuinely
-optional blocks (invoices_service.py gates both on whether the resolved
-template's `blocks` array actually lists them) -- design.md §9's layout
-order is "then payment instructions, then footer", so that's where they
-land here too.
+optional, reorderable blocks (invoices_service.py gates both on whether
+the resolved template's `blocks` array lists them, and passes their
+relative order via `optional_block_order`) -- design.md §9's default
+layout order is "then payment instructions, then footer", which is what
+an unedited template still produces.
+
+`font_scale`, `margins_mm`, and the logo are template theme tokens
+(4.2) -- font_scale existed in every template's `theme` JSONB since
+migration 0006 but was never read until now; logo_position/margins_mm
+are new in migration 0021.
 """
 
 from decimal import Decimal
@@ -26,7 +34,9 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -36,9 +46,27 @@ from reportlab.platypus import (
 
 _STYLES = getSampleStyleSheet()
 
+_LOGO_MAX_WIDTH_MM = 40
+_LOGO_MAX_HEIGHT_MM = 20
+
+_LOGO_HALIGN = {"top_left": "LEFT", "top_center": "CENTER", "top_right": "RIGHT"}
+
 
 def _money(amount: Decimal, currency: str) -> str:
     return f"{currency} {amount:,.2f}"
+
+
+def _logo_flowable(logo_bytes: bytes, logo_position: str) -> Image | None:
+    halign = _LOGO_HALIGN.get(logo_position)
+    if halign is None:
+        return None
+    reader = ImageReader(BytesIO(logo_bytes))
+    orig_w, orig_h = reader.getSize()
+    max_w, max_h = _LOGO_MAX_WIDTH_MM * mm, _LOGO_MAX_HEIGHT_MM * mm
+    scale = min(max_w / orig_w, max_h / orig_h, 1.0)
+    img = Image(BytesIO(logo_bytes), width=orig_w * scale, height=orig_h * scale)
+    img.hAlign = halign
+    return img
 
 
 def render_invoice_pdf(
@@ -49,27 +77,45 @@ def render_invoice_pdf(
     line_items: list[dict],
     tax_lines: list[dict],
     accent_color: str = "#0D99FF",
+    font_scale: float = 1.0,
+    margins_mm: float = 20.0,
+    logo_bytes: bytes | None = None,
+    logo_position: str = "top_left",
     payment_instruction: dict | None = None,
     notes_visible: bool = True,
+    optional_block_order: tuple[str, ...] = ("payment", "footer"),
 ) -> bytes:
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf,
         pagesize=LETTER,
-        topMargin=20 * mm,
-        bottomMargin=20 * mm,
-        leftMargin=20 * mm,
-        rightMargin=20 * mm,
+        topMargin=margins_mm * mm,
+        bottomMargin=margins_mm * mm,
+        leftMargin=margins_mm * mm,
+        rightMargin=margins_mm * mm,
         title=f"Invoice {invoice.get('number') or 'DRAFT'}",
     )
     accent = colors.HexColor(accent_color)
+
+    def fs(base: float) -> float:
+        return round(base * font_scale, 2)
+
     title_style = ParagraphStyle(
-        "InvoiceTitle", parent=_STYLES["Title"], textColor=accent, fontSize=20, alignment=2
+        "InvoiceTitle", parent=_STYLES["Title"], textColor=accent, fontSize=fs(20), alignment=2
     )
-    label_style = ParagraphStyle("Label", parent=_STYLES["Normal"], textColor=colors.HexColor("#757575"), fontSize=8)
-    body_style = ParagraphStyle("Body", parent=_STYLES["Normal"], fontSize=10)
+    label_style = ParagraphStyle(
+        "Label", parent=_STYLES["Normal"], textColor=colors.HexColor("#757575"), fontSize=fs(8)
+    )
+    body_style = ParagraphStyle("Body", parent=_STYLES["Normal"], fontSize=fs(10))
 
     story = []
+
+    # --- logo (optional, positioned per theme.logo_position) --------------
+    if logo_bytes:
+        logo = _logo_flowable(logo_bytes, logo_position)
+        if logo is not None:
+            story.append(logo)
+            story.append(Spacer(1, 4 * mm))
 
     # --- supplier + document header (side by side) -----------------------
     supplier_lines = [supplier.get("operating_name") or supplier["legal_name"]]
@@ -132,7 +178,7 @@ def render_invoice_pdf(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F5F5F5")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#757575")),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("FONTSIZE", (0, 0), (-1, -1), fs(9)),
                 ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
                 ("ALIGN", (0, 0), (0, -1), "LEFT"),
                 ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.HexColor("#D9D9D9")),
@@ -161,7 +207,7 @@ def render_invoice_pdf(
     totals_table = Table(totals_rows, colWidths=[130 * mm, 40 * mm])
     style_cmds = [
         ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("FONTSIZE", (0, 0), (-1, -1), fs(10)),
         ("LINEABOVE", (0, -1), (-1, -1), 1, accent),
         ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
         ("TOPPADDING", (0, 0), (-1, -1), 3),
@@ -171,8 +217,13 @@ def render_invoice_pdf(
     story.append(totals_table)
     story.append(Spacer(1, 10 * mm))
 
-    # --- payment instructions (optional block, gated by the caller) --------
-    if payment_instruction:
+    # --- payment instructions / notes: the two optional, reorderable -------
+    # blocks. Each renders at most once; `optional_block_order` (computed
+    # by the caller from the template's `blocks` array) controls which
+    # comes first when both are present.
+    def render_payment() -> None:
+        if not payment_instruction:
+            return
         lines = [f"<b>Payment instructions</b> ({payment_instruction['currency']})"]
         method = payment_instruction.get("method")
         if method:
@@ -187,8 +238,15 @@ def render_invoice_pdf(
         story.append(Paragraph("<br/>".join(lines), body_style))
         story.append(Spacer(1, 6 * mm))
 
-    if notes_visible and invoice.get("notes"):
-        story.append(Paragraph(f"<b>Notes</b><br/>{invoice['notes']}", body_style))
+    def render_footer() -> None:
+        if notes_visible and invoice.get("notes"):
+            story.append(Paragraph(f"<b>Notes</b><br/>{invoice['notes']}", body_style))
+
+    renderers = {"payment": render_payment, "footer": render_footer}
+    for block in optional_block_order:
+        renderer = renderers.get(block)
+        if renderer is not None:
+            renderer()
 
     doc.build(story)
     return buf.getvalue()

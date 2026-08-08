@@ -6,7 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
 from tallyquo.templates import service
-from tallyquo.templates.schemas import SetDefaultTemplateIn, TemplateOut, TemplatePackage
+from tallyquo.templates.schemas import (
+    SetDefaultTemplateIn,
+    TemplateIn,
+    TemplateOut,
+    TemplatePackage,
+    TemplatePreviewIn,
+)
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -59,3 +65,61 @@ async def set_default_template(
         await service.set_default_template(db, current_user.tenant_id, body.template_id)
     except service.TemplateNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from None
+
+
+@router.post("/preview")
+async def preview_template(
+    body: TemplatePreviewIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    try:
+        pdf = await service.render_preview_pdf(db, current_user.tenant_id, body.theme, body.blocks)
+    except service.InvalidTemplatePackage as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return Response(content=pdf, media_type="application/pdf")
+
+
+@router.post("", response_model=TemplateOut, status_code=201)
+async def create_template(
+    body: TemplateIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TemplateOut:
+    try:
+        row = await service.create_template(db, current_user.tenant_id, body.name, body.theme, body.blocks)
+    except service.InvalidTemplatePackage as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return TemplateOut(**row)
+
+
+# Registered after the static /default and /preview routes above --
+# Starlette matches routes in registration order, so a path-param route
+# here first would swallow requests meant for those literal paths.
+@router.put("/{template_id}", response_model=TemplateOut)
+async def update_template(
+    template_id: UUID,
+    body: TemplateIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TemplateOut:
+    try:
+        row = await service.update_template(
+            db, current_user.tenant_id, template_id, body.name, body.theme, body.blocks
+        )
+    except service.TemplateNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    except service.InvalidTemplatePackage as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return TemplateOut(**row)
+
+
+@router.delete("/{template_id}", status_code=204)
+async def archive_template(
+    template_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    found = await service.archive_template(db, current_user.tenant_id, template_id)
+    if not found:
+        raise HTTPException(status_code=404, detail="Template not found.")

@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.billing import fx
+from tallyquo.core import storage
 from tallyquo.identity import profile_service
 from tallyquo.tax.context_builder import build_supply_context
 from tallyquo.tax.engine import MissingJurisdiction, NoRateForDate, compute
@@ -618,19 +619,61 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
             )
         ).mappings().first()
     else:
+        # X4/L14, made real: an issued invoice pins (template_id,
+        # template_version). Until this fix, this query looked up
+        # template_id alone with no version filter at all, so editing a
+        # template (4.2) would immediately change how every invoice ever
+        # issued against it re-renders -- the opposite of the guarantee
+        # this whole snapshot mechanism exists for. `template_version_history`
+        # holds every *superseded* version; the pin's version is still the
+        # live `template` row until the next edit moves it there.
+        pin_row = (
+            await session.execute(
+                text("SELECT template_id, template_version FROM invoice WHERE id = :id"),
+                {"id": invoice_id},
+            )
+        ).mappings().one()
         theme_row = (
             await session.execute(
                 text(
-                    "SELECT theme, blocks FROM template WHERE id = ("
-                    "  SELECT template_id FROM invoice WHERE id = :id"
-                    ")"
+                    "SELECT theme, blocks FROM template_version_history "
+                    "WHERE template_id = :tid AND version = :tver"
                 ),
-                {"id": invoice_id},
+                {"tid": pin_row["template_id"], "tver": pin_row["template_version"]},
             )
         ).mappings().first()
+        if theme_row is None:
+            theme_row = (
+                await session.execute(
+                    text("SELECT theme, blocks FROM template WHERE id = :tid AND version = :tver"),
+                    {"tid": pin_row["template_id"], "tver": pin_row["template_version"]},
+                )
+            ).mappings().first()
     theme = (theme_row["theme"] if theme_row else None) or {}
     accent_color = theme.get("accent_color", "#0D99FF")
+    font_scale = float(theme.get("font_scale", 1.0))
+    margins_mm = float(theme.get("margins_mm", 20.0))
+    logo_position = theme.get("logo_position", "top_left")
     blocks = (theme_row["blocks"] if theme_row else None) or []
+
+    # Logo comes from the tenant's business profile, not the template pin
+    # -- it's the same image regardless of which template renders it,
+    # and (deliberate scope boundary, edgecases.md L18) it is NOT frozen
+    # at issue time the way tax/supplier/payment data is: a re-download
+    # of an old invoice shows the tenant's *current* logo, matching how
+    # letterhead naturally works, not a compliance-sensitive fact that
+    # must never silently change.
+    logo_row = (
+        await session.execute(
+            text("SELECT logo_ref FROM business_profile WHERE tenant_id = :t"), {"t": tenant_id}
+        )
+    ).mappings().first()
+    logo_bytes = None
+    if logo_row and logo_row["logo_ref"]:
+        try:
+            logo_bytes = storage.download(logo_row["logo_ref"])
+        except Exception:  # noqa: BLE001 -- a broken/missing logo must never block rendering
+            logo_bytes = None
 
     if invoice["status"] == "draft":
         profile_row = (
@@ -675,8 +718,13 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         line_items=invoice["line_items"],
         tax_lines=invoice["tax_lines"],
         accent_color=accent_color,
+        font_scale=font_scale,
+        margins_mm=margins_mm,
+        logo_bytes=logo_bytes,
+        logo_position=logo_position,
         payment_instruction=payment_instruction if "payment" in blocks else None,
         notes_visible="footer" in blocks,
+        optional_block_order=tuple(blocks),
     )
 
 

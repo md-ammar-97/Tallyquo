@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
@@ -48,6 +48,21 @@ async def update_registration(
             status_code=422,
             detail="Add the rest of your business profile before setting registration status.",
         ) from exc
+    return BusinessProfileOut(**profile)
+
+
+@router.post("/profile/logo", response_model=BusinessProfileOut)
+async def upload_logo(
+    file: UploadFile,
+    variant: str = "light",
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BusinessProfileOut:
+    data = await file.read()
+    try:
+        profile = await service.upload_logo(db, current_user.tenant_id, data, variant)
+    except service.InvalidLogoFile as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
     return BusinessProfileOut(**profile)
 
 

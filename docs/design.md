@@ -362,11 +362,13 @@ After upload, a three-field confirmation appears — vendor, date, amount — wi
 
 The whole flow is three taps and one glance. If it takes longer than fifteen seconds, expenses do not get logged, and the entire projection layer has nothing to work with.
 
-### 8.6 Template editor
+### 8.6 Template editor *(shipped 2026-08-08 — `implementation_plan.md` 4.2)*
 
 Left: block list with drag handles and visibility toggles. Centre: live document. Right: theme controls — brand colour, accent, font size scale, logo size and position, margins, show/hide optional blocks.
 
 The **compliance block is pinned, marked with a lock icon, and cannot be reordered out or hidden.** Its tooltip explains why: *"Required on every invoice — your client's accountant needs these fields."* Constraint stated as a service to the user rather than as a restriction imposed on them.
+
+**As shipped:** the "compliance block" is the 5 required block types (`supplier`, `document`, `bill_to`, `services`, `totals`) shown as one pinned, undraggable group — their *relative order among themselves* was never meaningful (`pdf_renderer.py` always renders them in a fixed sequence regardless of `blocks` array order), so there was nothing to preserve by letting them be dragged individually. `payment` and `footer` are the two blocks with a drag handle and a visibility toggle; reordering them is the one thing block order actually changes in the rendered PDF. Font scale is a slider (85%-115%, matching `templates/service.py`'s validated range); margins likewise (12mm-30mm). Logo position is a select (`top_left`/`top_center`/`top_right`/`none`) rather than a freeform drag, since the header layout has exactly those three anchor points. The live preview renders against the tenant's real business profile and logo but canned sample client/line-item data (`POST /templates/preview`), debounced ~500ms after the last change, and is never persisted.
 
 ### 8.7 Send invoice (compose window) *(shipped 2026-08-07 — `implementation_plan.md` 2.16/2.17)*
 
@@ -388,7 +390,7 @@ A settings page, not part of the invoice flow — reachable from the main nav ("
 
 The generated document is a separate design system from the app, sharing only tokens. It is a printed business document, not a web page.
 
-**Layout:** A4 and US Letter, 20mm margins, single column, logo top-left, document metadata top-right, then bill-to, then services, then totals right-aligned, then payment instructions, then footer.
+**Layout:** A4 and US Letter, 20mm margins by default (12-30mm, template-configurable since 4.2), single column, logo top-left by default (position configurable since 4.2), document metadata top-right, then bill-to, then services, then totals right-aligned, then payment instructions, then footer.
 
 **Type:** Inter throughout, 10pt body, 9pt tabular figures for the amount table, 18pt document title. Body colour `#1E1E1E`, labels `#757575`.
 

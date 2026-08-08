@@ -11,7 +11,12 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tallyquo.core import storage
 from tallyquo.core.security import decrypt_fields, encrypt_fields, mask_fields
+
+
+class InvalidLogoFile(ValueError):
+    pass
 
 _PROFILE_COLUMNS = (
     "legal_name, operating_name, address_line1, address_line2, city, "
@@ -169,3 +174,27 @@ async def archive_payment_instruction(session: AsyncSession, tenant_id: UUID, in
         {"t": tenant_id, "id": instruction_id},
     )
     return result.rowcount > 0
+
+
+async def upload_logo(session: AsyncSession, tenant_id: UUID, data: bytes, variant: str) -> dict:
+    """Closes Phase 1's 1.5 gap: `logo_ref`/`logo_dark_ref` have existed
+    on `business_profile` since migration 0002, but no upload endpoint
+    ever wrote to them -- confirmed by grepping the whole codebase for
+    any write to either column before this. Needed now because 4.2's
+    template editor has a "logo position" theme control that would
+    otherwise have nothing to position."""
+    if variant not in ("light", "dark"):
+        raise InvalidLogoFile("variant must be 'light' or 'dark'.")
+    try:
+        mime = storage.sniff_mime(data)
+    except storage.UnrecognizedFileType as exc:
+        raise InvalidLogoFile(str(exc)) from exc
+    if mime not in ("image/png", "image/jpeg", "image/gif"):
+        raise InvalidLogoFile("Logo must be a PNG, JPEG, or GIF image.")
+    key, _ = storage.upload(str(tenant_id), ["logo", variant, str(uuid4())], data)
+    column = "logo_ref" if variant == "light" else "logo_dark_ref"
+    await session.execute(
+        text(f"UPDATE business_profile SET {column} = :key WHERE tenant_id = :t"),
+        {"key": key, "t": tenant_id},
+    )
+    return await get_profile(session, tenant_id)

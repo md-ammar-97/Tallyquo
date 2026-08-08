@@ -136,10 +136,11 @@
 | L11 | Payment recorded on a cancelled invoice | Blocked |
 | L12 | Invoice marked paid, then payment reversed | Delete the payment record with a reason; status recalculates. Audited |
 | L13 | PDF render fails after a successful issue | Invoice is legally issued regardless. UI shows `Preparing document`; render retries; user can force regeneration |
-| L14 | Template edited after invoices used it | Issued invoices pin the template version and re-render identically. **P1** |
+| L14 | Template edited after invoices used it | Issued invoices pin the template version and re-render identically, backed by `template_version_history` (built 2026-08-08 alongside 4.2 -- see `datamodel.md`'s template section for the real gap this closed: before it, an issued invoice's PDF was re-derived from the *live* template row with no version check at all). **P1** |
 | L15 | Overdue status | Computed, not stored — derived from `due_date < today AND amount_paid < total`. Never a stale stored flag |
 | L16 | Timezone at a day boundary | Overdue evaluated in the business profile's timezone, not UTC |
 | L17 | Tenant switches default payment account, then an old invoice is re-downloaded | The old invoice still shows the account the client was originally given (`invoice.payment_instruction_snapshot`, frozen at issue, same discipline as L14/X4) — never today's default. If no default was ever configured, the PDF simply omits the section rather than guessing. Fixed 2026-08-08 (migration 0020); before that, issuance never read `payment_instruction` at all and no invoice this product issued had a payment section |
+| L18 | Tenant changes their logo, then an old invoice is re-downloaded | **Deliberate exception to L14/X4's discipline.** The logo is *not* frozen at issue time -- a re-render always uses the tenant's current `business_profile.logo_ref`, matching how printed letterhead naturally works (change your logo, every future printing uses the new one) rather than a compliance-sensitive fact like tax or payment details that must never silently change underneath an already-issued document. Scope boundary, not an oversight: no snapshot mechanism captures logo bytes at issue |
 
 ---
 

@@ -136,8 +136,11 @@ CREATE TABLE business_profile (
   website       text,
   social_links  jsonb NOT NULL DEFAULT '[]',  -- [{platform, url}]
 
-  logo_ref      text,                   -- storage key
-  logo_dark_ref text,
+  logo_ref      text,                   -- storage key, PNG/JPEG/GIF only
+  logo_dark_ref text,                   -- set via POST /profile/logo?variant=light|dark
+                                         -- (implementation_plan.md 1.5 -- these
+                                         -- columns existed since migration 0002
+                                         -- but nothing wrote to them until 2026-08-08)
 
   registration_status registration_status NOT NULL DEFAULT 'not_registered',
   gst_hst_number text,                  -- '123456789RT0001'
@@ -651,7 +654,9 @@ CREATE TABLE template_version_history (
 );
 ```
 
-**`template_version_history` is not built.** There is no template editor yet (4.2), so `template.version` has never had a reason to move off `1` -- nothing currently produces a second version to retain history for. Build this alongside 4.2, not before.
+**Built 2026-08-08 alongside 4.2's template editor.** Editing a tenant-owned template (`PUT /templates/:id`) inserts the current, about-to-be-superseded `(theme, blocks)` here under its own version before bumping `template.version` and overwriting the live row. `render_pdf` for an issued invoice resolves `(template_id, template_version)` against this table first, falling back to the live `template` row only when the pinned version is still the current one -- this is what actually makes X4/L14 hold for templates. Before this fix, `render_pdf`'s issued-invoice branch looked up `template_id` alone with no version filter at all, so editing a template would have immediately changed how every invoice already issued against it re-rendered; there was no live exposure only because no editor existed yet to produce a second version.
+
+`theme` gained two new keys in migration 0021: `logo_position` (`top_left` \| `top_center` \| `top_right` \| `none`) and `margins_mm` (10-40). `font_scale` existed since migration 0006 but `pdf_renderer.py` never read it until 4.2 -- all three are validated on write (`templates/service.py::_validate_theme`) and default sensibly on read (`theme.get(key, default)`) so pre-4.2 templates without these keys still render exactly as before.
 
 **RLS: added 2026-08-08 (`implementation_plan.md` 4.1), previously absent.** Migration 0006 shipped this table with no RLS at all ("only system rows exist in Phase 1, and NULL tenant_id rows must be visible regardless of session context") — true until Phase 4 made tenant-owned rows (imported templates) real. Migration 0019 adds a hybrid policy: system rows (`tenant_id IS NULL`) stay visible to every tenant; tenant-owned rows are visible and writable only by their own tenant; `WITH CHECK` prevents any tenant from writing a `NULL`-tenant row, so "create a fake system template" was never reachable even before RLS existed as a write path. Grants are `SELECT, INSERT, UPDATE` only — no `DELETE`, matching every other soft-delete table (`archived_at`) in this schema; the explicit `REVOKE DELETE` matters for the same reason it did for the Phase 3 reference tables (§6): this database auto-grants the app role full CRUD on new privilege boundaries unless a `REVOKE` says otherwise.
 
