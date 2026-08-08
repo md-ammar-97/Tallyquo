@@ -371,7 +371,17 @@ GET    /projection             ?year  *(shipped 2026-08-08)* — set-aside (fede
 PUT    /projection/declared-income     *(shipped 2026-08-08)* — declared-income mode
 DELETE /projection/declared-income/:year *(shipped 2026-08-08)* — revert to derived
 
-POST   /exports/year-end       (async → downloadable pack)
+POST   /exports/year-end       ?year  *(shipped 2026-08-08)* — invoice PDFs +
+                                 expenses.csv (T2125-mapped) + receipt images +
+                                 gst_hst_summary.csv + profit_and_loss.csv + a
+                                 README, zipped and returned as a signed URL
+                                 (7-day TTL, see §11). Built synchronously
+                                 within the request rather than as a queued
+                                 job — same reasoning as 3.10: at these data
+                                 volumes it's a sub-second-to-few-second
+                                 operation, not something needing a queue
+                                 this product doesn't otherwise have
+                                 (implementation_plan.md 3.11)
 GET    /exports/all            (full data export, no lock-in)
 ```
 
@@ -388,11 +398,11 @@ s3://bucket/
     invoices/{invoice_id}/{content_hash}.pdf
     receipts/{expense_id}/{content_hash}.{ext}
     evidence/{client_id}/{content_hash}.{ext}
-    exports/{export_id}.zip           (TTL 7 days)
+    year-end-packs/{year}-{uuid}.zip  (TTL 7 days -- shipped 2026-08-08, implementation_plan.md 3.11)
 ```
 
 - No public objects. Ever.
-- Access exclusively via signed URLs, TTL ≤ 5 minutes, generated only after the API has verified tenant ownership of the underlying row.
+- Access exclusively via signed URLs, TTL ≤ 5 minutes, generated only after the API has verified tenant ownership of the underlying row. **One deliberate exception**: the year-end accountant pack's link is valid 7 days — it's meant to be handed to (or re-downloaded by) an accountant over the following days, not fetched once immediately after the API call that created it. Every other signed URL in this product still uses the 5-minute default.
 - Uploads go through the API (which validates MIME type by magic bytes, not extension, enforces size caps, and strips EXIF from images) rather than direct-to-bucket, so that ownership is established before the object exists.
 - Content-addressed filenames deduplicate re-uploads and make integrity verification trivial.
 

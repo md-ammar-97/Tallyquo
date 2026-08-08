@@ -136,7 +136,7 @@ Two Phase-1-deferred open questions resolve here per the doc's own recommendatio
 
 ## 5. Phase 3 — The answer
 
-**Status: in progress, started 2026-08-07.** 3.1-3.10 and 3.12 built as specified below (3.10 deviates: live-query, not a background job -- see its row). 3.11 (year-end accountant pack) remains.
+**Status: shipped 2026-08-08.** 3.1-3.12 all built as specified below (3.10 deviates: live-query, not a background job; 3.11 deviates: synchronous within the request, not a queued job -- see their rows).
 
 **Scope (from `problem-statement.md` §10):** income and set-aside projection, CPP estimate, GST/HST net-owing by filing period, small-supplier threshold tracker, instalment warnings, year-end accountant pack.
 
@@ -154,13 +154,13 @@ Note that a **narrow** version of GST/HST position (§12 Q3 tier (a), sales-tax-
 | 3.8 | ✅ Small-supplier threshold tracker: rolling four-consecutive-calendar-quarter total including zero-rated and pre-registration revenue (S1, P1), FX-converted per invoice, credit notes netted out (S7), 75%/90% escalating warnings with consequence-stated copy, second-business disclosure (S9). **Not built**: distinguishing an immediate single-quarter crossing from a gradual one (S2/S3), and persisting "once crossed, stays crossed" even if revenue later dips (S5) — documented as a gap in `edgecases.md` §5 rather than silently shipped | 3.7 | M |
 | 3.9 | ✅ Quarterly instalment warning once projected net income tax + CPP owing crosses the CRA's $3,000 threshold — deliberately excludes GST/HST net-owing, a separate remittance with its own mechanics (a real bug caught while building this: the two were briefly summed together before a test caught it) | 3.5, 3.7 | S |
 | 3.10 | **Deviates from spec**: no `projection_refresh` background job. Everything is computed live on each `GET /projection` — same precedent as 2.3's client roll-up (`rollup_service.py`), and for the same reason: at single-tenant data volumes a handful of aggregate queries per request is cheap, and a debounced cache risks showing a stale figure in a financial product. Revisit if that stops being true | 3.2 | S |
-| 3.11 | Year-end accountant pack: async export job zipping invoice PDFs + expense CSV (T2125-mapped) + receipt images + GST/HST period summary + P&L, signed URL with 7-day TTL | 2.14, 3.7 | M |
+| 3.11 | ✅ Year-end accountant pack: invoice PDFs (rendered on demand, ADR-005 — nothing pre-stored) + expense CSV (T2125-mapped) + receipt images (fetched from storage) + GST/HST quarterly summary + P&L + a README, zipped and returned as a signed URL, 7-day TTL (`architecture.md` §11). **Deviates from spec**: built synchronously within the request, not as a queued async job — same reasoning as 3.10, and a storage-layer failure surfaces as a clean 502 rather than an unhandled 500 (caught while browser-verifying against local dev, where storage genuinely isn't configured yet) | 2.14, 3.7 | M |
 | 3.12 | ✅ Fiscal-year vs GST-filing-period calendar separation: a year selector (← / → one year at a time, `design.md` mockup) drives the income-tax view; the GST section stays quarter-grained underneath it in the same year. December/January boundary (P11) needed no special-casing — the selector already defaults to the current calendar year and the prior year is one click away | 3.2 | S |
 
 **Exit criteria:**
-- P1 threshold edge case **S1** green, plus the full P1–P11 projection edge-case set.
-- Every estimated figure carries the "estimate — not tax advice" affordance with visible assumptions — spot-check every screen that shows a number derived by 3.2–3.9.
-- Success metrics instrumented: % opening the projection view monthly, % generating a year-end pack (§9 — the retention proof metric).
+- ✅ P1 threshold edge case **S1** green, plus the full P1–P11 projection edge-case set (S2/S3/S5 are the one documented gap — `edgecases.md` §5).
+- ✅ Every estimated figure carries the "estimate — not tax advice" affordance with visible assumptions — spot-checked on the set-aside block, the derived/declared income toggle, and the year-end pack's README.
+- **Not built**: success metrics instrumentation (% opening the projection view monthly, % generating a year-end pack, §9's retention proof metric). This product has no analytics layer at all yet — a gap wider than Phase 3, out of scope to open here.
 
 ---
 

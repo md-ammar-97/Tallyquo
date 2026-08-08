@@ -303,6 +303,8 @@ The **instalment reminder** tile only renders when it applies (projected net inc
 
 A **year selector** (← / →) sits above the tiles, defaulting to the current calendar year — this is Phase 3's answer to keeping the income-tax calendar (always calendar-year) and the GST filing calendar (quarterly, shown in the table below the tiles) visibly separate without needing distinct navigation for each.
 
+The **year-end accountant pack** *(shipped 2026-08-08 — `implementation_plan.md` 3.11)* lives in the Reports block below the tiles, alongside the existing P&L CSV export: a year picker (defaulting to last year, the natural "closing out" case) and a **Generate pack** button. There's no separate progress UI for the zip assembly — it's fast enough at this data scale to just be the button's loading state — and the result is a plain download link plus a one-line reminder of what's inside and that the link expires in 7 days. A storage failure surfaces in the same red error-text style as everything else on this screen, never a blank retry with no explanation.
+
 ### 8.2 Invoice builder
 
 Split view: form left (`8` cols), live document preview right (`4` cols, sticky). Below `lg`, the preview moves behind a `Preview` toggle.

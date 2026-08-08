@@ -102,3 +102,28 @@ def signed_url(key: str, ttl_seconds: int | None = None) -> str:
         Params={"Bucket": settings.storage_bucket, "Key": key},
         ExpiresIn=ttl_seconds or settings.signed_url_ttl_seconds,
     )
+
+
+def download(key: str) -> bytes:
+    """Server-side fetch of an object's bytes -- used when the API itself
+    needs the content (e.g. bundling receipt images into a zip), as
+    opposed to `signed_url`, which hands the client a link to fetch it
+    directly."""
+    body = _client().get_object(Bucket=get_settings().storage_bucket, Key=key)["Body"]
+    return body.read()
+
+
+def upload_generated(tenant_id: str, key_parts: list[str], data: bytes, content_type: str) -> str:
+    """For content the API generated itself (a rendered zip, a report) --
+    the caller already knows and controls the content type, so this skips
+    `upload`'s magic-byte allow-list, which exists specifically to
+    validate untrusted *user* uploads (E13), not internal output.
+    Returns the object key."""
+    key = build_key(tenant_id, *key_parts)
+    _client().put_object(
+        Bucket=get_settings().storage_bucket,
+        Key=key,
+        Body=data,
+        ContentType=content_type,
+    )
+    return key
