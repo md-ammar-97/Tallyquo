@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     # identity to send from. Empty in local dev/CI: request_otp() logs the
     # code server-side instead of emailing it whenever environment != "production".
     resend_api_key: str = ""
-    otp_from_email: str = "Tallyquo <noreply@orbynlabs.ca>"
+    otp_from_email: str = "Tallyquo <login@notify.orbynlabs.ca>"
 
     # Receipt OCR (2.8) -- qwen/qwen3.6-27b on Groq's free tier. Empty in
     # local dev/CI until set; expenses_service falls straight to manual
