@@ -63,6 +63,15 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    # Platform-level transactional email (OTP sign-in codes) via Resend --
+    # distinct from notifications/smtp_client.py, which sends on a
+    # TENANT's own configured identity (invoices to clients). An OTP is
+    # requested before any tenant/profile exists, so there is no tenant
+    # identity to send from. Empty in local dev/CI: request_otp() logs the
+    # code server-side instead of emailing it whenever environment != "production".
+    resend_api_key: str = ""
+    otp_from_email: str = "Tallyquo <noreply@orbynlabs.ca>"
+
     # Receipt OCR (2.8) -- qwen/qwen3.6-27b on Groq's free tier. Empty in
     # local dev/CI until set; expenses_service falls straight to manual
     # entry with no error if OCR is called without a key (E3).

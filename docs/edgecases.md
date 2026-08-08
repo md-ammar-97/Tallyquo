@@ -25,6 +25,7 @@
 | A13 | Email change abandoned halfway | Old address remains authoritative and functional. Pending change expires in 24h |
 | A14 | Session active while tenant is suspended | Next request returns 403 with a clear reason; read-only export access remains |
 | A15 | Clock skew between server and mail delivery | OTP TTL measured server-side only |
+| A16 | Resend is down or misconfigured when a code is requested | `request_otp`'s HTTP response is identical either way (A1/A2 — a delivery failure must never be distinguishable from success, which would leak provider state to an attacker). Logged server-side as `otp_email_send_failed` so it's still visible to an operator. Found 2026-08-08: before Resend was wired up, `ENVIRONMENT` was never explicitly set on the deployed service, so it silently defaulted to `"local"` — the dev-only stopgap of logging the raw code instead of emailing it was active in real production the whole time, and no code was ever actually delivered by any provider. Fixed by setting `ENVIRONMENT=production` on Render and shipping real delivery via Resend (`core/resend_client.py`) |
 
 ---
 

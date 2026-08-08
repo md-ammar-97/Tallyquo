@@ -49,10 +49,11 @@ async def request_otp(email: str, ip: str | None) -> str | None:
     The HTTP router always returns the same response regardless of this
     function's return value -- callers there must discard it. It returns
     the plaintext code (or None if suppressed by a rate limit) purely so
-    tests can call this directly instead of scraping logs; production's
-    only consumer of the code itself is the notifications module (Phase 2,
-    not built yet -- logged in non-production environments in the meantime
-    as a stopgap for manual testing).
+    tests can call this directly instead of needing network access.
+    Production sends the code via Resend (core/resend_client.py, a
+    platform-level send -- there is no tenant identity yet at this point
+    in the flow); every other environment logs it server-side instead,
+    so local/CI dev never needs a Resend account.
     """
     settings = get_settings()
     email = email.strip().lower()
@@ -117,8 +118,25 @@ async def request_otp(email: str, ip: str | None) -> str | None:
                 },
             )
 
-    # TODO(Phase 1, notifications module): send `code` by email.
-    if get_settings().environment != "production":
+    if settings.environment == "production":
+        from tallyquo.core.logging import get_logger
+        from tallyquo.core.resend_client import EmailSendFailed, send_otp_email
+
+        try:
+            await send_otp_email(email, code)
+        except EmailSendFailed as exc:
+            # A1/A2: the HTTP response is identical either way -- a
+            # delivery failure must never be distinguishable from a
+            # successful send (that would leak whether the address is
+            # real, or expose provider outages to an attacker). Logged
+            # here so an actual delivery problem is still visible
+            # server-side instead of silently vanishing.
+            get_logger(__name__).error("otp_email_send_failed", email=email, error=str(exc))
+    else:
+        # Local/CI/staging: no real email goes out. Logged instead so a
+        # developer can complete a login without a Resend account, and
+        # so the test suite (which calls this function directly and
+        # reads its return value) never needs network access.
         from tallyquo.core.logging import get_logger
 
         get_logger(__name__).info("otp_code_issued_dev_only", email=email, code=code)
