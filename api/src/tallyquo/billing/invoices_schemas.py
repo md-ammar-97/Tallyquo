@@ -88,6 +88,7 @@ class InvoiceOut(BaseModel):
     fx_rate_date: date | None
     fx_rate_source: str | None
     has_share_link: bool
+    client_name: str | None = None
     line_items: list[InvoiceLineOut] = []
     tax_lines: list[InvoiceTaxLineOut] = []
 

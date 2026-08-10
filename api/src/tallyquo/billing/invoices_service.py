@@ -85,9 +85,16 @@ _INVOICE_COLUMNS = (
     # defeat the point of it being revocable/hard-to-guess in the first
     # place. Just enough to let the UI offer "view" vs. "get" across a
     # page reload without silently minting a fresh link on every view.
-    "invoice.share_token IS NOT NULL AS has_share_link"
+    "invoice.share_token IS NOT NULL AS has_share_link, "
+    # Sovereign Ledger redesign's Dashboard "Recent Invoices" tile (and
+    # any other list view) needs a client name to show, not just the id
+    # -- added here rather than a second per-row lookup.
+    "c.legal_name AS client_name"
 )
-_INVOICE_FROM = "invoice LEFT JOIN business_profile bp ON bp.tenant_id = invoice.tenant_id"
+_INVOICE_FROM = (
+    "invoice LEFT JOIN business_profile bp ON bp.tenant_id = invoice.tenant_id "
+    "LEFT JOIN client c ON c.id = invoice.client_id"
+)
 
 
 async def get_invoice(session: AsyncSession, invoice_id: UUID) -> dict | None:

@@ -78,6 +78,12 @@ class InstalmentWarningOut(BaseModel):
     threshold: Decimal
 
 
+class YtdActualsOut(BaseModel):
+    income: Decimal
+    expenses: Decimal
+    net_income: Decimal
+
+
 class ProjectionOut(BaseModel):
     year: int
     as_of: str
@@ -87,3 +93,4 @@ class ProjectionOut(BaseModel):
     quarterly_net_owing: list[QuarterNetOwingOut]
     threshold: ThresholdOut
     instalment_warning: InstalmentWarningOut
+    ytd: YtdActualsOut

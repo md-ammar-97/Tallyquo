@@ -89,6 +89,30 @@ async def test_ledger_filters_by_status_and_date():
 
 
 @pytest.mark.asyncio
+async def test_invoice_list_includes_client_name():
+    """Sovereign Ledger redesign's Dashboard "Recent Invoices" tile (and
+    any other invoice list view) needs a client name to display, not
+    just client_id -- added via a join rather than a second per-row
+    lookup."""
+    client, headers, client_id = await _setup()
+    try:
+        await client.post(
+            "/invoices",
+            json={
+                "client_id": client_id,
+                "invoice_date": "2026-01-15",
+                "line_items": [{"description": "A", "unit_rate": "100", "amount": "100.00"}],
+            },
+            headers=headers,
+        )
+        r = await client.get("/invoices", headers=headers)
+        assert r.status_code == 200
+        assert r.json()[0]["client_name"] == "Acme"
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_ledger_csv_export():
     client, headers, client_id = await _setup()
     try:

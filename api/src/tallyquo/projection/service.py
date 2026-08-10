@@ -62,6 +62,7 @@ class ProjectionView:
     quarterly_net_owing: list[gst_service.QuarterNetOwing]
     threshold: gst_service.ThresholdStatus
     instalment_warning: InstalmentWarning
+    ytd: income_service.YtdActuals
 
 
 async def build_projection(
@@ -114,6 +115,13 @@ async def build_projection(
     quarterly = await gst_service.net_owing_by_quarter(session, year)
     threshold = await gst_service.threshold_status(session, as_of)
 
+    # Redesigned dashboard's "Total Invoiced"/"Estimated Expenses" tiles.
+    # derived_income_projection() above already computes this internally
+    # (it's the ratio behind the straight-line extrapolation) but only
+    # returns the extrapolated figure, not the raw actuals -- fetched
+    # again here rather than widening that function's return contract.
+    ytd = await income_service.ytd_actuals(session, year, as_of)
+
     # CRA's instalment threshold is about *net income tax* owing (income
     # tax + CPP, both settled on the same T1 return) -- GST/HST net-owing
     # is a wholly separate remittance with its own return (GST34) and its
@@ -135,6 +143,7 @@ async def build_projection(
         quarterly_net_owing=quarterly,
         threshold=threshold,
         instalment_warning=instalment,
+        ytd=ytd,
     )
 
 

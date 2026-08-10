@@ -130,6 +130,32 @@ async def test_declared_income_overrides_derived_and_shows_variance():
 
 
 @pytest.mark.asyncio
+async def test_ytd_actuals_exposed_on_projection():
+    """Phase D of the Sovereign Ledger redesign: the dashboard's "Total
+    Invoiced"/"Estimated Expenses" tiles read this -- income_service.
+    ytd_actuals() already computed this internally to feed the derived
+    extrapolation, but nothing exposed the raw figures until now."""
+    client, headers = await _tenant()
+    try:
+        await _issue_invoice(client, headers, amount="10000.00", invoice_date="2026-01-15")
+        r = await client.post(
+            "/expenses",
+            json={"expense_date": "2026-01-20", "amount_total": "1130.00", "tax_amount": "130.00"},
+            headers=headers,
+        )
+        assert r.status_code == 201, r.text
+
+        r = await client.get("/projection?year=2026", headers=headers)
+        assert r.status_code == 200, r.text
+        ytd = r.json()["ytd"]
+        assert ytd["income"] == "10000.00"
+        assert ytd["expenses"] == "1000.00"
+        assert ytd["net_income"] == "9000.00"
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_o5_expense_itc_reduces_net_owing_even_without_tax_type():
     """Regression for a real bug caught while building this: itc_eligible
     is the GST/HST-ITC signal, tax_type on expense is optional and often

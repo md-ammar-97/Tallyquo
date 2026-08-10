@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, downloadFile } from '../api'
+import { AlertTriangle } from 'lucide-react'
+import { api, ApiError } from '../api'
 
 interface TaxBand {
   income_from: string
@@ -61,6 +62,12 @@ interface InstalmentWarning {
   threshold: string
 }
 
+interface YtdActuals {
+  income: string
+  expenses: string
+  net_income: string
+}
+
 interface Projection {
   year: number
   as_of: string
@@ -70,7 +77,21 @@ interface Projection {
   quarterly_net_owing: { period: string; collected: string; itcs_claimable: string; net_owing: string }[]
   threshold: Threshold
   instalment_warning: InstalmentWarning
+  ytd: YtdActuals
 }
+
+interface RecentInvoice {
+  id: string
+  number: string | null
+  client_name: string | null
+  invoice_date: string | null
+  status: string
+  tax_treatment_snapshot: string | null
+  currency: string
+  total: string
+}
+
+const RECENT_INVOICES_LIMIT = 8
 
 function formatDisplay(amount: string): string {
   const n = Number(amount)
@@ -78,35 +99,12 @@ function formatDisplay(amount: string): string {
 }
 
 export default function Dashboard() {
-  const [pnlGroupBy, setPnlGroupBy] = useState('month')
   const [projection, setProjection] = useState<Projection | null>(null)
   const [projectionError, setProjectionError] = useState<string | null>(null)
   const [assumptionsOpen, setAssumptionsOpen] = useState(false)
   const [declaredDraft, setDeclaredDraft] = useState('')
   const [editingDeclared, setEditingDeclared] = useState(false)
-
-  const currentYear = new Date().getFullYear()
-  const yearOptions = [currentYear, currentYear - 1, currentYear - 2]
-  const [packYear, setPackYear] = useState(String(currentYear - 1))
-  const [packGenerating, setPackGenerating] = useState(false)
-  const [packResult, setPackResult] = useState<{ url: string; filename: string; byte_size: number } | null>(null)
-  const [packError, setPackError] = useState<string | null>(null)
-
-  async function handleGeneratePack() {
-    setPackGenerating(true)
-    setPackError(null)
-    setPackResult(null)
-    try {
-      const result = await api.post<{ url: string; filename: string; byte_size: number }>(
-        `/exports/year-end?year=${packYear}`
-      )
-      setPackResult(result)
-    } catch (err) {
-      setPackError(err instanceof ApiError ? err.message : 'Could not generate the year-end pack.')
-    } finally {
-      setPackGenerating(false)
-    }
-  }
+  const [recentInvoices, setRecentInvoices] = useState<RecentInvoice[]>([])
 
   async function loadProjection(year?: number) {
     try {
@@ -121,6 +119,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadProjection()
+    api.get<RecentInvoice[]>('/invoices').then((rows) => setRecentInvoices(rows.slice(0, RECENT_INVOICES_LIMIT)))
   }, [])
 
   async function handleSaveDeclared(e: React.FormEvent) {
@@ -147,7 +146,25 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1>Dashboard</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1>How much is mine?</h1>
+          <p className="caption" style={{ marginTop: -8, marginBottom: 16 }}>
+            {projection ? `Year-to-date projection for ${projection.year}` : 'Year-to-date projection'}
+          </p>
+        </div>
+        {projection && (
+          <span>
+            <button className="link-button" onClick={() => changeYear(-1)}>
+              &larr; {projection.year - 1}
+            </button>{' '}
+            <button className="link-button" onClick={() => changeYear(1)}>
+              {projection.year + 1} &rarr;
+            </button>
+          </span>
+        )}
+      </div>
+
       <div className="block">
         <div className="block-body">
           <p style={{ marginBottom: 16 }}>
@@ -175,24 +192,55 @@ export default function Dashboard() {
 
       {projection && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span className="caption">Projection for {projection.year}</span>
-            <span>
-              <button className="link-button" onClick={() => changeYear(-1)}>&larr; {projection.year - 1}</button>{' '}
-              <button className="link-button" onClick={() => changeYear(1)}>{projection.year + 1} &rarr;</button>
-            </span>
-          </div>
+          {projection.instalment_warning.applies && (
+            <div
+              className="block alert"
+              style={{
+                borderLeft: '3px solid var(--color-status-overdue)',
+                background: 'var(--color-status-overdue-bg)',
+              }}
+            >
+              <div className="block-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <AlertTriangle size={18} color="var(--color-status-overdue)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <strong style={{ color: 'var(--color-status-overdue)' }}>Quarterly instalment warning</strong>
+                  <p className="caption" style={{ marginTop: 4 }}>
+                    Projected net income tax + CPP owing (CAD {projection.instalment_warning.projected_net_tax_owing})
+                    is over CAD {projection.instalment_warning.threshold} -- the CRA may expect quarterly instalments.
+                    Confirm with your accountant.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="metric-grid">
-            <div className={`metric-tile${assumptionsOpen ? ' expanded' : ''}`}>
-              <div className="metric-label">Set aside for tax</div>
+            <div className="metric-tile">
+              <div className="metric-label">Total invoiced</div>
+              <div className="metric-value display">{formatDisplay(projection.ytd.income)}</div>
+              <p className="caption metric-sub">year to date, excludes tax collected</p>
+            </div>
+
+            <div className="metric-tile">
+              <div className="metric-label">Estimated expenses</div>
+              <div className="metric-value display">{formatDisplay(projection.ytd.expenses)}</div>
+              <p className="caption metric-sub">year to date, deductible portion only</p>
+            </div>
+
+            <div
+              className={`metric-tile${assumptionsOpen ? ' expanded' : ''}`}
+              style={{ borderLeft: '4px solid var(--color-tertiary-default)' }}
+            >
+              <div className="metric-label">Recommended set-aside</div>
               <div className="metric-value display">{formatDisplay(projection.set_aside.total_estimated_tax_and_cpp)}</div>
               <p className="caption metric-sub">
                 {projection.income.mode === 'declared' ? 'based on declared income' : 'estimate'}
-                {projection.income.derived.is_low_confidence && projection.income.mode === 'derived' && ' -- low confidence, early in the year'}
+                {projection.income.derived.is_low_confidence &&
+                  projection.income.mode === 'derived' &&
+                  ' -- low confidence, early in the year'}
               </p>
               <button className="assumptions-toggle" onClick={() => setAssumptionsOpen((o) => !o)}>
-                {assumptionsOpen ? 'Hide assumptions' : 'Show assumptions'}
+                {assumptionsOpen ? 'Hide logic' : 'View logic'}
               </button>
               {assumptionsOpen && (
                 <div className="assumptions-list">
@@ -217,17 +265,27 @@ export default function Dashboard() {
                     <span>{projection.set_aside.recommended_set_aside_pct}% of net income</span>
                   </div>
                   <p className="caption" style={{ marginTop: 4 }}>
-                    Estimate only, not tax advice. Based on {projection.income.mode === 'declared' ? 'your declared annual income' : `${projection.income.derived.method.replace(/_/g, ' ')}`} of CAD {projection.income.active_projected_income}, accrual basis (by invoice and expense date, not when cash actually changed hands).
+                    Estimate only, not tax advice. Based on{' '}
+                    {projection.income.mode === 'declared'
+                      ? 'your declared annual income'
+                      : `${projection.income.derived.method.replace(/_/g, ' ')}`}{' '}
+                    of CAD {projection.income.active_projected_income}, accrual basis (by invoice and expense date,
+                    not when cash actually changed hands).
                   </p>
 
                   {projection.income.mode === 'declared' ? (
                     <p className="caption">
                       Derived (extrapolated) estimate: CAD {projection.income.derived.projected_annual_income}
                       {projection.income.variance_from_derived && ` (gap: CAD ${projection.income.variance_from_derived})`}{' '}
-                      <button className="link-button" onClick={handleClearDeclared}>Use derived instead</button>
+                      <button className="link-button" onClick={handleClearDeclared}>
+                        Use derived instead
+                      </button>
                     </p>
                   ) : editingDeclared ? (
-                    <form onSubmit={handleSaveDeclared} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                    <form
+                      onSubmit={handleSaveDeclared}
+                      style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}
+                    >
                       <input
                         type="number"
                         step="0.01"
@@ -238,7 +296,9 @@ export default function Dashboard() {
                         required
                       />
                       <button type="submit">Save</button>
-                      <button type="button" className="link-button" onClick={() => setEditingDeclared(false)}>Cancel</button>
+                      <button type="button" className="link-button" onClick={() => setEditingDeclared(false)}>
+                        Cancel
+                      </button>
                     </form>
                   ) : (
                     <button className="link-button" onClick={() => setEditingDeclared(true)}>
@@ -248,23 +308,26 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+          </div>
 
+          <div className="metric-grid">
             <div className="metric-tile">
               <div className="metric-label">Threshold tracker</div>
               <div className="metric-value">{projection.threshold.pct_of_threshold}%</div>
-              <div className={`progress-bar`}>
+              <div className="progress-bar">
                 <div
                   className={`progress-bar-fill ${projection.threshold.escalation !== 'ok' ? projection.threshold.escalation : ''}`}
                   style={{ width: `${Math.min(100, Number(projection.threshold.pct_of_threshold))}%` }}
                 />
               </div>
               <p className="caption metric-sub">
-                {(Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue)) > 0
+                {Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue) > 0
                   ? `CAD ${(Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue)).toFixed(2)} from the CAD ${projection.threshold.threshold} registration threshold. Crossing it changes what you must charge.`
                   : 'Threshold reached -- registration is required.'}
               </p>
               <p className="caption" style={{ marginTop: 4 }}>
-                Based on this account only -- the $30,000 threshold is shared across any associated businesses you also run.
+                Based on this account only -- the $30,000 threshold is shared across any associated businesses you
+                also run.
               </p>
             </div>
 
@@ -275,95 +338,87 @@ export default function Dashboard() {
               </div>
               <p className="caption metric-sub">collected minus input tax credits, by quarter -- never revenue</p>
             </div>
-
-            {projection.instalment_warning.applies && (
-              <div className="metric-tile" style={{ borderLeft: '3px solid var(--color-status-attention)' }}>
-                <div className="metric-label">Instalment reminder</div>
-                <p className="caption">
-                  Projected net income tax + CPP owing (CAD {projection.instalment_warning.projected_net_tax_owing}) is over
-                  CAD {projection.instalment_warning.threshold} -- the CRA may expect quarterly instalments. Confirm with your accountant.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="block">
-            <div className="block-header">
-              <h2>GST/HST net-owing by quarter</h2>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Quarter</th>
-                  <th>Collected</th>
-                  <th>ITCs claimable</th>
-                  <th>Net owing</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projection.quarterly_net_owing.map((q) => (
-                  <tr key={q.period}>
-                    <td>{q.period}</td>
-                    <td>CAD {q.collected}</td>
-                    <td>CAD {q.itcs_claimable}</td>
-                    <td>CAD {q.net_owing}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </>
       )}
 
       <div className="block">
         <div className="block-header">
-          <h2>Reports</h2>
+          <h2>Recent invoices</h2>
+          <Link className="link-button" to="/invoices">
+            View all
+          </Link>
         </div>
-        <div className="block-body" style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label>P&amp;L grouped by</label>
-            <select value={pnlGroupBy} onChange={(e) => setPnlGroupBy(e.target.value)}>
-              <option value="month">Month</option>
-              <option value="quarter">Quarter</option>
-              <option value="year">Year</option>
-            </select>
-          </div>
-          <button onClick={() => downloadFile(`/reports/pnl.csv?group_by=${pnlGroupBy}`, 'pnl.csv')}>
-            Download P&amp;L CSV
-          </button>
-        </div>
-        <div className="block-body" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, borderTop: '1px solid var(--color-border-subtle)' }}>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label>Year-end accountant pack</label>
-            <select value={packYear} onChange={(e) => setPackYear(e.target.value)}>
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-          <button onClick={handleGeneratePack} disabled={packGenerating}>
-            {packGenerating ? 'Generating…' : 'Generate pack'}
-          </button>
-          {packResult && (
-            <a href={packResult.url} target="_blank" rel="noreferrer">
-              Download {packResult.filename} ({(packResult.byte_size / 1024).toFixed(0)} KB)
-            </a>
-          )}
-        </div>
-        {packError && (
-          <div className="block-body" style={{ paddingTop: 0 }}>
-            <p className="error-text">{packError}</p>
-          </div>
-        )}
-        {packResult && (
-          <div className="block-body" style={{ paddingTop: 0 }}>
-            <p className="caption">
-              Invoice PDFs, expenses (T2125-mapped), receipt images, GST/HST quarterly summary, and P&amp;L, zipped.
-              This link works for 7 days from generation -- not tax advice, a record of what's in Tallyquo.
-            </p>
-          </div>
-        )}
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Date</th>
+              <th>Tax treatment</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentInvoices.map((inv) => (
+              <tr key={inv.id}>
+                <td>
+                  <Link to={`/invoices/${inv.id}`}>{inv.client_name ?? '—'}</Link>
+                </td>
+                <td>{inv.invoice_date ?? '—'}</td>
+                <td>
+                  {inv.tax_treatment_snapshot && (
+                    <span className={`badge ${inv.tax_treatment_snapshot}`}>
+                      {inv.tax_treatment_snapshot.replace(/_/g, ' ')}
+                    </span>
+                  )}
+                </td>
+                <td className="amount">
+                  {inv.currency} {inv.total}
+                </td>
+                <td>
+                  <span className={`badge ${inv.status}`}>{inv.status.replace(/_/g, ' ')}</span>
+                </td>
+              </tr>
+            ))}
+            {recentInvoices.length === 0 && (
+              <tr>
+                <td colSpan={5} className="caption" style={{ padding: 24 }}>
+                  No invoices yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {projection && (
+        <div className="block">
+          <div className="block-header">
+            <h2>GST/HST net-owing by quarter</h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Quarter</th>
+                <th>Collected</th>
+                <th>ITCs claimable</th>
+                <th>Net owing</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projection.quarterly_net_owing.map((q) => (
+                <tr key={q.period}>
+                  <td>{q.period}</td>
+                  <td>CAD {q.collected}</td>
+                  <td>CAD {q.itcs_claimable}</td>
+                  <td>CAD {q.net_owing}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

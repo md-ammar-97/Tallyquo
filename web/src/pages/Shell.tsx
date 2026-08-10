@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  BarChart3,
   Bell,
   Building2,
   FileText,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/recurring', label: 'Recurring', icon: Repeat },
   { to: '/clients', label: 'Clients', icon: Users },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/profile', label: 'Business profile', icon: Building2 },
   { to: '/email-accounts', label: 'Email accounts', icon: Mail },
 ]
@@ -35,6 +37,7 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/expenses', title: 'Expenses' },
   { prefix: '/recurring', title: 'Recurring' },
   { prefix: '/clients', title: 'Clients' },
+  { prefix: '/reports', title: 'Reports' },
   { prefix: '/profile', title: 'Business profile' },
   { prefix: '/email-accounts', title: 'Email accounts' },
   { prefix: '/', title: 'Dashboard' },

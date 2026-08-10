@@ -13,6 +13,7 @@ import InvoiceDetail from './pages/InvoiceDetail'
 import Ledger from './pages/Ledger'
 import PublicInvoice from './pages/PublicInvoice'
 import Recurring from './pages/Recurring'
+import Reports from './pages/Reports'
 import TemplateEditor from './pages/TemplateEditor'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ function App() {
           <Route path="expenses" element={<Expenses />} />
           <Route path="recurring" element={<Recurring />} />
           <Route path="email-accounts" element={<EmailAccounts />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="templates/new" element={<TemplateEditor />} />
           <Route path="templates/:id/edit" element={<TemplateEditor />} />
         </Route>

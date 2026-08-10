@@ -17,6 +17,7 @@ from tallyquo.projection.schemas import (
     SetAsideOut,
     TaxBandOut,
     ThresholdOut,
+    YtdActualsOut,
 )
 
 router = APIRouter(prefix="/projection", tags=["projection"])
@@ -94,6 +95,11 @@ def _to_out(view: service.ProjectionView) -> ProjectionOut:
             applies=view.instalment_warning.applies,
             projected_net_tax_owing=view.instalment_warning.projected_net_tax_owing,
             threshold=view.instalment_warning.threshold,
+        ),
+        ytd=YtdActualsOut(
+            income=view.ytd.income,
+            expenses=view.ytd.expenses,
+            net_income=view.ytd.net_income,
         ),
     )
 
