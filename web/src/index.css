@@ -72,6 +72,7 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 8px;
+  --radius-full: 9999px;
 
   /* design.md §8.1: the set-aside block is the only place this appears --
      a hero-sized figure for the one number the dashboard exists to answer. */
@@ -513,26 +514,165 @@ tbody tr:nth-child(5n):hover {
   min-height: 100vh;
 }
 .sidebar {
-  width: 220px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
   background: var(--color-bg-default);
   border-right: 1px solid var(--color-border-default);
   padding: var(--space-4);
   flex-shrink: 0;
 }
-.sidebar a {
+.brand-block {
+  padding: var(--space-2) var(--space-2) var(--space-4);
+}
+.brand-mark {
   display: block;
+  width: 100%;
+  max-width: 150px;
+  height: auto;
+}
+.mobile-wordmark {
+  font: 700 16px/1 var(--font-ui);
+  color: var(--color-accent-default);
+}
+.sidebar-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   text-decoration: none;
   font-size: 13px;
-  margin-bottom: 2px;
+}
+.sidebar a .nav-icon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 .sidebar a.active,
 .sidebar a:hover {
-  background: var(--color-bg-selected);
-  color: var(--color-accent-pressed);
+  background: var(--color-secondary-subtle);
+  color: var(--color-secondary-default);
 }
+.sidebar a.active .nav-icon,
+.sidebar a:hover .nav-icon {
+  color: var(--color-secondary-default);
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+.sidebar-footer button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  justify-content: flex-start;
+  border: none;
+  background: none;
+}
+.sidebar-footer button:hover {
+  color: var(--color-status-overdue);
+}
+
+.content-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* a flex child otherwise won't shrink below its content's natural width */
+}
+.topbar {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  background: var(--color-bg-default);
+  border-bottom: 1px solid var(--color-border-default);
+  position: sticky;
+  top: 0;
+  z-index: 15;
+}
+.topbar-title {
+  margin: 0;
+}
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+}
+.icon-button:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+.avatar-menu {
+  position: relative;
+}
+.avatar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent-default);
+  color: var(--color-text-onbrand);
+}
+.avatar-dropdown {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  min-width: 140px;
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  padding: var(--space-1);
+  z-index: 20;
+}
+.avatar-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: none;
+  justify-content: flex-start;
+  height: 32px;
+}
+.avatar-dropdown button:hover {
+  background: var(--color-bg-tertiary);
+}
+
 .main {
   flex: 1;
   padding: var(--space-6);
@@ -555,6 +695,9 @@ tbody tr:nth-child(5n):hover {
 @media (max-width: 768px) {
   .app-shell {
     flex-direction: column;
+  }
+  .topbar {
+    display: none;
   }
   .mobile-topbar {
     display: flex;
