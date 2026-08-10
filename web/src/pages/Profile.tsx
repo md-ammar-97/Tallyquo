@@ -521,7 +521,7 @@ export default function Profile() {
                         width: 14,
                         height: 14,
                         borderRadius: 3,
-                        background: t.theme.accent_color || '#0D99FF',
+                        background: t.theme.accent_color || '#1A365D',
                         verticalAlign: 'middle',
                       }}
                     />
@@ -537,11 +537,11 @@ export default function Profile() {
                   </td>
                   <td>
                     {t.is_system ? (
-                      <Link className="link-button" to={`/templates/new?clone=${t.id}`}>
+                      <Link className="link-button" to={`/settings/templates/new?clone=${t.id}`}>
                         Customize
                       </Link>
                     ) : (
-                      <Link className="link-button" to={`/templates/${t.id}/edit`}>
+                      <Link className="link-button" to={`/settings/templates/${t.id}/edit`}>
                         Edit
                       </Link>
                     )}
@@ -552,7 +552,7 @@ export default function Profile() {
           </table>
           {templateError && <p className="error-text">{templateError}</p>}
           <div style={{ marginTop: 12, display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link className="link-button" to="/templates/new">
+            <Link className="link-button" to="/settings/templates/new">
               + New custom template
             </Link>
             <label>

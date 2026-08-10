@@ -170,7 +170,7 @@ export default function Dashboard() {
           <p style={{ marginBottom: 16 }}>
             Set up your business profile and a client, then issue a correctly-taxed invoice in under two minutes.
           </p>
-          <Link to="/profile">
+          <Link to="/settings/profile">
             <button>1. Business profile</button>
           </Link>{' '}
           <Link to="/clients">

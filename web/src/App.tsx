@@ -3,6 +3,7 @@ import { isAuthenticated } from './api'
 import Login from './pages/Login'
 import Shell from './pages/Shell'
 import Dashboard from './pages/Dashboard'
+import Settings from './pages/Settings'
 import Profile from './pages/Profile'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
@@ -36,18 +37,19 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="profile" element={<Profile />} />
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
           <Route path="invoices" element={<Ledger />} />
           <Route path="invoices/new" element={<InvoiceBuilder />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
           <Route path="expenses" element={<Expenses />} />
-          <Route path="recurring" element={<Recurring />} />
-          <Route path="email-accounts" element={<EmailAccounts />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="templates/new" element={<TemplateEditor />} />
-          <Route path="templates/:id/edit" element={<TemplateEditor />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="settings/profile" element={<Profile />} />
+          <Route path="settings/email-accounts" element={<EmailAccounts />} />
+          <Route path="settings/recurring" element={<Recurring />} />
+          <Route path="settings/templates/new" element={<TemplateEditor />} />
+          <Route path="settings/templates/:id/edit" element={<TemplateEditor />} />
         </Route>
       </Routes>
     </BrowserRouter>

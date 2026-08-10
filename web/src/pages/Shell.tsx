@@ -3,15 +3,13 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
   Bell,
-  Building2,
   FileText,
   HelpCircle,
   LayoutDashboard,
   LogOut,
-  Mail,
   Plus,
   Receipt,
-  Repeat,
+  Settings as SettingsIcon,
   User,
   Users,
 } from 'lucide-react'
@@ -22,11 +20,9 @@ const NAV_ITEMS = [
   { to: '/', end: true, label: 'Dashboard', icon: LayoutDashboard },
   { to: '/invoices', label: 'Invoices', icon: FileText },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
-  { to: '/recurring', label: 'Recurring', icon: Repeat },
   { to: '/clients', label: 'Clients', icon: Users },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/profile', label: 'Business profile', icon: Building2 },
-  { to: '/email-accounts', label: 'Email accounts', icon: Mail },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 // Topbar page title -- matched against the longest prefix so nested
@@ -35,11 +31,13 @@ const PAGE_TITLES: { prefix: string; title: string }[] = [
   { prefix: '/invoices/new', title: 'New invoice' },
   { prefix: '/invoices', title: 'Invoices' },
   { prefix: '/expenses', title: 'Expenses' },
-  { prefix: '/recurring', title: 'Recurring' },
   { prefix: '/clients', title: 'Clients' },
   { prefix: '/reports', title: 'Reports' },
-  { prefix: '/profile', title: 'Business profile' },
-  { prefix: '/email-accounts', title: 'Email accounts' },
+  { prefix: '/settings/profile', title: 'Business profile' },
+  { prefix: '/settings/email-accounts', title: 'Email accounts' },
+  { prefix: '/settings/recurring', title: 'Recurring' },
+  { prefix: '/settings/templates', title: 'Invoice template' },
+  { prefix: '/settings', title: 'Settings' },
   { prefix: '/', title: 'Dashboard' },
 ]
 

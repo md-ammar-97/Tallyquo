@@ -556,7 +556,7 @@ export default function InvoiceDetail() {
               <div className="block-body">
                 <p className="caption">
                   No email account configured yet.{' '}
-                  <Link to="/email-accounts" style={{ color: 'var(--color-text-link)' }}>
+                  <Link to="/settings/email-accounts" style={{ color: 'var(--color-text-link)' }}>
                     Add one
                   </Link>{' '}
                   to send from your own address.

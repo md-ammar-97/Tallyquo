@@ -20,7 +20,7 @@ interface Template {
 const REQUIRED_BLOCKS = ['supplier', 'document', 'bill_to', 'services', 'totals']
 const OPTIONAL_BLOCK_LABELS: Record<string, string> = { payment: 'Payment instructions', footer: 'Notes / footer' }
 
-const DEFAULT_THEME: Theme = { accent_color: '#0D99FF', font_scale: 1.0, margins_mm: 20, logo_position: 'top_left' }
+const DEFAULT_THEME: Theme = { accent_color: '#1A365D', font_scale: 1.0, margins_mm: 20, logo_position: 'top_left' }
 
 export default function TemplateEditor() {
   const { id } = useParams()
@@ -165,7 +165,7 @@ export default function TemplateEditor() {
       } else {
         await api.post('/templates', body)
       }
-      navigate('/profile')
+      navigate('/settings/profile')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save template.')
     } finally {
@@ -303,7 +303,7 @@ export default function TemplateEditor() {
               <button type="button" className="primary" disabled={saving} onClick={handleSave}>
                 {saving ? 'Saving…' : 'Save template'}
               </button>
-              <button type="button" onClick={() => navigate('/profile')}>
+              <button type="button" onClick={() => navigate('/settings/profile')}>
                 Cancel
               </button>
             </div>

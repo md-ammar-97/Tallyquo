@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
 import { todayLocal } from '../dateUtils'
 
@@ -41,13 +42,14 @@ const emptyForm = {
 }
 
 export default function Expenses() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [categories, setCategories] = useState<Category[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [form, setForm] = useState(emptyForm)
   const [receiptId, setReceiptId] = useState<string | null>(null)
   const [ocr, setOcr] = useState<OcrResult | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [showManual, setShowManual] = useState(false)
+  const [showManual, setShowManual] = useState(searchParams.get('new') === '1')
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +63,11 @@ export default function Expenses() {
   }
 
   useEffect(load, [])
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleFile(file: File) {
     setUploading(true)
