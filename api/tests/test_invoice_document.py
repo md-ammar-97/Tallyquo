@@ -83,6 +83,52 @@ async def test_preview_document_reflects_live_draft_data_without_persisting():
 
 
 @pytest.mark.asyncio
+async def test_preview_document_carries_tax_engine_warnings():
+    """preview_tax has always surfaced tax/engine.compute's warnings
+    (edgecases.md X12) to the builder -- this endpoint replaces that
+    call for the redesigned builder, so it must not lose them."""
+    client, headers = await _tenant()
+    try:
+        # Zero-rated export only branches through the non-residency-evidence
+        # warning if the supplier is actually registered -- an unregistered
+        # supplier short-circuits to "not charged" before that check.
+        r = await client.patch(
+            "/profile/registration",
+            json={
+                "registration_status": "registered",
+                "gst_hst_number": "123456789RT0001",
+                "registration_effective_date": "2020-01-01",
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200, r.text
+
+        r = await client.post(
+            "/clients",
+            json={"legal_name": "US Co", "country_code": "US", "tax_treatment": "zero_rated_export"},
+            headers=headers,
+        )
+        assert r.status_code == 201, r.text
+        client_id = r.json()["id"]
+
+        r = await client.post(
+            "/invoices/preview-document",
+            json={
+                "client_id": client_id,
+                "invoice_date": "2026-05-01",
+                "line_items": [{"description": "Work", "unit_rate": "100.00", "amount": "100.00"}],
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200, r.text
+        warnings = r.json()["warnings"]
+        assert len(warnings) == 1
+        assert "non-residency evidence" in warnings[0]
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_preview_document_requires_business_profile():
     transport = httpx.ASGITransport(app=app)
     client = httpx.AsyncClient(transport=transport, base_url="http://test")

@@ -157,6 +157,11 @@ class InvoiceDocumentOut(BaseModel):
     client: InvoiceDocumentClientOut
     payment_instruction: InvoiceDocumentPaymentInstructionOut | None = None
     notes_visible: bool
+    # Only ever populated for a pre-issue preview (assemble_preview_document)
+    # -- tax/engine.compute's warnings (e.g. zero-rated export missing
+    # non-residency evidence). Always empty for a real invoice's document,
+    # since compliance was already resolved at issue time.
+    warnings: list[str] = []
 
 
 class PreviewDocumentIn(BaseModel):

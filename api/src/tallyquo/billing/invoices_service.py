@@ -839,6 +839,11 @@ async def assemble_preview_document(session: AsyncSession, tenant_id: UUID, draf
         "client": dict(client_row),
         "payment_instruction": payment_instruction if "payment" in blocks else None,
         "notes_visible": "footer" in blocks,
+        # tax/engine.compute's warnings (e.g. zero-rated export missing
+        # non-residency evidence) -- preview_tax has always surfaced
+        # these to the builder; carried through here so switching the
+        # builder from preview-tax to this endpoint doesn't lose them.
+        "warnings": list(result.warnings),
     }
 
 

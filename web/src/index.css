@@ -741,6 +741,13 @@ tbody tr:nth-child(5n):hover {
   .field-row {
     grid-template-columns: 1fr;
   }
+  .invoice-builder-layout {
+    grid-template-columns: 1fr;
+  }
+  .invoice-builder-preview {
+    position: static;
+    max-height: none;
+  }
   /* Block headers (title + filter/action controls) wrap to their own
      rows instead of squeezing into a fixed 48px strip -- the same
      block-header markup a page uses on desktop just needs room to grow
@@ -754,4 +761,153 @@ tbody tr:nth-child(5n):hover {
   .block-header > div {
     flex-wrap: wrap;
   }
+}
+
+/* Invoice document (design.md §9): a separate design system from the
+   app, sharing only tokens -- a printed business document, not a web
+   page. 0px border to simulate a printed sheet floating on the app's
+   grey background; high contrast; the total-due row is the one place
+   colour draws the eye. */
+.invoice-document {
+  background: var(--color-bg-default);
+  border-radius: var(--radius-md);
+  padding: 40px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+.invoice-document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.invoice-document-title {
+  font: 700 24px/1 var(--font-ui);
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+.invoice-document-meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.invoice-document-meta > div {
+  display: flex;
+  gap: var(--space-2);
+}
+.invoice-document-meta dt {
+  width: 100px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.invoice-document-meta dd {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+.invoice-document-supplier {
+  text-align: right;
+  line-height: 1.5;
+}
+.invoice-document-billto {
+  margin-bottom: var(--space-5);
+  line-height: 1.5;
+}
+.invoice-document-lines {
+  margin-bottom: var(--space-4);
+}
+.invoice-document-lines th {
+  background: transparent;
+  border-bottom: 1px solid var(--color-border-strong);
+}
+.invoice-document-totals {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-6);
+}
+.invoice-document-totals table {
+  width: 280px;
+}
+.invoice-document-totals td {
+  border-bottom: none;
+  padding: 4px var(--space-2);
+  font-family: var(--font-mono);
+}
+.invoice-document-total-due {
+  background: var(--color-accent-subtle);
+  font-weight: 700;
+}
+.invoice-document-total-due td {
+  font-weight: 700;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+.invoice-document-payment,
+.invoice-document-notes {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+  line-height: 1.6;
+}
+
+/* Compliance Checklist (design.md): a vertical stepper. Incomplete
+   items are text-muted with a hollow dot; complete items get a
+   Compliance Green check. Advisory only -- see ComplianceChecklist.tsx. */
+.compliance-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.compliance-checklist li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  color: var(--color-text-secondary);
+}
+.compliance-checklist li.done {
+  color: var(--color-text-primary);
+}
+.compliance-checklist-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-text-onbrand);
+}
+.compliance-checklist li.done .compliance-checklist-icon {
+  background: var(--color-secondary-default);
+}
+.compliance-checklist li:not(.done) .compliance-checklist-icon {
+  border: 2px solid var(--color-border-strong);
+}
+.compliance-checklist-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+}
+
+/* Invoice builder: form left, sticky live-preview document right. */
+.invoice-builder-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  gap: var(--space-6);
+  align-items: start;
+}
+.invoice-builder-preview {
+  position: sticky;
+  top: var(--space-4);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }

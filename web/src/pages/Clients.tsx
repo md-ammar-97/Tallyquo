@@ -22,6 +22,8 @@ const emptyForm = {
   country_code: 'CA',
   region_code: '',
   tax_treatment: 'taxable',
+  address_line1: '',
+  city: '',
 }
 
 const PAGE_SIZE = 20
@@ -74,7 +76,11 @@ export default function Clients() {
     setSaving(true)
     setError(null)
     try {
-      const body: Record<string, unknown> = { ...form }
+      const body: Record<string, unknown> = {
+        ...form,
+        address_line1: form.address_line1 || null,
+        city: form.city || null,
+      }
       if (form.country_code !== 'CA') {
         body.tax_treatment = 'zero_rated_export'
         delete body.region_code
@@ -145,6 +151,19 @@ export default function Clients() {
                     />
                   </div>
                 )}
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Address (optional)</label>
+                  <input
+                    value={form.address_line1}
+                    onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>City (optional)</label>
+                  <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </div>
               </div>
               <p className="caption" style={{ marginBottom: 12 }}>
                 {form.country_code === 'CA'
