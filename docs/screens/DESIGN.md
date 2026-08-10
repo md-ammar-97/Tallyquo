@@ -109,6 +109,8 @@ spacing:
   container-max: 1200px
 ---
 
+> **2026-08-10:** This spec, along with the mockups alongside it in this folder (`clients.png`, `create_inovoice.png`, `dashboard.png`, `sample_innovice.png`, `sorverign_ledger.jpg`), has been merged into `docs/design.md` as the living design system — that document now reflects what actually shipped, including deliberate deviations from what's specced here (the app keeps the "Tallyquo" brand rather than the "SoleProp Shield" placeholder text in the mockups, for one). This file is kept as the original source reference, not a second spec to maintain in sync by hand going forward.
+
 ## Brand & Style
 
 The design system is built on the pillars of **Professionalism, Reliability, and Clarity**. It serves as a "protective shield" for Canadian sole proprietors, moving away from the ephemeral trends of "fintech-playful" aesthetics toward an "accountant-approved" visual language. The brand personality is authoritative yet supportive—it doesn't just record data; it ensures correctness.

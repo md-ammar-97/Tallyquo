@@ -81,7 +81,7 @@ The tax engine is the highest-blast-radius component in the whole product (§5.1
 | 1.20 | Compliance block: not literally "locked in an editor" (there is no editor), but structurally guaranteed — `pdf_renderer.py` always renders the compliance-critical content regardless of `blocks`, so there was never a code path that could omit it. Pagination rules for long line-item tables (M5) — not verified either way | 1.19 | M |
 | 1.21 | Ledger view: flat filterable table (date range, client, status, amount, currency, tax treatment), URL-persisted filter state, CSV export of the filtered set (§6.7 ledger half only — client roll-up view is Phase 2) | 1.15 | M |
 | 1.22 | Design system base component library: block primitive, badges (tax-treatment + status), tables, buttons, inputs, tabular-figure money formatting — build once here, reused every phase after | 0.1 | L |
-| 1.23 | Invoice builder UI: split form/live-preview layout, read-only tax block that states derived treatment + jurisdiction + reasoning, sticky issue footer with irreversibility confirmation (`design.md` §8.2) | 1.11, 1.19, 1.22 | L |
+| 1.23 | ⚠️ **Partially shipped via SL.F (2026-08-10), not this phase.** Split form/live-preview layout: done — the live preview is the real `<InvoiceDocument>` component fed by actual backend tax computation, not an approximation. Still missing, unchanged by SL.F: a dedicated read-only tax block with inline override affordance (tax lines render inside the document preview instead; overriding a treatment requires editing the client record directly, not a builder-time action) and a sticky issue footer with an irreversibility confirmation dialog (issuing is a plain button today, server-enforced but with no client-side "this can't be undone" step) | 1.11, 1.19, 1.22 | L |
 | 1.24 | `snapshot_verify` nightly job: recompute every issued invoice from its frozen snapshot, alert (P1) on any mismatch — running from day one even at low volume, because catching a divergence early is cheap and catching it after 500 invoices is not | 1.15 | M |
 | 1.25 | WCAG 2.1 AA pass on the invoice builder specifically (NFR floor named explicitly in `problem-statement.md` §8) | 1.23 | M |
 
@@ -186,7 +186,26 @@ This phase is lower-risk to sequence loosely — none of it touches the tax-corr
 
 ---
 
-## 7. Cross-cutting requirements — every phase, not a phase
+## 7. Sovereign Ledger redesign — UI/UX overhaul across Phases 1-4
+
+**Status: shipped 2026-08-10.** Not a new functional phase — a full design-system replacement (`design.md`, merging in `docs/screens/DESIGN.md`'s original brief and mockups) applied across everything Phases 1-4 had already built. Planned and executed as ten sequential sub-phases, each committed, CI-gated, and browser-verified independently rather than as one big-bang change.
+
+| # | Workstream | Depends on | Size |
+|---|---|---|---|
+| SL.A | ✅ Design tokens, self-hosted Inter/JetBrains Mono font loading (`@fontsource-variable/inter`, `@fontsource/jetbrains-mono` — no external network dependency), `lucide-react` icon library (previously absent from the app entirely) | — | M |
+| SL.B | ✅ Shell/nav restructure: icon-led sidebar, persistent desktop topbar (previously mobile-only), avatar sign-out menu. Bell/Help ship as inert visual placeholders (no notifications backend or support destination exists to wire them to yet) | SL.A | M |
+| SL.C | ✅ Clients list: new `GET /clients/summary` (paginated, per-client outstanding balance + overdue flag — a new aggregate query, deliberately not reusing `rollup_service.tenant_aging_report`, which excludes zero-balance/not-yet-due clients). **Deviates from the `clients.png` mockup**: the tax badge shows an honest `{region} — {rate}%` label derived from the real rate table rather than the mockup's fabricated compound "GST + PST" figure, since PST is an invoice-level opt-in flag, not a stored per-client default | SL.A, SL.B | M |
+| SL.D | ✅ Dashboard remap: "How much is mine?" headline, YTD invoiced/expenses tiles (`income_service.ytd_actuals()` was already computed internally, just never exposed), full-width instalment banner, new Recent Invoices table. Reports extracted to its own `/reports` route | SL.A, SL.B | M |
+| SL.E | ✅ Invoice document backend: `render_pdf`'s data-assembly logic extracted into `assemble_invoice_document`/`assemble_preview_document`, shared by the existing PDF renderer and three new JSON endpoints. Regression-gated by the pre-existing PDF test suite running unmodified — proved the extraction changed zero PDF output | SL.A | M |
+| SL.F | ✅ Invoice builder rebuilt: two-column layout, live `<InvoiceDocument>` preview fed by real backend tax computation (not a client approximation), new Compliance checklist component (advisory only — verified fail-safe: a due-date-before-invoice-date invoice still gets server-rejected even with every checklist item showing complete). Surfaced and fixed two real gaps: `preview-document` wasn't forwarding `tax/engine.compute()`'s warnings, and the Clients "Add client" form never collected an address at all | SL.A, SL.B, SL.E | L |
+| SL.G | ✅ `<InvoiceDocument>` applied to the authenticated invoice-detail page and the public share-link page. Frozen-snapshot guarantee (X4/L14) re-verified through the actual browser after a post-issue profile edit, on both pages, not just the pre-existing API-level test | SL.E, SL.F | S |
+| SL.H | ✅ Settings hub (`/settings`) consolidating Business profile/Email accounts/Recurring/Templates, previously four separate top-level nav items. Every dangling link this move created was found and fixed (`grep` swept, not assumed clean). Re-skin of `Ledger`/`ClientDetail`/`Login` needed no changes — already token-driven from SL.A | SL.A, SL.B | M |
+| SL.I | ✅ PWA theme-color/manifest colours updated to match | SL.A | S |
+| SL.J | ✅ This reconciliation — `design.md` merged as the living spec, `docs/screens/DESIGN.md` marked superseded-but-kept, this table added. Surfaced two things worth a follow-up, not fixed here: the topbar's persistent tax-registration-status chip from `design.md` §7 was never built in this redesign (a real gap, not a deliberate cut), and badge text-on-tint contrast for the new green/gold tokens falls short of WCAG AA at badge text size (`design.md` §12 — 4.00:1 and 3.23:1 against the 4.5:1 floor, computed during this pass, never previously checked for either the old or new palette) | SL.A-SL.I | S |
+
+---
+
+## 8. Cross-cutting requirements — every phase, not a phase
 
 These are not deliverables with an exit date; they're standing constraints that must hold from Phase 0 onward and regress-test on every subsequent phase.
 
@@ -203,7 +222,7 @@ These are not deliverables with an exit date; they're standing constraints that 
 
 ---
 
-## 8. Open decisions still blocking full commitment
+## 9. Open decisions still blocking full commitment
 
 Carried forward from `problem-statement.md` §12, mapped to the phase each one actually gates. Everything else in §12 already has a recommendation baked into the phase tables above.
 
