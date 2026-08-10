@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { API_BASE_URL } from '../api'
-
-interface LineItem {
-  id: string
-  description: string
-  quantity: string
-  unit_rate: string
-  amount: string
-}
+import InvoiceDocument, { type InvoiceDocumentData } from '../components/InvoiceDocument'
 
 interface Invoice {
   id: string
@@ -17,17 +10,15 @@ interface Invoice {
   invoice_date: string | null
   due_date: string | null
   currency: string
-  subtotal: string
-  tax_total: string
   total: string
   amount_paid: string
   tax_treatment_snapshot: string | null
-  line_items: LineItem[]
 }
 
 export default function PublicInvoice() {
   const { token } = useParams<{ token: string }>()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
+  const [doc, setDoc] = useState<InvoiceDocumentData | null>(null)
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
@@ -39,6 +30,13 @@ export default function PublicInvoice() {
       })
       .then(setInvoice)
       .catch(() => setNotFound(true))
+    fetch(`${API_BASE_URL}/public/invoices/${token}/document`)
+      .then((res) => {
+        if (!res.ok) throw new Error('not found')
+        return res.json()
+      })
+      .then(setDoc)
+      .catch(() => {})
   }, [token])
 
   async function handleDownload() {
@@ -70,7 +68,7 @@ export default function PublicInvoice() {
 
   return (
     <main style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-6) var(--space-4)' }}>
-      <div style={{ width: '100%', maxWidth: 640 }}>
+      <div style={{ width: '100%', maxWidth: 720 }}>
         <h1>{invoice.number}</h1>
         <div className="block">
           <div className="block-body">
@@ -83,63 +81,13 @@ export default function PublicInvoice() {
               )}
             </p>
             <p className="caption">
-              Invoice date: {invoice.invoice_date ?? '—'} · Due: {invoice.due_date ?? '—'}
+              Invoice date: {invoice.invoice_date ?? '—'} · Due: {invoice.due_date ?? '—'} · Paid: {invoice.currency}{' '}
+              {invoice.amount_paid}
             </p>
-            <table style={{ marginTop: 16 }}>
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th className="amount">Qty</th>
-                  <th className="amount">Rate</th>
-                  <th className="amount">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.line_items.map((li) => (
-                  <tr key={li.id}>
-                    <td>{li.description}</td>
-                    <td className="amount">{li.quantity}</td>
-                    <td className="amount">{li.unit_rate}</td>
-                    <td className="amount">{li.amount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <table style={{ marginTop: 12 }}>
-              <tbody>
-                <tr>
-                  <td>Subtotal</td>
-                  <td className="amount">
-                    {invoice.currency} {invoice.subtotal}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Tax</td>
-                  <td className="amount">
-                    {invoice.currency} {invoice.tax_total}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>Total</strong>
-                  </td>
-                  <td className="amount">
-                    <strong>
-                      {invoice.currency} {invoice.total}
-                    </strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Paid</td>
-                  <td className="amount">
-                    {invoice.currency} {invoice.amount_paid}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <button className="primary" style={{ marginTop: 16 }} onClick={handleDownload}>
+            <button className="primary" style={{ margin: '16px 0' }} onClick={handleDownload}>
               Download PDF
             </button>
+            {doc && <InvoiceDocument data={doc} />}
           </div>
         </div>
       </div>

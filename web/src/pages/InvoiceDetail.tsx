@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
 import { todayLocal } from '../dateUtils'
+import InvoiceDocument, { type InvoiceDocumentData } from '../components/InvoiceDocument'
 
 interface LineItem {
   id: string
@@ -103,6 +104,7 @@ function ChipInput({
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
+  const [doc, setDoc] = useState<InvoiceDocumentData | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
   const [notFound, setNotFound] = useState(false)
   const [form, setForm] = useState(emptyPaymentForm)
@@ -137,6 +139,7 @@ export default function InvoiceDetail() {
       .get<Invoice>(`/invoices/${id}`)
       .then(setInvoice)
       .catch(() => setNotFound(true))
+    api.get<InvoiceDocumentData>(`/invoices/${id}/document`).then(setDoc)
     api.get<Payment[]>(`/invoices/${id}/payments`).then(setPayments)
   }
 
@@ -328,40 +331,9 @@ export default function InvoiceDetail() {
             )}
           </p>
           <p className="caption">
-            Invoice date: {invoice.invoice_date ?? '—'} · Due: {invoice.due_date ?? '—'}
+            Invoice date: {invoice.invoice_date ?? '—'} · Due: {invoice.due_date ?? '—'} · Paid: {invoice.currency}{' '}
+            {invoice.amount_paid}
           </p>
-          <table style={{ marginTop: 12 }}>
-            <tbody>
-              <tr>
-                <td>Subtotal</td>
-                <td className="amount">
-                  {invoice.currency} {invoice.subtotal}
-                </td>
-              </tr>
-              <tr>
-                <td>Tax</td>
-                <td className="amount">
-                  {invoice.currency} {invoice.tax_total}
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Total</strong>
-                </td>
-                <td className="amount">
-                  <strong>
-                    {invoice.currency} {invoice.total}
-                  </strong>
-                </td>
-              </tr>
-              <tr>
-                <td>Paid</td>
-                <td className="amount">
-                  {invoice.currency} {invoice.amount_paid}
-                </td>
-              </tr>
-            </tbody>
-          </table>
           {invoice.currency !== 'CAD' && (
             <p className="caption" style={{ marginTop: 8 }}>
               {invoice.total_cad ? (
@@ -469,31 +441,13 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Line items</h2>
+      {doc && (
+        <div className="block">
+          <div className="block-body">
+            <InvoiceDocument data={doc} />
+          </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th className="amount">Qty</th>
-              <th className="amount">Rate</th>
-              <th className="amount">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.line_items.map((li) => (
-              <tr key={li.id}>
-                <td>{li.description}</td>
-                <td className="amount">{li.quantity}</td>
-                <td className="amount">{li.unit_rate}</td>
-                <td className="amount">{li.amount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
 
       <div className="block">
         <div className="block-header">
