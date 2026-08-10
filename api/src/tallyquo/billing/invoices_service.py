@@ -30,6 +30,15 @@ class InvoiceNotDraft(Exception):
     """L1, P1: issued invoices are immutable -- edits/re-issue are a 409."""
 
 
+class NoBusinessProfile(Exception):
+    """Raised by assemble_preview_document -- same prerequisite preview_tax
+    already requires before it can compute anything."""
+
+
+class ClientNotFound(Exception):
+    pass
+
+
 # ---- drafts -----------------------------------------------------------
 
 _LINE_COLUMNS = "id, description, quantity, unit, unit_rate, amount, is_taxable, project_ref"
@@ -587,14 +596,40 @@ async def create_credit_note(
     return dict(result.mappings().one())
 
 
-async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -> bytes | None:
-    """Renders on demand rather than persisting to storage -- the DB row is
-    the source of truth (architecture.md ADR-005: "any PDF can be
-    regenerated"), and issued invoices use the frozen snapshot so a PDF
-    generated today matches one generated in 2033 byte-for-byte (X4), even
-    if the business profile or client address has since changed."""
-    from tallyquo.templates.pdf_renderer import render_invoice_pdf
+async def _default_template_theme_and_blocks(session: AsyncSession, tenant_id: UUID) -> dict:
+    """The tenant's chosen template (Phase 4.1) if set, else whichever
+    system template is_default. Shared by the draft branch of
+    assemble_invoice_document and by assemble_preview_document (the
+    builder's before-a-row-exists live preview) so both always agree
+    with what issuing will actually pin -- falling back to an empty
+    blocks list in only one of them would hide payment instructions in
+    the preview only to have them reappear once issued, which is both
+    confusing and the wrong direction to be wrong in."""
+    row = (
+        await session.execute(
+            text(
+                "SELECT theme, blocks FROM template WHERE id = COALESCE("
+                "  (SELECT default_template_id FROM business_profile WHERE tenant_id = :t),"
+                "  (SELECT id FROM template WHERE is_system = true AND tenant_id IS NULL "
+                "   ORDER BY is_default DESC LIMIT 1)"
+                ")"
+            ),
+            {"t": tenant_id},
+        )
+    ).mappings().first()
+    return {"theme": (row["theme"] if row else None) or {}, "blocks": (row["blocks"] if row else None) or []}
 
+
+async def assemble_invoice_document(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -> dict | None:
+    """Shared data assembly for both the PDF renderer (render_pdf) and
+    the web-rendered document preview (GET /invoices/:id/document,
+    Sovereign Ledger redesign Phase E/F/G) -- one place resolves
+    supplier/client/payment-instruction/template data so the two can
+    never drift from each other. draft-vs-issued branching, the
+    template pin resolution (with the template_version_history fallback
+    so X4/L14 holds), and the payment-instruction/logo freeze rules are
+    all exactly as render_pdf always did them -- only extracted, not
+    changed."""
     invoice = await get_invoice(session, invoice_id)
     if invoice is None:
         return None
@@ -607,24 +642,8 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
     # sections below -- the only two blocks that are genuinely optional;
     # the compliance-critical ones are unconditional, same as always.
     if invoice["status"] == "draft":
-        # A tenant who hasn't explicitly chosen a template yet must still
-        # preview the same blocks/theme the invoice will actually issue
-        # with (whichever system template is_default) -- falling back to
-        # an empty blocks list here would hide payment instructions in
-        # the preview only to have them reappear once issued, which is
-        # both confusing and the wrong direction to be wrong in.
-        theme_row = (
-            await session.execute(
-                text(
-                    "SELECT theme, blocks FROM template WHERE id = COALESCE("
-                    "  (SELECT default_template_id FROM business_profile WHERE tenant_id = :t),"
-                    "  (SELECT id FROM template WHERE is_system = true AND tenant_id IS NULL "
-                    "   ORDER BY is_default DESC LIMIT 1)"
-                    ")"
-                ),
-                {"t": tenant_id},
-            )
-        ).mappings().first()
+        resolved = await _default_template_theme_and_blocks(session, tenant_id)
+        theme, blocks = resolved["theme"], resolved["blocks"]
     else:
         # X4/L14, made real: an issued invoice pins (template_id,
         # template_version). Until this fix, this query looked up
@@ -656,12 +675,13 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
                     {"tid": pin_row["template_id"], "tver": pin_row["template_version"]},
                 )
             ).mappings().first()
-    theme = (theme_row["theme"] if theme_row else None) or {}
+        theme = (theme_row["theme"] if theme_row else None) or {}
+        blocks = (theme_row["blocks"] if theme_row else None) or []
+
     accent_color = theme.get("accent_color", "#0D99FF")
     font_scale = float(theme.get("font_scale", 1.0))
     margins_mm = float(theme.get("margins_mm", 20.0))
     logo_position = theme.get("logo_position", "top_left")
-    blocks = (theme_row["blocks"] if theme_row else None) or []
 
     # Logo comes from the tenant's business profile, not the template pin
     # -- it's the same image regardless of which template renders it,
@@ -718,20 +738,136 @@ async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -
         client = snap["client_snapshot"] or {}
         payment_instruction = snap["payment_instruction_snapshot"]
 
+    return {
+        "invoice": invoice,
+        "supplier": supplier,
+        "client": client,
+        "payment_instruction": payment_instruction if "payment" in blocks else None,
+        "notes_visible": "footer" in blocks,
+        "accent_color": accent_color,
+        "font_scale": font_scale,
+        "margins_mm": margins_mm,
+        "logo_bytes": logo_bytes,
+        "logo_position": logo_position,
+        "optional_block_order": tuple(blocks),
+    }
+
+
+async def assemble_preview_document(session: AsyncSession, tenant_id: UUID, draft: dict) -> dict:
+    """Live document preview for the invoice builder before any invoice
+    row exists yet (Phase F). Delegates to the exact same tax
+    computation preview_tax already performs (build_supply_context +
+    tax/engine.compute), so tax is computed in exactly one place, and
+    to the same draft-branch template/payment-instruction resolution
+    assemble_invoice_document uses -- so the preview can never drift
+    from what issuing will actually produce."""
+    profile_row = (
+        await session.execute(
+            text(
+                "SELECT legal_name, operating_name, address_line1, address_line2, city, "
+                "region_code, postal_code, country_code, email, gst_hst_number, "
+                "registration_status, registration_effective_date "
+                "FROM business_profile WHERE tenant_id = :t"
+            ),
+            {"t": tenant_id},
+        )
+    ).mappings().first()
+    if profile_row is None:
+        raise NoBusinessProfile("Add your business profile before previewing.")
+
+    client_row = (
+        await session.execute(
+            text(
+                "SELECT legal_name, address_line1, address_line2, city, region_code, "
+                "postal_code, country_code, is_gst_registered, tax_treatment, "
+                "treatment_override_reason FROM client WHERE id = :id"
+            ),
+            {"id": draft["client_id"]},
+        )
+    ).mappings().first()
+    if client_row is None:
+        raise ClientNotFound("Client not found.")
+
+    evidence_count = (
+        await session.execute(
+            text(
+                "SELECT count(*) FROM client_evidence WHERE client_id = :id "
+                "AND kind = 'non_residency_attestation'"
+            ),
+            {"id": draft["client_id"]},
+        )
+    ).scalar_one()
+
+    line_items = draft.get("line_items") or []
+    ctx = build_supply_context(
+        business_profile=dict(profile_row),
+        client=dict(client_row),
+        line_amounts=[(Decimal(str(li["amount"])), li.get("is_taxable", True)) for li in line_items],
+        invoice_date=draft.get("invoice_date") or date.today(),
+        has_non_residency_evidence=evidence_count > 0,
+        include_provincial_sales_tax=draft.get("include_provincial_sales_tax", False),
+    )
+    rate_table = await load_rate_table(session)
+    result = compute(ctx, rate_table)
+
+    subtotal = sum((Decimal(str(li["amount"])) for li in line_items), start=Decimal("0.00"))
+    tax_lines = [vars(line) for line in result.lines]
+
+    resolved = await _default_template_theme_and_blocks(session, tenant_id)
+    blocks = resolved["blocks"]
+    payment_instruction = await profile_service.get_default_payment_instruction_decrypted(session, tenant_id)
+
+    invoice_view = {
+        "number": None,
+        "invoice_date": draft.get("invoice_date"),
+        "due_date": draft.get("due_date"),
+        "service_period_start": draft.get("service_period_start"),
+        "service_period_end": draft.get("service_period_end"),
+        "currency": draft.get("currency", "CAD"),
+        "po_reference": draft.get("po_reference"),
+        "notes": draft.get("notes"),
+        "subtotal": subtotal,
+        "tax_total": result.tax_total,
+        "total": subtotal + result.tax_total,
+        "line_items": line_items,
+        "tax_lines": tax_lines,
+    }
+
+    return {
+        "invoice": invoice_view,
+        "supplier": dict(profile_row),
+        "client": dict(client_row),
+        "payment_instruction": payment_instruction if "payment" in blocks else None,
+        "notes_visible": "footer" in blocks,
+    }
+
+
+async def render_pdf(session: AsyncSession, tenant_id: UUID, invoice_id: UUID) -> bytes | None:
+    """Renders on demand rather than persisting to storage -- the DB row is
+    the source of truth (architecture.md ADR-005: "any PDF can be
+    regenerated"), and issued invoices use the frozen snapshot so a PDF
+    generated today matches one generated in 2033 byte-for-byte (X4), even
+    if the business profile or client address has since changed."""
+    from tallyquo.templates.pdf_renderer import render_invoice_pdf
+
+    doc = await assemble_invoice_document(session, tenant_id, invoice_id)
+    if doc is None:
+        return None
+
     return render_invoice_pdf(
-        invoice=invoice,
-        supplier=supplier,
-        client=client,
-        line_items=invoice["line_items"],
-        tax_lines=invoice["tax_lines"],
-        accent_color=accent_color,
-        font_scale=font_scale,
-        margins_mm=margins_mm,
-        logo_bytes=logo_bytes,
-        logo_position=logo_position,
-        payment_instruction=payment_instruction if "payment" in blocks else None,
-        notes_visible="footer" in blocks,
-        optional_block_order=tuple(blocks),
+        invoice=doc["invoice"],
+        supplier=doc["supplier"],
+        client=doc["client"],
+        line_items=doc["invoice"]["line_items"],
+        tax_lines=doc["invoice"]["tax_lines"],
+        accent_color=doc["accent_color"],
+        font_scale=doc["font_scale"],
+        margins_mm=doc["margins_mm"],
+        logo_bytes=doc["logo_bytes"],
+        logo_position=doc["logo_position"],
+        payment_instruction=doc["payment_instruction"],
+        notes_visible=doc["notes_visible"],
+        optional_block_order=doc["optional_block_order"],
     )
 
 

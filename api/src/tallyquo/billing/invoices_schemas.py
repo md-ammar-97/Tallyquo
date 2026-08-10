@@ -95,6 +95,83 @@ class InvoiceOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InvoiceDocumentInvoiceOut(BaseModel):
+    """The web-rendered document preview's `invoice` sub-object (GET
+    /invoices/:id/document, POST /invoices/preview-document). Deliberately
+    NOT InvoiceOut -- a pre-issue preview has no id/status/created_at at
+    all, so this is the smaller subset both the real-invoice and
+    ad-hoc-draft assemblers actually produce. line_items uses
+    InvoiceLineIn (no `id` required) for the same reason: a preview's
+    lines are echoed straight back from the request body."""
+
+    number: str | None = None
+    invoice_date: date | None = None
+    due_date: date | None = None
+    service_period_start: date | None = None
+    service_period_end: date | None = None
+    currency: str
+    po_reference: str | None = None
+    notes: str | None = None
+    subtotal: Decimal
+    tax_total: Decimal
+    total: Decimal
+    line_items: list[InvoiceLineIn] = []
+    tax_lines: list[InvoiceTaxLineOut] = []
+
+
+class InvoiceDocumentSupplierOut(BaseModel):
+    legal_name: str
+    operating_name: str | None = None
+    address_line1: str | None = None
+    address_line2: str | None = None
+    city: str | None = None
+    region_code: str | None = None
+    postal_code: str | None = None
+    country_code: str | None = None
+    email: str | None = None
+    gst_hst_number: str | None = None
+
+
+class InvoiceDocumentClientOut(BaseModel):
+    legal_name: str
+    address_line1: str | None = None
+    address_line2: str | None = None
+    city: str | None = None
+    region_code: str | None = None
+    postal_code: str | None = None
+    country_code: str | None = None
+
+
+class InvoiceDocumentPaymentInstructionOut(BaseModel):
+    label: str | None = None
+    method: str | None = None
+    provider: str | None = None
+    account_holder: str | None = None
+    currency: str | None = None
+    fields: dict[str, str] = {}
+
+
+class InvoiceDocumentOut(BaseModel):
+    invoice: InvoiceDocumentInvoiceOut
+    supplier: InvoiceDocumentSupplierOut
+    client: InvoiceDocumentClientOut
+    payment_instruction: InvoiceDocumentPaymentInstructionOut | None = None
+    notes_visible: bool
+
+
+class PreviewDocumentIn(BaseModel):
+    client_id: UUID
+    invoice_date: date | None = None
+    due_date: date | None = None
+    service_period_start: date | None = None
+    service_period_end: date | None = None
+    currency: str = "CAD"
+    po_reference: str | None = None
+    notes: str | None = None
+    include_provincial_sales_tax: bool = False
+    line_items: list[InvoiceLineIn] = []
+
+
 class IssueInvoiceIn(BaseModel):
     confirm_zero_total: bool = False
 

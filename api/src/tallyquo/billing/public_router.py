@@ -8,7 +8,7 @@ auth bootstrap flow uses before a JWT exists.
 from fastapi import APIRouter, HTTPException, Response
 
 from tallyquo.billing import invoices_service, share_service
-from tallyquo.billing.invoices_schemas import InvoiceOut
+from tallyquo.billing.invoices_schemas import InvoiceDocumentOut, InvoiceOut
 from tallyquo.core.tenant_context import tenant_session
 
 router = APIRouter(prefix="/public/invoices", tags=["public"])
@@ -38,3 +38,16 @@ async def get_shared_invoice_pdf(token: str) -> Response:
     if pdf_bytes is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return Response(content=pdf_bytes, media_type="application/pdf")
+
+
+@router.get("/{token}/document", response_model=InvoiceDocumentOut)
+async def get_shared_invoice_document(token: str) -> InvoiceDocumentOut:
+    resolved = await share_service.resolve_share_token(token)
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    tenant_id, invoice_id = resolved
+    async with tenant_session(tenant_id) as session:
+        doc = await invoices_service.assemble_invoice_document(session, tenant_id, invoice_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return InvoiceDocumentOut(**doc)

@@ -13,11 +13,13 @@ from tallyquo.billing import share_service
 from tallyquo.billing.invoices_schemas import (
     CreditNoteIn,
     CreditNoteOut,
+    InvoiceDocumentOut,
     InvoiceDraftIn,
     InvoiceOut,
     IssueInvoiceIn,
     PaymentIn,
     PaymentOut,
+    PreviewDocumentIn,
     ShareLinkOut,
 )
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
@@ -105,6 +107,21 @@ async def create_draft(
     return InvoiceOut(**row)
 
 
+@router.post("/preview-document", response_model=InvoiceDocumentOut)
+async def preview_document(
+    body: PreviewDocumentIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceDocumentOut:
+    try:
+        doc = await service.assemble_preview_document(db, current_user.tenant_id, body.model_dump())
+    except service.NoBusinessProfile as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except service.ClientNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    return InvoiceDocumentOut(**doc)
+
+
 @router.get("/{invoice_id}", response_model=InvoiceOut)
 async def get_invoice(invoice_id: UUID, db: AsyncSession = Depends(get_db)) -> InvoiceOut:
     row = await service.get_invoice(db, invoice_id)
@@ -159,6 +176,18 @@ async def get_invoice_pdf(
     if pdf_bytes is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return Response(content=pdf_bytes, media_type="application/pdf")
+
+
+@router.get("/{invoice_id}/document", response_model=InvoiceDocumentOut)
+async def get_invoice_document(
+    invoice_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> InvoiceDocumentOut:
+    doc = await service.assemble_invoice_document(db, current_user.tenant_id, invoice_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return InvoiceDocumentOut(**doc)
 
 
 @router.post("/{invoice_id}/cancel", status_code=204)
