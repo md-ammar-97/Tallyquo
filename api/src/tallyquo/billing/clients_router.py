@@ -13,6 +13,8 @@ from tallyquo.billing.clients_schemas import (
     ClientIn,
     ClientOut,
     ClientRollupOut,
+    ClientSummaryOut,
+    ClientSummaryPageOut,
 )
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
 
@@ -50,6 +52,14 @@ async def export_clients_csv(db: AsyncSession = Depends(get_db)) -> Response:
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=clients.csv"},
     )
+
+
+@router.get("/summary", response_model=ClientSummaryPageOut)
+async def list_clients_summary(
+    limit: int = 20, offset: int = 0, db: AsyncSession = Depends(get_db)
+) -> ClientSummaryPageOut:
+    items, total = await service.list_clients_summary(db, limit=limit, offset=offset)
+    return ClientSummaryPageOut(items=[ClientSummaryOut(**row) for row in items], total=total)
 
 
 @router.post("", response_model=ClientOut, status_code=201)

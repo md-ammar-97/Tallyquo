@@ -103,3 +103,13 @@ class AgingReportRowOut(AgingBucketsOut):
     client_id: UUID
     client_name: str
     total_outstanding: Decimal
+
+
+class ClientSummaryOut(ClientOut):
+    outstanding_cad: Decimal
+    has_overdue: bool
+
+
+class ClientSummaryPageOut(BaseModel):
+    items: list[ClientSummaryOut]
+    total: int
