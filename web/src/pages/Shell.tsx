@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   Add,
   ChartBar,
@@ -15,6 +16,7 @@ import {
 } from '@carbon/icons-react'
 import { logout } from '../api'
 import logo from '../assets/logo.svg'
+import { duration, ease, pageTransition, shellEntrance } from '../motion/tokens'
 
 const NAV_ITEMS = [
   { to: '/', end: true, label: 'Dashboard', icon: DashboardIcon },
@@ -71,7 +73,12 @@ export default function Shell() {
           {menuOpen ? '✕' : '☰'}
         </button>
       </div>
-      <nav className={`sidebar${menuOpen ? ' open' : ''}`}>
+      <motion.nav
+        className={`sidebar${menuOpen ? ' open' : ''}`}
+        variants={shellEntrance}
+        initial="initial"
+        animate="animate"
+      >
         <div className="brand-block">
           <img src={logo} alt="Tallyquo" className="brand-mark" />
         </div>
@@ -93,9 +100,15 @@ export default function Shell() {
             Sign out
           </button>
         </div>
-      </nav>
+      </motion.nav>
       <div className="content-column">
-        <div className="topbar">
+        <motion.div
+          className="topbar"
+          variants={shellEntrance}
+          initial="initial"
+          animate="animate"
+          transition={{ duration: duration.moderate02, ease: ease.entranceProductive, delay: 0.04 }}
+        >
           <h2 className="topbar-title">{pageTitle(location.pathname)}</h2>
           <div className="topbar-actions">
             <button type="button" className="primary" onClick={() => navigate('/invoices/new')}>
@@ -126,9 +139,13 @@ export default function Shell() {
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
         <div className="main">
-          <Outlet />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={location.pathname} variants={pageTransition} initial="initial" animate="animate" exit="exit">
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

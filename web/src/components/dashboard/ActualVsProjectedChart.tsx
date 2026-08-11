@@ -1,5 +1,6 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PnlRow } from './RevenueExpenseChart'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface Props {
   rows: PnlRow[]
@@ -70,7 +71,17 @@ export default function ActualVsProjectedChart({ rows, year, projectedAnnualInco
             label={{ value: 'Target', fontSize: 11, fill: 'var(--color-tertiary-default)', position: 'insideTopRight' }}
           />
         )}
-        <Line type="monotone" dataKey="actual" name="Actual" stroke="var(--color-accent-default)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+        <Line
+          type="monotone"
+          dataKey="actual"
+          name="Actual"
+          stroke="var(--color-accent-default)"
+          strokeWidth={2}
+          dot={{ r: 3 }}
+          connectNulls={false}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        />
         <Line
           type="monotone"
           dataKey="projected"
@@ -80,6 +91,8 @@ export default function ActualVsProjectedChart({ rows, year, projectedAnnualInco
           strokeDasharray="5 4"
           dot={{ r: 3 }}
           connectNulls
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
         />
       </LineChart>
     </ResponsiveContainer>

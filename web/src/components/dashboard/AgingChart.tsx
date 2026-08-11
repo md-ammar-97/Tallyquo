@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface AgingSummary {
   not_due: string
@@ -48,7 +49,12 @@ export default function AgingChart({ summary }: { summary: AgingSummary }) {
           formatter={(value) => formatCurrency(Number(value))}
           contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
         />
-        <Bar dataKey="value" radius={[0, 2, 2, 0]}>
+        <Bar
+          dataKey="value"
+          radius={[0, 2, 2, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        >
           {data.map((_d, i) => (
             <Cell key={i} fill={i === 4 ? 'var(--color-status-overdue)' : 'var(--color-accent-default)'} />
           ))}

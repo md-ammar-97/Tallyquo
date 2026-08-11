@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface QuarterRow {
   period: string
@@ -39,8 +40,22 @@ export default function GstQuarterlyChart({ rows }: { rows: QuarterRow[] }) {
           contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="collected" name="Collected" fill="var(--color-accent-default)" radius={[2, 2, 0, 0]} />
-        <Bar dataKey="itcs" name="ITCs claimable" fill="var(--color-text-tertiary)" radius={[2, 2, 0, 0]} />
+        <Bar
+          dataKey="collected"
+          name="Collected"
+          fill="var(--color-accent-default)"
+          radius={[2, 2, 0, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        />
+        <Bar
+          dataKey="itcs"
+          name="ITCs claimable"
+          fill="var(--color-text-tertiary)"
+          radius={[2, 2, 0, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        />
       </BarChart>
     </ResponsiveContainer>
   )

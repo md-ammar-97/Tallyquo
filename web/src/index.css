@@ -103,6 +103,21 @@
      a hero-sized figure for the one number the dashboard exists to answer. */
   --text-display: 700 32px/40px var(--font-ui);
 
+  /* @carbon/motion's real duration/easing tokens (verified via
+     `node -e "require('@carbon/motion')..."`) -- shared by plain CSS
+     transitions here and by the JS/Framer Motion adapter in
+     src/motion/tokens.ts, so hover/press/entrance timing reads as one
+     consistent system rather than two hand-tuned ones. */
+  --motion-fast-01: 70ms;
+  --motion-fast-02: 110ms;
+  --motion-moderate-01: 150ms;
+  --motion-moderate-02: 240ms;
+  --motion-slow-01: 400ms;
+  --motion-slow-02: 700ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --motion-ease-entrance: cubic-bezier(0, 0, 0.38, 0.9);
+  --motion-ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
+
   color-scheme: light;
   font-family: var(--font-ui);
   font-size: 13px;
@@ -173,6 +188,14 @@ button {
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition:
+    background-color var(--motion-fast-02) var(--motion-ease-standard),
+    border-color var(--motion-fast-02) var(--motion-ease-standard),
+    color var(--motion-fast-02) var(--motion-ease-standard),
+    transform var(--motion-fast-01) var(--motion-ease-standard);
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 button:disabled {
   opacity: 0.5;
@@ -231,6 +254,9 @@ td {
 /* Carbon DataTables use hairline row dividers plus a hover state only --
    no periodic zebra tint, a deliberate departure from the prior system's
    every-5th-row shading. */
+tbody tr {
+  transition: background-color var(--motion-fast-02) var(--motion-ease-standard);
+}
 tbody tr:hover {
   background: var(--color-bg-hover);
 }
@@ -409,7 +435,7 @@ tbody tr:hover {
   padding: var(--space-4);
   color: inherit;
   text-decoration: none;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--motion-fast-02) var(--motion-ease-standard);
 }
 .settings-card:hover {
   border-color: var(--color-accent-default);
@@ -640,6 +666,9 @@ tbody tr:hover {
   color: var(--color-text-primary);
   text-decoration: none;
   font-size: 13px;
+  transition:
+    background-color var(--motion-fast-02) var(--motion-ease-standard),
+    color var(--motion-fast-02) var(--motion-ease-standard);
 }
 .sidebar a .nav-icon {
   color: var(--color-text-secondary);
@@ -715,6 +744,9 @@ tbody tr:hover {
   background: none;
   color: var(--color-text-secondary);
   border-radius: var(--radius-sm);
+  transition:
+    background-color var(--motion-fast-02) var(--motion-ease-standard),
+    color var(--motion-fast-02) var(--motion-ease-standard);
 }
 .icon-button:hover {
   background: var(--color-bg-tertiary);
@@ -998,4 +1030,19 @@ tbody tr:hover {
   top: var(--space-4);
   max-height: calc(100vh - 96px);
   overflow-y: auto;
+}
+
+/* CB.I: prefers-reduced-motion support, previously unimplemented anywhere
+   in this app. Covers every plain-CSS transition above (button/nav/table
+   hover, progress bars); the JS/Framer Motion layer (src/motion/) has its
+   own equivalent guard via <MotionConfig reducedMotion="user">. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

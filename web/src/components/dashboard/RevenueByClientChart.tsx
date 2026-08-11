@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface Row {
   client_id: string
@@ -31,7 +32,13 @@ export default function RevenueByClientChart({ rows }: { rows: Row[] }) {
           formatter={(value) => formatCurrency(Number(value))}
           contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
         />
-        <Bar dataKey="value" fill="var(--color-accent-default)" radius={[0, 2, 2, 0]} />
+        <Bar
+          dataKey="value"
+          fill="var(--color-accent-default)"
+          radius={[0, 2, 2, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        />
       </BarChart>
     </ResponsiveContainer>
   )

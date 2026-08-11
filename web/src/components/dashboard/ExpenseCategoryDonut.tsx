@@ -1,4 +1,5 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface Row {
   category_id: string | null
@@ -35,7 +36,16 @@ export default function ExpenseCategoryDonut({ rows }: { rows: Row[] }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={55}
+          outerRadius={85}
+          paddingAngle={2}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        >
           {data.map((_d, i) => (
             <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
           ))}

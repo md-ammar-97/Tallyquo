@@ -1,4 +1,5 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface Invoice {
   status: string
@@ -38,7 +39,16 @@ export default function InvoiceStatusDonut({ invoices }: { invoices: Invoice[] }
   return (
     <ResponsiveContainer width="100%" height={240}>
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={55}
+          outerRadius={85}
+          paddingAngle={2}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        >
           {data.map((entry, i) => (
             <Cell key={i} fill={entry.color} />
           ))}

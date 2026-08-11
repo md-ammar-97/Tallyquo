@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 export interface PnlRow {
   period: string
@@ -61,8 +62,22 @@ export default function RevenueExpenseChart({ rows }: { rows: PnlRow[] }) {
           contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="income" name="Revenue" fill="var(--color-accent-default)" radius={[2, 2, 0, 0]} />
-        <Bar dataKey="expenses" name="Expenses" fill="var(--color-text-tertiary)" radius={[2, 2, 0, 0]} />
+        <Bar
+          dataKey="income"
+          name="Revenue"
+          fill="var(--color-accent-default)"
+          radius={[2, 2, 0, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        />
+        <Bar
+          dataKey="expenses"
+          name="Expenses"
+          fill="var(--color-text-tertiary)"
+          radius={[2, 2, 0, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        />
         <Line
           type="monotone"
           dataKey="net_income"
@@ -71,6 +86,8 @@ export default function RevenueExpenseChart({ rows }: { rows: PnlRow[] }) {
           strokeWidth={2}
           strokeDasharray="4 3"
           dot={{ r: 3 }}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
         />
       </ComposedChart>
     </ResponsiveContainer>

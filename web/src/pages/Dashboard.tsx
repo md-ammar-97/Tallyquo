@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { WarningAltFilled } from '@carbon/icons-react'
 import { api, ApiError } from '../api'
+import { staggerContainer, tileEntrance } from '../motion/tokens'
 import KpiTile from '../components/dashboard/KpiTile'
 import RevenueExpenseChart, { type PnlRow } from '../components/dashboard/RevenueExpenseChart'
 import SafeToSpendWaterfall from '../components/dashboard/SafeToSpendWaterfall'
@@ -414,7 +416,7 @@ export default function Dashboard() {
       )}
 
       {projection && (
-        <>
+        <motion.div variants={staggerContainer} initial="initial" animate="animate">
           {projection.instalment_warning.applies && (
             <div
               className="block alert"
@@ -444,27 +446,44 @@ export default function Dashboard() {
               outcome (Net income sign, Safe to spend, Outstanding) --
               GST/HST owing and the projected/reserve figures stay
               neutral, matching design.md's colour-polarity rule. */}
-          <div className="metric-grid">
-            <KpiTile label="Revenue" value={formatDisplay(projection.ytd.income)} sub="year to date, excludes tax collected" />
-            <KpiTile label="Expenses" value={formatDisplay(projection.ytd.expenses)} sub="year to date, deductible portion only" />
+          <motion.div className="metric-grid" variants={staggerContainer} initial="initial" animate="animate">
+            <KpiTile
+              label="Revenue"
+              value={formatDisplay(projection.ytd.income)}
+              numericValue={Number(projection.ytd.income)}
+              format={formatDisplay}
+              sub="year to date, excludes tax collected"
+            />
+            <KpiTile
+              label="Expenses"
+              value={formatDisplay(projection.ytd.expenses)}
+              numericValue={Number(projection.ytd.expenses)}
+              format={formatDisplay}
+              sub="year to date, deductible portion only"
+            />
             <KpiTile
               label="Net income"
               value={formatDisplay(projection.ytd.net_income)}
+              numericValue={Number(projection.ytd.net_income)}
+              format={formatDisplay}
               sub="revenue minus expenses, year to date"
               polarity={Number(projection.ytd.net_income) >= 0 ? 'positive' : 'negative'}
             />
             <KpiTile
               label="Safe to spend"
               value={formatDisplay(safeToSpend)}
+              numericValue={safeToSpend}
+              format={formatDisplay}
               sub="full-year projected income, after recommended tax + CPP reserve"
               polarity={safeToSpend >= 0 ? 'positive' : 'negative'}
             />
-          </div>
+          </motion.div>
 
-          <div className="metric-grid">
-            <div
+          <motion.div className="metric-grid" variants={staggerContainer} initial="initial" animate="animate">
+            <motion.div
               className={`metric-tile${assumptionsOpen ? ' expanded' : ''}`}
               style={{ borderLeft: '4px solid var(--color-tertiary-default)' }}
+              variants={tileEntrance}
             >
               <div className="metric-label">Tax + CPP reserve</div>
               <div className="metric-value display">{formatDisplay(projection.set_aside.total_estimated_tax_and_cpp)}</div>
@@ -557,37 +576,43 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
-            </div>
+            </motion.div>
 
             <KpiTile
               label="GST/HST owing (this year)"
               value={formatDisplay(gstHeldTotal)}
+              numericValue={Number(gstHeldTotal)}
+              format={formatDisplay}
               sub="collected minus input tax credits -- never revenue"
             />
             <KpiTile
               label="Outstanding"
               value={formatDisplay(agingSummary?.total_outstanding ?? '0')}
+              numericValue={Number(agingSummary?.total_outstanding ?? '0')}
+              format={formatDisplay}
               sub={agingSummary ? `CAD ${Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 ? (Number(agingSummary.total_outstanding) - Number(agingSummary.not_due)).toFixed(2) : '0.00'} overdue` : undefined}
               polarity={agingSummary && Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 ? 'negative' : 'neutral'}
             />
             <KpiTile
               label="Projected annual revenue"
               value={formatDisplay(projection.income.active_projected_income)}
+              numericValue={Number(projection.income.active_projected_income)}
+              format={formatDisplay}
               sub={projection.income.mode === 'declared' ? 'your declared target' : 'straight-line extrapolation'}
             />
-          </div>
+          </motion.div>
 
-          <div className="block">
+          <motion.div className="block" variants={tileEntrance}>
             <div className="block-header">
               <h2>Business performance</h2>
             </div>
             <div className="block-body">
               <RevenueExpenseChart rows={pnlRows} />
             </div>
-          </div>
+          </motion.div>
 
-          <div className="dashboard-chart-grid">
-            <div className="block">
+          <motion.div className="dashboard-chart-grid" variants={staggerContainer}>
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Where your revenue goes</h2>
               </div>
@@ -600,8 +625,8 @@ export default function Dashboard() {
                   jurisdiction={projection.jurisdiction}
                 />
               </div>
-            </div>
-            <div className="block">
+            </motion.div>
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Actual vs. projected revenue</h2>
               </div>
@@ -613,17 +638,17 @@ export default function Dashboard() {
                   declaredAnnualIncome={projection.income.declared_annual_income ? Number(projection.income.declared_annual_income) : null}
                 />
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          <div className="metric-grid">
+          <motion.div className="metric-grid" variants={staggerContainer}>
             {/* Tax Reserve progress (dashboard_design.md §7): the
                 recommended figure is already computed above; this tracks
                 what the user says they've actually moved into a reserve
                 account. Careful language throughout -- "recommended
                 reserve" and "shortfall", never "you owe", matching §7's
                 explicit copy guidance. */}
-            <div className="metric-tile">
+            <motion.div className="metric-tile" variants={tileEntrance}>
               <div className="metric-label">Tax reserve progress</div>
               {(() => {
                 const recommended = Number(projection.set_aside.total_estimated_tax_and_cpp)
@@ -673,9 +698,9 @@ export default function Dashboard() {
                   </>
                 )
               })()}
-            </div>
+            </motion.div>
 
-            <div className="metric-tile">
+            <motion.div className="metric-tile" variants={tileEntrance}>
               <div className="metric-label">Threshold tracker</div>
               <div className="metric-value">{projection.threshold.pct_of_threshold}%</div>
               <div className="progress-bar">
@@ -693,16 +718,16 @@ export default function Dashboard() {
                 Based on this account only -- the $30,000 threshold is shared across any associated businesses you
                 also run.
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* GST/HST Control Center (dashboard_design.md §8) + AR Aging
               (§10) -- both already had a home in this app before this
               redesign (a plain quarterly table, and the client-level
               aging report); this adds the tenant-wide chart view each
               section's spec calls for, keeping the underlying data. */}
-          <div className="dashboard-chart-grid">
-            <div className="block">
+          <motion.div className="dashboard-chart-grid" variants={staggerContainer}>
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>GST/HST control center</h2>
               </div>
@@ -729,9 +754,9 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </motion.div>
 
-            <div className="block">
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Accounts receivable aging</h2>
               </div>
@@ -748,17 +773,17 @@ export default function Dashboard() {
                   </>
                 )}
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          <div className="block">
+          <motion.div className="block" variants={tileEntrance}>
             <div className="block-header">
               <h2>Invoice status</h2>
             </div>
             <div className="block-body">
               <InvoiceStatusDonut invoices={allInvoices} />
             </div>
-          </div>
+          </motion.div>
 
           {/* Revenue by Client (dashboard_design.md §13) + Expense
               Category (§15). Monthly Expense Trend (§16) is deliberately
@@ -766,8 +791,8 @@ export default function Dashboard() {
               above already plots monthly expenses as its own bar series,
               and a second standalone expense-only trend chart would just
               repeat that data, not add anything. */}
-          <div className="dashboard-chart-grid">
-            <div className="block">
+          <motion.div className="dashboard-chart-grid" variants={staggerContainer}>
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Revenue by client</h2>
               </div>
@@ -783,21 +808,21 @@ export default function Dashboard() {
                   </p>
                 )}
               </div>
-            </div>
-            <div className="block">
+            </motion.div>
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Expenses by category</h2>
               </div>
               <div className="block-body">
                 <ExpenseCategoryDonut rows={expenseByCategory} />
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          <div className="metric-grid">
+          <motion.div className="metric-grid" variants={staggerContainer}>
             {/* Receipt Completeness (§17) */}
             {receiptCompleteness && receiptCompleteness.total > 0 && (
-              <div className="metric-tile">
+              <motion.div className="metric-tile" variants={tileEntrance}>
                 <div className="metric-label">Receipts on file</div>
                 <div className="metric-value">{receiptCompleteness.pct?.toFixed(0) ?? 0}%</div>
                 <div className="progress-bar">
@@ -807,19 +832,19 @@ export default function Dashboard() {
                   {receiptCompleteness.with_receipt} / {receiptCompleteness.total} expenses supported
                   {receiptCompleteness.missing > 0 && ` -- ${receiptCompleteness.missing} missing`}
                 </p>
-              </div>
+              </motion.div>
             )}
 
             {/* Recurring Revenue (§18) */}
-            <div className="metric-tile">
+            <motion.div className="metric-tile" variants={tileEntrance}>
               <div className="metric-label">Recurring revenue (next month)</div>
               <div className="metric-value display">{formatDisplay(recurringForecast[0]?.amount ?? '0')}</div>
               <p className="caption metric-sub">from active recurring invoice schedules</p>
-            </div>
+            </motion.div>
 
             {/* Accountant Readiness (§21) */}
             {readinessFactors.length > 0 && (
-              <div className="metric-tile">
+              <motion.div className="metric-tile" variants={tileEntrance}>
                 <div className="metric-label">Accountant readiness</div>
                 <div className="metric-value">{readinessPct}%</div>
                 <div className="progress-bar">
@@ -834,15 +859,15 @@ export default function Dashboard() {
                       </p>
                     ))}
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
 
           {/* Business Momentum (§19): this year vs. last year YTD, the
               comparison actually available from a year-scoped
               projection -- see the year-selector note above. */}
           {priorYearProjection && (
-            <div className="block">
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Business momentum</h2>
               </div>
@@ -877,13 +902,13 @@ export default function Dashboard() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </motion.div>
           )}
 
           {/* Year-over-Year (§20): gated behind at least one prior year
               of data existing, per the spec. */}
           {hasYoyData && yoyRows.length > 1 && (
-            <div className="block">
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Year-over-year</h2>
               </div>
@@ -907,7 +932,7 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </motion.div>
           )}
 
           {/* Needs Your Attention (§22): surfaced actions, prioritized
@@ -915,7 +940,7 @@ export default function Dashboard() {
               records, then informational items -- per §22's own
               guidance. */}
           {attentionItems.length > 0 && (
-            <div className="block">
+            <motion.div className="block" variants={tileEntrance}>
               <div className="block-header">
                 <h2>Needs your attention</h2>
               </div>
@@ -940,9 +965,9 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
-        </>
+        </motion.div>
       )}
 
       {/* Recent Activity (§23): a lightweight feed merging the invoice

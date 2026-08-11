@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { rechartsDurationMs, rechartsEasing } from '../../motion/tokens'
 
 interface Props {
   netBusinessIncome: number
@@ -52,7 +53,13 @@ export default function SafeToSpendWaterfall({ netBusinessIncome, federalTax, pr
         />
         {/* Invisible base bar floats the visible bar to the right height. */}
         <Bar dataKey="base" stackId="waterfall" fill="transparent" isAnimationActive={false} />
-        <Bar dataKey="value" stackId="waterfall" radius={[2, 2, 0, 0]}>
+        <Bar
+          dataKey="value"
+          stackId="waterfall"
+          radius={[2, 2, 0, 0]}
+          animationDuration={rechartsDurationMs.entrance}
+          animationEasing={rechartsEasing.entrance}
+        >
           {steps.map((step, i) => (
             <Cell
               key={i}
