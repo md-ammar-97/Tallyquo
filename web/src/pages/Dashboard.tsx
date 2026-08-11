@@ -9,6 +9,8 @@ import ActualVsProjectedChart from '../components/dashboard/ActualVsProjectedCha
 import GstQuarterlyChart from '../components/dashboard/GstQuarterlyChart'
 import AgingChart from '../components/dashboard/AgingChart'
 import InvoiceStatusDonut from '../components/dashboard/InvoiceStatusDonut'
+import RevenueByClientChart from '../components/dashboard/RevenueByClientChart'
+import ExpenseCategoryDonut from '../components/dashboard/ExpenseCategoryDonut'
 
 interface TaxBand {
   income_from: string
@@ -112,6 +114,47 @@ interface TaxReserve {
   reserved_amount: string | null
 }
 
+interface RevenueByClientRow {
+  client_id: string
+  client_name: string
+  billed_cad: string
+}
+
+interface ExpenseByCategoryRow {
+  category_id: string | null
+  category_name: string
+  amount: string
+}
+
+interface ReceiptCompleteness {
+  total: number
+  with_receipt: number
+  missing: number
+  pct: number | null
+}
+
+interface RecurringForecastRow {
+  period: string
+  amount: string
+}
+
+interface BusinessProfile {
+  legal_name: string
+  address_line1: string | null
+  city: string | null
+  region_code: string | null
+  registration_status: string
+  gst_hst_number: string | null
+}
+
+interface RecentExpense {
+  id: string
+  expense_date: string
+  vendor: string | null
+  amount_total: string
+  created_at: string
+}
+
 const RECENT_INVOICES_LIMIT = 8
 
 function formatDisplay(amount: string | number): string {
@@ -131,6 +174,14 @@ export default function Dashboard() {
   const [taxReserve, setTaxReserve] = useState<TaxReserve | null>(null)
   const [editingReserve, setEditingReserve] = useState(false)
   const [reserveDraft, setReserveDraft] = useState('')
+  const [revenueByClient, setRevenueByClient] = useState<RevenueByClientRow[]>([])
+  const [expenseByCategory, setExpenseByCategory] = useState<ExpenseByCategoryRow[]>([])
+  const [receiptCompleteness, setReceiptCompleteness] = useState<ReceiptCompleteness | null>(null)
+  const [recurringForecast, setRecurringForecast] = useState<RecurringForecastRow[]>([])
+  const [profile, setProfile] = useState<BusinessProfile | null>(null)
+  const [recentExpenses, setRecentExpenses] = useState<RecentExpense[]>([])
+  const [priorYearProjection, setPriorYearProjection] = useState<Projection | null>(null)
+  const [annualPnlRows, setAnnualPnlRows] = useState<PnlRow[]>([])
 
   async function loadProjection(year?: number) {
     try {
@@ -138,6 +189,12 @@ export default function Dashboard() {
       setProjection(data)
       setProjectionError(null)
       await loadTaxReserve(data.year)
+      // Business Momentum (dashboard_design.md §19): current vs. prior
+      // comparable period. A full month/quarter comparison would need
+      // period-scoped projection support this endpoint doesn't have
+      // (see the year-selector note above) -- year-over-year is what's
+      // actually available, so that's the comparison built here.
+      api.get<Projection>(`/projection?year=${data.year - 1}`).then(setPriorYearProjection).catch(() => setPriorYearProjection(null))
     } catch (err) {
       setProjection(null)
       setProjectionError(err instanceof ApiError ? err.message : 'Could not load projection.')
@@ -152,8 +209,15 @@ export default function Dashboard() {
   useEffect(() => {
     loadProjection()
     api.get<PnlRow[]>('/reports/pnl?group_by=month').then(setPnlRows)
+    api.get<PnlRow[]>('/reports/pnl?group_by=year').then(setAnnualPnlRows)
     api.get<AgingSummary>('/reports/aging/summary').then(setAgingSummary)
     api.get<RecentInvoice[]>('/invoices').then(setAllInvoices)
+    api.get<RevenueByClientRow[]>('/reports/revenue-by-client').then(setRevenueByClient)
+    api.get<ExpenseByCategoryRow[]>('/expenses/by-category').then(setExpenseByCategory)
+    api.get<ReceiptCompleteness>('/expenses/receipt-completeness').then(setReceiptCompleteness)
+    api.get<RecurringForecastRow[]>('/projection/recurring-forecast?months=3').then(setRecurringForecast)
+    api.get<BusinessProfile | null>('/profile').then(setProfile)
+    api.get<RecentExpense[]>('/expenses').then((rows) => setRecentExpenses(rows.slice(0, 5)))
   }, [])
 
   const recentInvoices = allInvoices.slice(0, RECENT_INVOICES_LIMIT)
@@ -194,6 +258,106 @@ export default function Dashboard() {
   const gstHeldTotal = projection
     ? projection.quarterly_net_owing.reduce((sum, q) => sum + Number(q.net_owing), 0)
     : 0
+  const overdueAmount = agingSummary ? Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) : 0
+
+  // Accountant Readiness (dashboard_design.md §21): a composite computed
+  // client-side, not an opaque server-side score -- each factor and its
+  // weight is visible right here, so "why is my score 80%" is always
+  // answerable by reading this component, not a black box.
+  const readinessFactors: { label: string; done: boolean; detail: string }[] = []
+  if (profile) {
+    readinessFactors.push({
+      label: 'Business profile complete',
+      done: !!(profile.legal_name && profile.address_line1 && profile.city),
+      detail: profile.legal_name && profile.address_line1 && profile.city ? 'On file.' : 'Missing legal name or address.',
+    })
+    readinessFactors.push({
+      label: 'GST/HST registration on file',
+      done: profile.registration_status !== 'registered' || !!profile.gst_hst_number,
+      detail:
+        profile.registration_status === 'registered'
+          ? profile.gst_hst_number
+            ? 'Registered, BN on file.'
+            : 'Registered but missing a BN number.'
+          : 'Not registered -- not applicable.',
+    })
+  }
+  if (receiptCompleteness) {
+    readinessFactors.push({
+      label: 'Expenses have receipts',
+      done: receiptCompleteness.missing === 0,
+      detail:
+        receiptCompleteness.missing === 0
+          ? 'All expenses supported.'
+          : `${receiptCompleteness.missing} expense${receiptCompleteness.missing === 1 ? '' : 's'} missing a receipt.`,
+    })
+  }
+  readinessFactors.push({
+    label: 'No overdue invoices',
+    done: overdueAmount <= 0.01,
+    detail: overdueAmount > 0.01 ? `CAD ${overdueAmount.toFixed(2)} overdue.` : 'Nothing overdue.',
+  })
+  const readinessPct = readinessFactors.length
+    ? Math.round((readinessFactors.filter((f) => f.done).length / readinessFactors.length) * 100)
+    : 0
+
+  // Needs Your Attention (dashboard_design.md §22): surfaced actions,
+  // not just analytics. Priority order follows §22's own guidance --
+  // compliance risk, then overdue money, then missing records, then
+  // upcoming/informational items.
+  const attentionItems: { level: 'high' | 'medium' | 'low' | 'info'; text: string; to: string; cta: string }[] = []
+  if (projection?.threshold.escalation === 'overdue') {
+    attentionItems.push({ level: 'high', text: 'GST/HST registration threshold crossed.', to: '/settings/profile', cta: 'Review registration' })
+  } else if (projection?.threshold.escalation === 'attention') {
+    attentionItems.push({ level: 'medium', text: `GST/HST threshold is at ${projection.threshold.pct_of_threshold}%.`, to: '/settings/profile', cta: 'Review threshold' })
+  }
+  if (overdueAmount > 0.01) {
+    attentionItems.push({ level: 'high', text: `CAD ${overdueAmount.toFixed(2)} is overdue from clients.`, to: '/invoices?status=overdue', cta: 'View overdue invoices' })
+  }
+  if (receiptCompleteness && receiptCompleteness.missing > 0) {
+    attentionItems.push({
+      level: 'medium',
+      text: `${receiptCompleteness.missing} expense${receiptCompleteness.missing === 1 ? '' : 's'} missing a receipt.`,
+      to: '/expenses',
+      cta: 'Review expenses',
+    })
+  }
+  if (taxReserve && projection) {
+    const shortfall = Number(projection.set_aside.total_estimated_tax_and_cpp) - Number(taxReserve.reserved_amount ?? 0)
+    if (shortfall > 0.01) {
+      attentionItems.push({ level: 'low', text: `Tax reserve is CAD ${shortfall.toFixed(2)} below the recommended amount.`, to: '#tax-reserve', cta: 'View calculation' })
+    }
+  }
+  const upcomingRecurring = recurringForecast.find((r) => Number(r.amount) > 0)
+  if (upcomingRecurring) {
+    attentionItems.push({
+      level: 'info',
+      text: `CAD ${Number(upcomingRecurring.amount).toFixed(2)} in recurring revenue expected ${new Date(upcomingRecurring.period + 'T00:00:00').toLocaleDateString('en-CA', { month: 'long' })}.`,
+      to: '/settings/recurring',
+      cta: 'View recurring',
+    })
+  }
+
+  // Recent Activity (dashboard_design.md §23): a lightweight feed, not a
+  // full audit log -- merges the two data sources already fetched for
+  // other sections (invoices, expenses) rather than a dedicated endpoint.
+  const activity = [
+    ...allInvoices.map((inv) => ({
+      date: inv.invoice_date ?? '',
+      text: `Invoice ${inv.number ?? '(draft)'} ${inv.status} -- ${inv.currency} ${inv.total}`,
+      to: `/invoices/${inv.id}`,
+    })),
+    ...recentExpenses.map((exp) => ({
+      date: exp.expense_date,
+      text: `Expense logged -- ${exp.vendor ?? 'Uncategorized'} -- CAD ${exp.amount_total}`,
+      to: '/expenses',
+    })),
+  ]
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, 6)
+
+  const yoyRows = annualPnlRows.filter((r) => r.period.startsWith(String(projection?.year ?? '')) || Number(r.period.slice(0, 4)) === (projection?.year ?? 0) - 1)
+  const hasYoyData = annualPnlRows.some((r) => Number(r.period.slice(0, 4)) < (projection?.year ?? 0))
 
   return (
     <div>
@@ -595,7 +759,209 @@ export default function Dashboard() {
               <InvoiceStatusDonut invoices={allInvoices} />
             </div>
           </div>
+
+          {/* Revenue by Client (dashboard_design.md §13) + Expense
+              Category (§15). Monthly Expense Trend (§16) is deliberately
+              not a separate chart -- the Business Performance chart
+              above already plots monthly expenses as its own bar series,
+              and a second standalone expense-only trend chart would just
+              repeat that data, not add anything. */}
+          <div className="dashboard-chart-grid">
+            <div className="block">
+              <div className="block-header">
+                <h2>Revenue by client</h2>
+              </div>
+              <div className="block-body">
+                <RevenueByClientChart rows={revenueByClient} />
+                {revenueByClient.length > 0 && (
+                  <p className="caption" style={{ marginTop: 8 }}>
+                    {(
+                      (Number(revenueByClient[0].billed_cad) / revenueByClient.reduce((s, r) => s + Number(r.billed_cad), 0)) *
+                      100
+                    ).toFixed(0)}
+                    % of revenue currently comes from {revenueByClient[0].client_name}.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="block">
+              <div className="block-header">
+                <h2>Expenses by category</h2>
+              </div>
+              <div className="block-body">
+                <ExpenseCategoryDonut rows={expenseByCategory} />
+              </div>
+            </div>
+          </div>
+
+          <div className="metric-grid">
+            {/* Receipt Completeness (§17) */}
+            {receiptCompleteness && receiptCompleteness.total > 0 && (
+              <div className="metric-tile">
+                <div className="metric-label">Receipts on file</div>
+                <div className="metric-value">{receiptCompleteness.pct?.toFixed(0) ?? 0}%</div>
+                <div className="progress-bar">
+                  <div className="progress-bar-fill" style={{ width: `${receiptCompleteness.pct ?? 0}%` }} />
+                </div>
+                <p className="caption metric-sub">
+                  {receiptCompleteness.with_receipt} / {receiptCompleteness.total} expenses supported
+                  {receiptCompleteness.missing > 0 && ` -- ${receiptCompleteness.missing} missing`}
+                </p>
+              </div>
+            )}
+
+            {/* Recurring Revenue (§18) */}
+            <div className="metric-tile">
+              <div className="metric-label">Recurring revenue (next month)</div>
+              <div className="metric-value display">{formatDisplay(recurringForecast[0]?.amount ?? '0')}</div>
+              <p className="caption metric-sub">from active recurring invoice schedules</p>
+            </div>
+
+            {/* Accountant Readiness (§21) */}
+            {readinessFactors.length > 0 && (
+              <div className="metric-tile">
+                <div className="metric-label">Accountant readiness</div>
+                <div className="metric-value">{readinessPct}%</div>
+                <div className="progress-bar">
+                  <div className={`progress-bar-fill${readinessPct < 100 ? ' attention' : ''}`} style={{ width: `${readinessPct}%` }} />
+                </div>
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {readinessFactors
+                    .filter((f) => !f.done)
+                    .map((f) => (
+                      <p key={f.label} className="caption">
+                        {f.label}: {f.detail}
+                      </p>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Business Momentum (§19): this year vs. last year YTD, the
+              comparison actually available from a year-scoped
+              projection -- see the year-selector note above. */}
+          {priorYearProjection && (
+            <div className="block">
+              <div className="block-header">
+                <h2>Business momentum</h2>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th className="amount">{projection.year}</th>
+                    <th className="amount">{priorYearProjection.year}</th>
+                    <th className="amount">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(
+                    [
+                      ['Revenue', Number(projection.ytd.income), Number(priorYearProjection.ytd.income)],
+                      ['Expenses', Number(projection.ytd.expenses), Number(priorYearProjection.ytd.expenses)],
+                      ['Net income', Number(projection.ytd.net_income), Number(priorYearProjection.ytd.net_income)],
+                    ] as [string, number, number][]
+                  ).map(([label, current, prior]) => {
+                    const pctChange = prior !== 0 ? ((current - prior) / Math.abs(prior)) * 100 : null
+                    return (
+                      <tr key={label}>
+                        <td>{label}</td>
+                        <td className="amount">CAD {current.toFixed(2)}</td>
+                        <td className="amount">CAD {prior.toFixed(2)}</td>
+                        <td className="amount" style={{ color: pctChange != null && pctChange >= 0 ? 'var(--color-secondary-default)' : pctChange != null ? 'var(--color-status-overdue)' : undefined }}>
+                          {pctChange != null ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(0)}%` : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Year-over-Year (§20): gated behind at least one prior year
+              of data existing, per the spec. */}
+          {hasYoyData && yoyRows.length > 1 && (
+            <div className="block">
+              <div className="block-header">
+                <h2>Year-over-year</h2>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th className="amount">Revenue</th>
+                    <th className="amount">Expenses</th>
+                    <th className="amount">Net income</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yoyRows.map((r) => (
+                    <tr key={r.period}>
+                      <td>{r.period.slice(0, 4)}</td>
+                      <td className="amount">CAD {r.income}</td>
+                      <td className="amount">CAD {r.expenses}</td>
+                      <td className="amount">CAD {r.net_income}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Needs Your Attention (§22): surfaced actions, prioritized
+              compliance risk first, then overdue money, then missing
+              records, then informational items -- per §22's own
+              guidance. */}
+          {attentionItems.length > 0 && (
+            <div className="block">
+              <div className="block-header">
+                <h2>Needs your attention</h2>
+              </div>
+              <div className="block-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {attentionItems.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <span
+                      style={{
+                        color:
+                          item.level === 'high'
+                            ? 'var(--color-status-overdue)'
+                            : item.level === 'medium'
+                              ? 'var(--color-tertiary-default)'
+                              : 'var(--color-text-primary)',
+                      }}
+                    >
+                      {item.text}
+                    </span>
+                    <Link className="link-button" to={item.to}>
+                      {item.cta}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Recent Activity (§23): a lightweight feed merging the invoice
+          and expense data already fetched for other sections -- not a
+          full audit log. */}
+      {activity.length > 0 && (
+        <div className="block">
+          <div className="block-header">
+            <h2>Recent activity</h2>
+          </div>
+          <div className="block-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {activity.map((a, i) => (
+              <Link key={i} to={a.to} style={{ display: 'flex', justifyContent: 'space-between', color: 'inherit', textDecoration: 'none' }}>
+                <span>{a.text}</span>
+                <span className="caption">{a.date}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="block">
