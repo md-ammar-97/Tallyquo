@@ -205,7 +205,27 @@ This phase is lower-risk to sequence loosely — none of it touches the tax-corr
 
 ---
 
-## 8. Cross-cutting requirements — every phase, not a phase
+## 8. IBM Carbon redesign — second full design-system replacement, across everything Sovereign Ledger had already restyled
+
+**Status: shipped 2026-08-11.** Not a new functional phase — a second complete design-system replacement (`design.md`, merging in `docs/screens/dashboard_design.md`'s dashboard brief), applied on top of Sovereign Ledger (§7) rather than the original Figma-era system. Planned and executed as eleven sequential sub-phases, same discipline as §7: each committed, verified (build+lint+real browser walkthrough with seeded data, screenshots read back not just HTTP-200-assumed), and pushed independently.
+
+| # | Workstream | Depends on | Size |
+|---|---|---|---|
+| CB.A | ✅ Design tokens: Carbon Gray neutrals, zero-radius everywhere except Tags/circular elements, IBM Plex Sans/Mono self-hosted fonts, `@carbon/motion`'s real duration/easing values as new CSS custom properties, Carbon's real dataviz categorical palette. Financial Blue and Set-aside Gold kept unchanged; Green/Red replaced with Carbon's actual Support Green 50/Red 60. Library installs: `recharts`, `motion`, `@carbon/icons-react`, `@carbon/motion`, `@carbon/themes`/`@carbon/colors` (dev, reference only) | `design.md` §2-5 | M |
+| CB.B | ✅ Icon swap: `lucide-react` → `@carbon/icons-react` across 16 usages in 4 files (`Shell.tsx`, `Dashboard.tsx`, `Settings.tsx`, `ComplianceChecklist.tsx`) | CB.A | S |
+| CB.C | ✅ Shell/nav + shared-component restyle: button variants (secondary/ghost), real Carbon Tag proportions (verified against `_tag.scss`, not assumed), table zebra-striping dropped, active-nav tint moved from Compliance Green to Financial-Blue-subtle (green no longer available once it means positive polarity everywhere else) | CB.A, CB.B | S |
+| CB.D | ✅ Backend: `GET /reports/pnl` (JSON), `GET /reports/aging/summary` (new not-due bucket, a real gap in the pre-existing `tenant_aging_report`), `GET /reports/revenue-by-client`, `GET /expenses/by-category`, `GET /expenses/receipt-completeness`, `GET /projection/recurring-forecast`, `GET /reports/payment-speed` (v1: tenant-wide average only, trend/per-client explicitly deferred), `tax_reserve` table + `GET`/`PUT /projection/tax-reserve/{year}`. 40 new/extended tests, full local pytest suite green before push | — | L |
+| CB.E | ✅ Dashboard rebuild 1/3: eight hero KPI tiles, 12-month Business performance chart, Safe-to-spend waterfall, Actual-vs-projected chart. Caught and fixed a real UX gap during its own verification: Safe-to-spend (projected basis) sat beside Net income (YTD-actual basis) with no distinguishing caption | CB.C, CB.D | L |
+| CB.F | ✅ Dashboard rebuild 2/3: Tax Reserve progress tile (new user-enterable field), GST/HST control center chart, AR aging chart, Invoice status donut (client-side tally, no new endpoint) | CB.E | M |
+| CB.G | ✅ Dashboard rebuild 3/3: Revenue by client, Expenses by category, Receipt completeness, Recurring revenue, Business momentum, Year-over-year (gated), Accountant readiness (computed client-side, deliberately not an opaque server score), Needs your attention, Recent activity | CB.F | M |
+| CB.H | ✅ **Remaining 12 pages re-skin sweep — needed zero code changes.** Verified via full grep audit (2 intentional hardcoded hexes found, both correctly out-of-scope invoice-template defaults; 100% of colour-bearing inline styles already `var(--color-*)`-driven) plus a real Playwright walkthrough of all 12 pages (Ledger, ClientDetail, Clients, InvoiceBuilder, Settings, Profile, TemplateEditor, EmailAccounts, Recurring, InvoiceDetail, PublicInvoice, Login) with real seeded data. Sovereign Ledger's own class-reuse architecture did all the work | CB.C | S (verification only) |
+| CB.I | ✅ Framer Motion cinematic layer: `@carbon/motion`-timed route transitions (`AnimatePresence`), staggered tile/panel entrance across every CB.E/F/G dashboard section, KPI count-ups that never animate from zero on first mount, chart draw-ins re-pointed at the same tokens, spring hover/press on the shared `KpiTile` wrapper, Carbon-timed CSS transitions added to buttons/table-rows/nav (previously instant-snap, no `transition` property at all). **`prefers-reduced-motion` implemented for the first time in this app's history**, both via `<MotionConfig reducedMotion="user">` and a global CSS fallback. Deliberately overrides Sovereign Ledger's "never animate numbers from zero" rule, per the user's own explicit cinematic-polish brief | CB.C, CB.E, CB.F, CB.G, CB.H | L |
+| CB.J | ✅ PWA manifest `background_color` updated from Sovereign Ledger's `#F8FAFC` to Carbon Gray 10 `#F4F4F4` to match the real page background. `theme-color`/`theme_color` needed no change (Financial Blue kept) | CB.A | S |
+| CB.K | ✅ This reconciliation — `design.md` rewritten as the new living spec, this table added, `docs/screens/dashboard_design.md` marked merged/superseded-but-kept. Real WCAG contrast re-check against the new Carbon palette (not assumed to pass because the hexes are "official IBM") surfaced genuine, previously-unchecked failures: Green 50 on its own paired tint at Tag text size (3.04:1, *worse* than the prior system's already-failing green), Gold on its tint (3.23:1, unchanged carry-over), and two plain-text usages at normal size outside the Tag component entirely (Business Momentum's %-change cells, Needs-your-attention's medium-severity items) — flagged for a follow-up pass, not fixed in this review-only phase | CB.A-CB.J | S |
+
+---
+
+## 9. Cross-cutting requirements — every phase, not a phase
 
 These are not deliverables with an exit date; they're standing constraints that must hold from Phase 0 onward and regress-test on every subsequent phase.
 
@@ -222,7 +242,7 @@ These are not deliverables with an exit date; they're standing constraints that 
 
 ---
 
-## 9. Open decisions still blocking full commitment
+## 10. Open decisions still blocking full commitment
 
 Carried forward from `problem-statement.md` §12, mapped to the phase each one actually gates. Everything else in §12 already has a recommendation baked into the phase tables above.
 

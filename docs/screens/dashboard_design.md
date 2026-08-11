@@ -5,6 +5,8 @@
 **Status:** Draft v0.1  
 **Date:** August 2026  
 
+**2026-08-11 note:** The dashboard described here shipped as part of the IBM Carbon redesign (`implementation_plan.md` §8, phases CB.E-CB.G; `design.md` §8.1 is now the merged, living spec for what actually shipped, including deliberate deviations flagged inline there — e.g. the waterfall's basis, which section 5 below sketches differently). This document is kept as the original source brief, not a second spec to keep in sync by hand — most of what's below shipped close to as written; where it didn't, `design.md` §8.1 says so.
+
 ---
 
 ## 1. Dashboard Design Principle

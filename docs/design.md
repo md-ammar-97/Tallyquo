@@ -1,211 +1,179 @@
 # Design System
 
 **Companion to:** `problem-statement.md`, `architecture.md`, `datamodel.md`
-**Direction:** "Sovereign Ledger" — financial-blue/compliance-green/set-aside-gold, block-based composition
-**Status:** Shipped 2026-08-10 (`implementation_plan.md` Sovereign Ledger redesign, phases A-J)
+**Direction:** IBM Carbon Design System v11 — zero-radius flat structure, Financial Blue + Set-aside Gold as the two retained brand accents, Carbon's real Support Green/Red for financial polarity, a full Framer Motion cinematic layer
+**Status:** Shipped 2026-08-11 (`implementation_plan.md` §8's IBM Carbon redesign, phases CB.A-CB.K)
 
-**2026-08-10 note:** This document originally specified a "Figma UI" system (blue accent, five-colour Figma brand spectrum for tax states). That system shipped and ran in production for Phase 1-4. It has since been fully replaced by **Sovereign Ledger**, whose token brief and mockups live in `docs/screens/DESIGN.md` — this document is now the merged, living spec; `docs/screens/DESIGN.md` is kept as the original source reference, not a second spec to keep in sync by hand. Sections below reflect what actually shipped, including the deliberate deviations from the original brief (noted inline with ⚠️, matching `implementation_plan.md`'s convention).
+**2026-08-11 note:** This document previously specified "Sovereign Ledger" (financial-blue/compliance-green/set-aside-gold, 4-8px radius, block-based composition), which shipped 2026-08-10 and ran in production. It has since been fully replaced by the **IBM Carbon** redesign described below. Sovereign Ledger's own token brief lived in `docs/screens/DESIGN.md`; this redesign's dashboard brief lives in `docs/screens/dashboard_design.md`, now marked merged/superseded-but-kept at its own header. This document is the merged, living spec — sections below reflect what actually shipped, including deliberate deviations from both Carbon's own conventions and this redesign's own plan (noted inline with ⚠️, matching this file's long-standing convention).
 
 ---
 
 ## 1. Design thesis
 
-The product handles money that isn't the user's, on documents that are legal records. The interface should feel like a **precision instrument, not a marketing site** — dense without being cluttered, using colour as signal rather than decoration, never asking the user to admire it. Sovereign Ledger's own vocabulary carries this now: financial-blue for structure and interaction, compliance-green for "this is correct/complete," set-aside-gold for "this needs your attention or is being held aside," and error-red reserved for genuinely wrong states. Three hues, not five — a deliberate narrowing from the earlier Figma-spectrum system (see §2.3's history note).
+The product still handles money that isn't the user's, on documents that are legal records — that thesis hasn't changed. What changed is the visual language expressing it. Sovereign Ledger read as "precision instrument" through soft rounded blocks and a single blue-green-gold palette; Carbon reads the same intent through a harder, more literal structural honesty — **zero border-radius everywhere** (the one visual trait that most immediately signals "this is Carbon, not a generic SaaS dashboard"), flat bordered panels with no shadow, IBM Plex's slightly technical typographic voice, and colour applied with Carbon's own systematic discipline rather than a bespoke three-hue system.
 
-Three principles carried through every decision below:
+The user's explicit brief for this redesign was two things at once, in tension: **"do not make everything black and white"** (keep real brand colour) and **make it "extremely polished, smooth, cinematic"** via animation. Both survive as first-class constraints below, not just the zero-radius structural change:
 
-**Blocks, not pages.** Every surface is composed of self-contained blocks with a consistent anatomy — header row, body, optional footer action. This mirrors the invoice itself, which is also a stack of blocks. The same mental model runs from the app chrome down into the document being produced.
+**Two brand accents survive Carbon's own neutral palette.** Financial Blue `#1A365D` replaces Carbon's default Blue 60 everywhere an accent appears — buttons, focus rings, links, active nav, the primary chart series — because it's the one hue tied to the actual product logo. Set-aside Gold `#B7791F` is *also* kept, not converted to Carbon's own (yellow) warning colour, because it already carries a specific "tax liability held aside" meaning distinct from Carbon's generic warning concept (§2.3). Genuine Carbon Green 50 / Red 60 carry financial polarity throughout — profit/loss, receivable/payable — exactly the "relevant numbers" the brief called out by name.
 
-**Colour is meaning.** Financial Blue, Compliance Green, and Set-aside Gold are each rationed to one job: blue for interactive elements and chrome, green/gold/red for tax and payment states, never decoration. A user must be able to glance at a list of thirty invoices and read their tax treatment by colour alone.
+**Motion is real, not decorative, and it is Carbon-timed.** Every animation in the app — route transitions, staggered tile entrance, KPI count-ups, chart draw-ins, hover/press feedback — sources its duration and easing from `@carbon/motion`'s actual published tokens (§10), not hand-picked values. This is a real reversal of the prior system's explicit "never animate numbers from zero" rule (§10's history note) — the user asked for cinematic polish this time, and got it, deliberately and by name.
 
-**Quiet by default, loud on consequence.** Issuing an invoice is irreversible. Crossing the small supplier threshold changes a legal obligation. These moments get the only visual weight in the product; everything else is neutral greys and hairlines.
+**Charts exist for the first time.** Every prior Dashboard iteration was 100% text/table/progress-bar. This redesign adds Recharts-based visualisation throughout — trend lines, a waterfall, donuts, aging/concentration bars — hand-themed to Carbon tokens rather than the heavier `@carbon/charts-react` package (§6's chart section explains why).
 
 ---
 
 ## 2. Colour tokens
 
-### 2.1 Foundation — Sovereign Ledger neutrals
+### 2.1 Foundation — Carbon Gray neutrals
+
+Pulled directly from `@carbon/themes`' White theme and `@carbon/colors`, verified via `node -e "require('@carbon/themes')..."` against the actually-installed packages during implementation — not hand-transcribed from memory or from a screenshot.
 
 ```
---color-bg-default        #FFFFFF   app canvas, block surfaces
---color-bg-secondary      #F8FAFC   page background behind blocks
---color-bg-tertiary       #F1F5F9   input wells, table zebra
---color-bg-hover          #F1F5F9   row and button hover
---color-bg-pressed        #E2E8F0
---color-bg-selected       #E6ECF3   selected row (accent-tinted)
+--color-bg-default        #FFFFFF   panel/card surfaces
+--color-bg-secondary      #F4F4F4   page background behind panels (Carbon Gray 10)
+--color-bg-tertiary       #E8E8E8   input wells, hover fills, disabled fills
+--color-bg-hover          #E8E8E8   row and button hover
+--color-bg-pressed        #C6C6C6
+--color-bg-selected       #E6ECF3   selected row (Financial-Blue-tinted, not Carbon Gray)
 
---color-border-default    #E2E8F0   the workhorse hairline
---color-border-strong     #CBD5E1   input borders
---color-border-focus      #1A365D   focus ring
---color-border-subtle     #F1F5F9   internal table rules
+--color-border-default    #E0E0E0   the workhorse hairline
+--color-border-strong     #8D8D8D   input borders
+--color-border-focus      #1A365D   focus ring (Financial Blue, not Carbon Blue 60)
+--color-border-subtle     #E0E0E0   internal table rules
 
---color-text-primary      #0F172A   headings, values, amounts
---color-text-secondary    #64748B   labels, metadata, helper text
---color-text-tertiary     #94A3B8   placeholders, disabled
---color-text-caption      #64748B   helper text, timestamps
+--color-text-primary      #161616   headings, values, amounts
+--color-text-secondary    #525252   labels, metadata, helper text
+--color-text-tertiary     #8D8D8D   placeholders, disabled
+--color-text-caption      #525252   helper text, timestamps
 --color-text-onbrand      #FFFFFF
 --color-text-link         #1A365D
 ```
 
-### 2.2 Accent — Financial Blue
+This is a genuinely different neutral scale from Sovereign Ledger's, not a re-hex of the same values — Carbon's Gray 10 (`#F4F4F4`) reads distinctly flatter/cooler than Sovereign Ledger's `#F8FAFC`, and it shows: the PWA manifest's `background_color` needed a real update to match (§7, CB.J), not just the CSS tokens.
+
+### 2.2 Accent — Financial Blue (unchanged from Sovereign Ledger, replacing Carbon Blue 60)
 
 ```
---color-accent-default    #1A365D   primary actions, focus, selection
+--color-accent-default    #1A365D   primary actions, focus, selection, active nav
 --color-accent-hover      #15294A
 --color-accent-pressed    #0F1D36
 --color-accent-subtle     #E6ECF3   backgrounds for accent surfaces
 --color-accent-border     #B8C7DA
 ```
 
-Used **only** for interactive affordances, the current selection, and app chrome (sidebar active state uses green — see §2.3). Never for decoration, never for illustration, never for a hero gradient.
+Identical hex values to Sovereign Ledger's accent — this is the one token family the redesign deliberately left untouched, confirmed via the user's own AskUserQuestion selection ("Keep Financial Blue #1A365D") rather than assumed. It now also covers the sidebar's active-nav tint (§7), which Sovereign Ledger had assigned to green — green is no longer available for that role once it means something specific (positive financial polarity) everywhere else in the app.
 
-### 2.3 Semantic assignments — Compliance Green / Set-aside Gold / Error Red
+### 2.3 Semantic assignments — genuine Carbon Support colours, plus one retained deviation
 
-**History note:** the original Figma-derived system used five brand hues (purple/blue/grey/green/red/orange) to distinguish tax states. Sovereign Ledger narrows this to three semantic hues — compliance-green, set-aside-gold, error-red — plus neutral grey. Shipping this required a real remap, not a find-replace, since the two systems don't have a 1:1 hue mapping. The remap actually shipped (`clients_router`/`Clients.tsx`, `implementation_plan.md` Sovereign Ledger Phase C):
+| Token | Hex | Source | Assigned meaning |
+|---|---|---|---|
+| `--color-secondary-default` / `--color-status-paid` / `--color-state-taxable` | `#24A148` | Carbon Support **Green 50**, real/unmodified | **Positive financial outcome** — net income ≥ 0, safe-to-spend, paid, taxable/active tax position |
+| `--color-status-overdue` | `#DA1E28` | Carbon Support **Red 60**, real/unmodified | **Negative financial outcome** — overdue, net income < 0, cancelled |
+| `--color-tertiary-default` / `--color-status-attention` / `--color-state-zero-rated` | `#B7791F` | **Set-aside Gold, kept — not Carbon's actual (yellow) warning colour** | Tax liability held aside, threshold/attention escalation, zero-rated export |
+| `--color-state-unregistered` | `#525252` | Carbon Gray 90 | Not registered, exempt, draft — deliberately grey, the absence of a position |
 
-| Token | Hex | Assigned meaning |
-|---|---|---|
-| `--color-state-taxable` / `--color-status-paid` | `#2F855A` (Compliance Green) | **Taxable / Paid / active collection** — tax is being correctly collected, or money has arrived |
-| `--color-state-zero-rated` / `--color-status-attention` | `#B7791F` (Set-aside Gold) | **Zero-rated export / attention / partially-paid** — a special case that needs the user's awareness, or money being held aside |
-| `--color-state-unregistered` | `#64748B` (neutral grey) | **Not charged, not registered, exempt, draft** — deliberately grey, not a colour: the absence of an active position |
-| `--color-status-overdue` | `#C53030` (Error Red) | Overdue / error / destructive — the one hue reserved for genuinely wrong states |
+**⚠️ The gold-for-warning deviation is deliberate and was decided without a separate user round-trip** (documented in the redesign's own plan as low-stakes): Carbon's actual Support "warning" colour is yellow (`#F1C21B`), not gold. Gold was kept because it already carries a specific, established "tax liability being set aside" meaning in this product (§8.1's Tax + CPP reserve tile) that Carbon's generic warning concept doesn't have a name for, and the user's own "keep some brand colours" instruction reads as plural, not limited to just blue. This is the one place the palette isn't "authentic Carbon" by the letter, done knowingly.
 
-**Why zero-rated shares gold with "attention" rather than keeping its own hue.** The five-hue system gave zero-rated a distinct blue specifically so it read as "an active tax position, not an absence." Sovereign Ledger's narrower vocabulary doesn't have a fourth hue to spend on that distinction, so zero-rated instead borrows gold's "special case, pay attention" meaning — a US client's invoice is not wrong (it's not red), but it is exactly the kind of case (`edgecases.md` X12's non-residency-evidence nag) where a user should actually look. Unregistered stays grey either way, since that's genuinely nothing, not a special case.
+**The colour-polarity rule, stated once here since it governs every subsequent screen:** Green 50 / Red 60 are reserved **strictly** for genuine positive/negative financial *outcomes* — net income's sign, safe-to-spend, overdue amounts. They are never applied to neutral-magnitude figures that merely got bigger or smaller without a value judgment attached — GST/HST collected, the threshold percentage, or tax/CPP deductions (which use gold, since they're expected obligations, not errors). A user reading the Dashboard's eight hero tiles should be able to tell at a glance which four are "outcomes" and which four are "facts," purely from colour.
 
-**Client list tax badge — an honest label, not the mockup's compound figure.** `docs/screens/clients.png` shows a "GST + PST (12%)" style compound badge. What shipped (`Clients.tsx`'s `taxLabel()`) is `{region} — {rate}% HST` derived from the real seeded `tax_rate` table (e.g. `ON — 13% HST`), because PST/RST is an invoice-level opt-in flag (`include_provincial_sales_tax`), not a stored per-client default — labelling every Ontario client with a PST rate they may never actually be charged would show data the record doesn't have. ⚠️ narrower than the original mockup, by design.
-
-### 2.4 Semantic surfaces
+### 2.4 Chart categorical palette (new — no equivalent in Sovereign Ledger)
 
 ```
---color-success-bg        #E6F4EC    --color-success-fg    #2F855A
---color-warning-bg        #FBF0DF    --color-warning-fg    #B7791F
---color-danger-bg         #FBEAEA    --color-danger-fg     #C53030
---color-info-bg           #E6ECF3    --color-info-fg       #1A365D
+--color-chart-1  #8A3FFC     --color-chart-4  #D02670
+--color-chart-2  #0072C3     --color-chart-5  #BA4E00
+--color-chart-3  #007D79     --color-chart-6  #6F6F6F
 ```
+
+Carbon's actual published dataviz categorical sequence (`@carbon/colors`), used **only** for neutral multi-category series — expense-by-category and revenue-by-client donuts/bars — where no category is inherently "good" or "bad" relative to another. Never mixed with the polarity rule above.
 
 ### 2.5 Dark mode
 
-Still deferred, tokens still named so it is a value swap, not a rewrite. The invoice **document** never inverts — a printed invoice is always dark ink on white paper, regardless of app theme. This is a hard rule: the preview must show what the client will receive.
+Still deferred, same as Sovereign Ledger — tokens stay named so it's a value swap later, not a rewrite. The invoice **document** still never inverts (§9, unchanged).
 
 ---
 
 ## 3. Typography
 
-**Inter** for the interface, **JetBrains Mono** for data — designed for small sizes and dense data, both with excellent tabular figures. No display face, no serif, no pairing beyond these two. In a product where a misread digit costs money, personality in the type is a liability.
+**IBM Plex Sans** for the interface, **IBM Plex Mono** for data — Carbon's own type family, replacing Inter/JetBrains Mono. Both self-hosted via `@fontsource-variable/ibm-plex-sans` and `@fontsource/ibm-plex-mono` (same self-hosted-fontsource pattern the app already used, no external network dependency — verified, not assumed).
 
 ```
---font-ui        'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif
---font-mono      'JetBrains Mono', ui-monospace, monospace
+--font-ui        'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif
+--font-mono      'IBM Plex Mono', ui-monospace, monospace
 ```
 
-Both are self-hosted via `@fontsource-variable/inter` and `@fontsource/jetbrains-mono` (no external network dependency — verified against the packages' own `@font-face` declarations, not assumed) rather than the Roboto Mono reference this document originally specified, which was never actually loaded by any build before the Sovereign Ledger redesign shipped a font pipeline for the first time. `--font-mono` backs the invoice document's dates/amounts and select high-attention figures (the Clients list's Outstanding column). It is not yet a blanket rule on every `.amount` cell app-wide — most ledger/table amounts still render in body Inter with `tabular-nums`, which is a reasonable next increment rather than a gap in what shipped.
+Plex Sans has a visibly different x-height and letterform than Inter at the same point sizes — the type scale below was re-verified to still read correctly in the new face rather than assuming the old point sizes transfer unchanged; no sizes actually needed to move.
 
-### Type scale
-
-Only `--text-display` exists as a literal CSS custom property (§13); the rest below are baked into per-selector rules in `index.css` rather than exposed as reusable tokens — the "Token" column names the concept, not something you can actually reference as `var(...)`.
+### Type scale (unchanged sizes/weights from Sovereign Ledger; only the face changed)
 
 | Concept | Size / line | Weight | Use |
 |---|---|---|---|
-| `--text-display` | 32 / 40 | **700** | Dashboard headline figure — and, as of the Sovereign Ledger redesign, page `<h1>` too (see below) |
-| `--text-h1` (`h1` selector) | 32 / 40 | **700** | Page title — promoted to display size/weight 2026-08-10; the original 24/32/600 spec was superseded rather than kept as a distinct smaller size |
-| `--text-h2` (`h2` selector) | 18 / 24 | 600 | Block header — unchanged |
-| `--text-body` | 13 / 20 | 400 | Default body, table cells — unchanged |
-| `--text-label` (`label` selector) | 11 / 16 | 500 | Field labels — unchanged |
-| `--text-caption` (`.caption` class) | 11 / 16 | 400 | Helper text, timestamps — unchanged |
+| `--text-display` | 32 / 40 | **700** | Dashboard hero KPI figures — now eight tiles, not one (§8.1) |
+| `h1` | 32 / 40 | 700 | Page title |
+| `h2` | 18 / 24 | 600 | Block header |
+| body | 13 / 20 | 400 | Default body, table cells |
+| `label` | 11 / 16 | 500 | Field labels |
+| `.caption` | 11 / 16 | 400 | Helper text, timestamps |
 
-`--text-h3`/`--text-body-strong` from the original spec were never implemented as distinct rules either before or after this redesign — not a regression, just never built.
+13px body stays deliberate for the same reason as before — it reads as a tool, not a website.
 
-13px body is deliberate. It reads as a tool rather than a website, and it lets a ledger row fit meaningfully more information without scrolling.
+### Numeric typography — unchanged rules, still non-negotiable
 
-### Numeric typography — non-negotiable rules
-
-- **All money and quantities use tabular figures** (`font-variant-numeric: tabular-nums`). Columns of numbers must align on the decimal or the user cannot scan them.
-- Amounts are **right-aligned**, always.
-- Currency is shown as `CAD 7,200.00`, not `$7,200.00`, wherever both CAD and USD can appear in the same view. Ambiguous dollar signs are how people misread a total by 40%.
-- Negative amounts use a minus sign and `--color-status-overdue`, never parentheses and never colour alone.
-- Tax rates render to their true precision: `13%`, `9.975%` — never rounded to `10%`.
+All money/quantities use tabular figures, right-aligned, `CAD 7,200.00` not `$7,200.00`, negative amounts use a minus sign plus Red 60 (never parentheses, never colour alone), tax rates render to true precision. None of this changed with the redesign.
 
 ### Label case
 
-Sentence case throughout, including buttons and column headers. `Invoice date`, not `Invoice Date`. Title case in a data-dense UI adds visual noise without adding information.
+Sentence case throughout — unchanged. Carbon's own convention (Tag components, buttons) is also sentence case, so this needed no reconciliation between the two systems.
 
 ---
 
 ## 4. Spacing, radius, elevation
 
-### 8pt grid with a 4pt half-step
+### Carbon's real 2px-based spacing scale
 
 ```
 --space-1   4px     --space-5   24px
 --space-2   8px     --space-6   32px
---space-3   12px    --space-7   48px
---space-4   16px    --space-8   64px
+--space-3   12px    --space-7   40px
+--space-4   16px
 ```
 
-Block padding is `--space-4` (16px) on mobile, `--space-5` (24px) on desktop. Gap between blocks is always `--space-4`. Field-to-field vertical rhythm is `--space-3`.
+Verified, not shifted: Sovereign Ledger's existing 4/8/12/16/24/32px values already land exactly on Carbon's `spacing-02` through `spacing-07`, so `--space-1..6` carried over unchanged. `--space-7` extends the range to Carbon's `spacing-08` (40px, was 48px under Sovereign Ledger) for the one place that needed it.
 
-### Radius — per-component-type, not one shared scale
-
-```
---radius-xs    2px     small chips
---radius-badge 2px     badges — a sharper, "stamped" look for status indicators
---radius-sm    4px     buttons, inputs
---radius-md    8px     blocks, cards, panels, the invoice document
---radius-lg    8px     modals, popovers (shares --radius-md's value)
---radius-full  9999px  avatars, count pills, circular icon buttons
-```
-
-Small radii read as precision. A 16px radius on a financial record looks like a consumer app and undermines the document's seriousness. Sovereign Ledger widened blocks/cards from the original 6px to 8px (still tight relative to consumer norms) and gave badges their own 2px token distinct from buttons/inputs — a badge is a stamp, not an affordance, and reads more like one at a sharper corner than a shared 4px would give it.
-
-### Elevation — borders first, shadows last
+### Radius — zero everywhere, Carbon's single defining trait
 
 ```
---elev-0   border: 1px solid var(--color-border-default)      blocks (default)
---elev-1   0 1px 3px rgba(0,0,0,0.06)  + border                dropdowns
---elev-2   0 4px 12px rgba(0,0,0,0.10) + border                popovers, toasts
---elev-3   0 12px 32px rgba(0,0,0,0.14)                        modals
+--radius-xs    0
+--radius-sm    0
+--radius-md    0
+--radius-lg    0
+--radius-badge var(--radius-full)   Tags, the one real rounding exception
+--radius-full  9999px               avatars, circular icon buttons
 ```
 
-Surfaces separate with hairlines, not shadows. Blocks in this product sit flat on `--color-bg-secondary` with a single-pixel border. Shadow appears only when something genuinely floats above the plane. ⚠️ `--elev-*` values above were never implemented as CSS custom properties in any shipped version of this app (Figma-era or Sovereign Ledger) — they describe an intent that shadows-when-floating still roughly matches in practice (modals/dropdowns do use inline box-shadow), but there's no token to point to.
+This is the single biggest visual departure from Sovereign Ledger, and the whole point of "IBM Carbon" as a request rather than just a colour change: buttons, inputs, panels, modals — all flat rectangles now. Carbon's actual rounding exceptions are Tags and circular elements (avatars, checklist dots), which is why `--radius-badge` reuses `--radius-full` rather than getting its own small value — verified against Carbon's real `_tag.scss` source (16px), which renders identically to a full pill at this app's 24px Tag height.
+
+### Elevation — borders first, shadows last (unchanged philosophy — a genuine continuity point)
+
+Blocks/panels sit flat with a single hairline border, no shadow — this was already Carbon-authentic in Sovereign Ledger before this redesign existed, so it needed no change. Modals/dropdowns still use inline `box-shadow` for genuine floating surfaces; `--elev-*` tokens still don't exist as CSS custom properties (unchanged gap, not new).
 
 ---
 
-## 5. The block system
-
-Every screen is a vertical or grid stack of **blocks**. A block is the only container primitive. There are no cards, panels, wells, or sections — one abstraction, used everywhere.
-
-### Anatomy
+## 5. Motion tokens (new — @carbon/motion, replacing the never-implemented Sovereign Ledger values)
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  Block header          [optional action] [overflow ⋯]│  48px, border-bottom
-├──────────────────────────────────────────────────────┤
-│                                                      │
-│  Block body                                          │  padding 24px
-│                                                      │
-├──────────────────────────────────────────────────────┤
-│  Block footer (optional)                     [action]│  56px, border-top
-└──────────────────────────────────────────────────────┘
-   radius 8px · border 1px #E2E8F0 · background #FFFFFF
+--motion-fast-01      70ms    hover/press micro-feedback
+--motion-fast-02      110ms
+--motion-moderate-01  150ms
+--motion-moderate-02  240ms   tile/panel entrance
+--motion-slow-01      400ms   page transitions, count-ups, chart draw-in
+--motion-slow-02      700ms
+
+--motion-ease-standard  cubic-bezier(0.2, 0, 0.38, 0.9)
+--motion-ease-entrance  cubic-bezier(0, 0, 0.38, 0.9)
+--motion-ease-exit      cubic-bezier(0.2, 0, 1, 0.9)
 ```
 
-### Block variants
-
-| Variant | Purpose | Distinguishing treatment |
-|---|---|---|
-| `block/default` | Everything | Neutral border, white surface |
-| `block/metric` | A single figure with a label and delta | `--text-display` figure, sparkline slot |
-| `block/table` | Ledger, list views | Body padding removed; table meets the border |
-| `block/form` | Grouped input fields | Two-column label/field on desktop, stacked on mobile |
-| `block/alert` | Threshold warnings, missing evidence | Left border 3px in the semantic colour, tinted background |
-| `block/document` | Invoice preview | Fixed paper aspect, always light, inner shadow |
-
-### Grid
-
-12 columns, `--space-4` gutter, max content width 1280px.
-Standard layouts: `12` (full), `8 + 4` (content + sidebar), `6 + 6` (comparison), `3 × 4` (metric row), `4 × 3` (template gallery).
-
-Breakpoints: `sm 640` · `md 768` · `lg 1024` · `xl 1280`. Below `md`, all grids collapse to a single column and blocks go edge-to-edge with 16px page padding.
+These are `@carbon/motion`'s actual published values (`durationFast01` etc. and `easings.standard/entrance/exit.productive`), verified via `node -e "require('@carbon/motion')..."` against the installed package, not invented. Unlike Sovereign Ledger's equivalent tokens — which were specified in this document but **never actually implemented** as CSS custom properties, with the handful of shipped transitions using plain `0.15s ease` instead — these are real, live in `index.css`'s `:root`, and are the literal source both the CSS-side hover transitions and the JS/Framer Motion layer (`web/src/motion/tokens.ts`) draw from. Full behaviour described in §10.
 
 ---
 
@@ -213,369 +181,263 @@ Breakpoints: `sm 640` · `md 768` · `lg 1024` · `xl 1280`. Below `md`, all gri
 
 ### Buttons
 
-| Variant | Fill | Text | Border | Use |
-|---|---|---|---|---|
-| Primary | `--color-accent-default` | white | none | One per view. `Issue invoice`, `Save` |
-| Secondary | white | `--color-text-primary` | `--color-border-strong` | `Cancel`, `Preview` |
-| Ghost | transparent | `--color-text-secondary` | none | Toolbar, table row actions |
-| Danger | white | `--color-status-overdue` | `--color-status-overdue` (`#C53030`) | `Cancel invoice`, `Delete` |
-| Danger solid | `--color-status-overdue` | white | none | Confirmation modal only |
-
-Sizes: `sm 28px` · `md 32px` (default) · `lg 40px` (primary page actions). Radius `--radius-sm`. Horizontal padding `--space-3`. Icon-only buttons are square at the same heights.
-
-**Focus:** 2px `--color-accent-default` ring at 2px offset. Visible on keyboard focus, always, no exceptions for aesthetics.
+Same four variants as Sovereign Ledger (Primary/Secondary/Ghost/Danger), radius now 0 instead of `--radius-sm`'s old 4px. **New:** every button now has a real Carbon-timed hover/press transition (`background-color`/`border-color`/`color` at `--motion-fast-02`, plus a `scale(0.97)` press feedback at `--motion-fast-01`) — previously buttons snapped instantly with no `transition` property at all anywhere in the stylesheet.
 
 ### Inputs
 
-32px height, `--radius-xs`, 1px `--color-border-strong`, 8px horizontal padding, `--text-body`. Focus replaces the border with `--color-accent-default` and adds the ring. Error state uses `--color-status-overdue` border with the message below in `--text-caption`.
+32px height, 0 radius (was `--radius-xs`'s 2px), 1px `--color-border-strong`, unchanged otherwise.
 
-Labels sit above the field in `--text-label` / `--color-text-secondary`. Required fields are marked by an asterisk in `--color-status-overdue` and announced to assistive tech — never by colour alone.
+### Tags — real Carbon proportions, not a re-skinned badge
 
-**Money inputs**: right-aligned, tabular figures, currency prefix in a non-editable adornment, formats on blur, accepts paste with symbols and separators and strips them silently.
-
-### Badges — tax treatment and status
-
-Height 20px, `--radius-badge` (2px — sharper than buttons/inputs, see §4), `--text-label`, uppercase, 6px horizontal padding, tinted background with the full-strength colour as text.
+Height 24px (was 20px), 8px horizontal padding (was 6px), **sentence case, not uppercase** (`Taxable`, not `TAXABLE`), `label-01` type style (12px/16px, weight 400, not the old bold-uppercase treatment), pill radius via `--radius-badge`. These exact proportions were verified against Carbon's actual `_tag.scss` source fetched from unpkg during implementation, not assumed to match the old badge's dimensions.
 
 ```
-● Taxable / Paid        Compliance Green  #2F855A on #E6F4EC
-● Zero-rated / Attention  Set-aside Gold  #B7791F on #FBF0DF
-○ Not registered / Draft   neutral grey  #64748B on #F1F5F9
-● Overdue                Error Red       #C53030 on #FBEAEA
+● Taxable / Paid          Green 50   #24A148 on #DEFBE6
+● Zero-rated / Attention  Gold       #B7791F on #FBF0DF
+○ Not registered / Draft  Gray 90    #525252 on #E8E8E8
+● Overdue                 Red 60     #DA1E28 on #FFF1F1
 ```
 
-Three semantic hues, not the original five (§2.3's history note) — filled dot for an active/attention-worthy state, hollow dot for its absence. Colour is never the only carrier — the label always states the treatment (e.g. the Clients list's honest `ON — 13% HST` region+rate label, not a bare colour swatch, §2.3).
+**⚠️ Two of these four combinations fail WCAG AA at Tag text size — see §12, re-verified with real numbers as part of this reconciliation, not assumed to pass because the hexes are "official IBM."**
 
-### Tables
+### Tables — dropped zebra striping
 
-Row height 44px (48px on touch). Header row `--text-label`, `--color-text-secondary`, `--color-bg-secondary` background, sticky on scroll. Rules between rows are `--color-border-subtle`; the outer boundary is `--color-border-default`. Hover fills `--color-bg-hover`. Row actions reveal on hover on desktop and live in an overflow menu on touch.
+Real Carbon DataTables use hairline row dividers plus a hover state only, **no periodic zebra tint**. Sovereign Ledger's `tbody tr:nth-child(5n)` shading was removed — a deliberate, flagged behaviour change, not a silent regression. Table row hover now also has a real transition (`--motion-fast-02`) where previously — like buttons — there was none.
 
-**Amount columns are always the rightmost columns and always right-aligned.** Totals rows use `--text-body-strong` with a 2px top border.
+### Charts (new section — no equivalent existed before this redesign)
 
-### Toasts and alerts
+**Library: Recharts, hand-themed to Carbon tokens** — not `@carbon/charts-react`, decided directly with the user via AskUserQuestion before implementation. `@carbon/charts-react` was rejected for three concrete reasons: no native waterfall chart type (the Dashboard needed one — see below), a heavier D3-based runtime, and materially more limited animation control than a "cinematic" brief calls for. Recharts' SVG elements accept CSS custom properties directly as `fill`/`stroke` props and resolve them correctly (`getComputedStyle` confirmed, not assumed) — the same token system styles both plain CSS and every chart.
 
-Toasts bottom-right, `--elev-2`, auto-dismiss 5s, never for errors that need action. Persistent alerts use `block/alert` inline where the problem is, not floating.
+**Eight chart components ship, all under `web/src/components/dashboard/`:**
+
+| Chart | Type | Colour treatment |
+|---|---|---|
+| Business performance | Composed (bar + line) | Revenue/Expenses bars neutral (Blue/Gray), Net income line neutral dashed — a single stroke can't change colour mid-line if it crosses zero across the year |
+| Where your revenue goes | Custom waterfall | Start/end bars Financial Blue, deduction bars Gold (an expected obligation, not an error — not Red) |
+| Actual vs. projected revenue | Line + reference line | Financial Blue actual (solid) + projected (dashed continuation) |
+| GST/HST control center | Bar | Neutral Blue/Gray — collected and ITCs are magnitudes, not outcomes |
+| Accounts receivable aging | Horizontal bar | Neutral buckets except 90+ days (Red 60) — the one bucket signalling a real collection problem |
+| Invoice status | Donut | Per-status semantic colour (paid=Green, overdue=Red, draft=Gray, etc.) |
+| Revenue by client | Horizontal bar | Neutral Financial Blue — which client bills most isn't a polarity question |
+| Expenses by category | Donut | Categorical chart palette (§2.4) — no category is inherently good/bad |
+
+**The waterfall has no native Recharts type.** Built via the standard technique: two stacked `<Bar>` elements sharing a `stackId`, an invisible "base" bar (transparent fill, `isAnimationActive={false}`) floats a visible "value" bar to the correct height, with per-step `<Cell>` colouring.
+
+**⚠️ The waterfall's basis deliberately deviates from `dashboard_design.md` §5's own 5-step example**, which starts from raw Revenue. This app's waterfall starts from Net Business Income instead (Revenue → Federal tax → Provincial tax → CPP → Safe to spend, one fewer step) because `GET /projection`'s tax/CPP figures are computed from the *active projected annual* net-income basis, and there is no projected-annual-*expenses* figure available to bridge Revenue down to that same basis consistently — starting from net income keeps every step on one basis rather than forcing numbers that wouldn't actually reconcile.
+
+**Every chart's `animationDuration`/`animationEasing` props are re-pointed at the same `@carbon/motion` tokens** (`src/motion/tokens.ts`'s `rechartsDurationMs`/`rechartsEasing` — 400ms, Carbon's entrance-expressive curve) rather than Recharts' own defaults, so chart draw-ins read as part of the same motion system as everything else, not a visually separate library's timing.
 
 ---
 
-## 7. Application shell *(shipped 2026-08-10 — Sovereign Ledger Phase B)*
+## 7. Application shell
 
 ```
 ┌────────────┬──────────────────────────────────────────────────┐
 │  Logo      │  Topbar — page title · Create Invoice · 🔔 ? 👤   │
 │            ├──────────────────────────────────────────────────┤
 │ +Add       │                                                  │
-│  Expense   │   Page background #F8FAFC                        │
+│  Expense   │   Page background #F4F4F4 (Carbon Gray 10)       │
 │            │   ┌────────────────────────────────────────────┐ │
-│  Dashboard │   │  block                                     │ │
+│  Dashboard │   │  flat 0-radius panel                        │ │
 │  Invoices  │   └────────────────────────────────────────────┘ │
-│  Expenses  │   ┌──────────────────┐ ┌───────────────────────┐ │
-│  Clients   │   │  block           │ │  block                │ │
-│  Reports   │   └──────────────────┘ └───────────────────────┘ │
+│  Expenses  │                                                  │
+│  Clients   │                                                  │
+│  Reports   │                                                  │
 │  Settings  │                                                  │
-│            │                                                  │
 │  Sign out  │                                                  │
 └────────────┴──────────────────────────────────────────────────┘
 ```
 
-Business profile, Email accounts, and Recurring invoices — each a top-level nav item in the original brief — consolidated under **Settings** as of the Phase H re-skin sweep, matching `docs/screens/DESIGN.md`'s leaner sidebar; each is still one click away via a Settings hub page rather than buried. Templates (new/edit) nest under Settings too, since they're only ever reached from within Business profile, never a standalone destination. lucide-react icons replace the earlier icon-font assumption, `lucide-react` having been picked specifically for this redesign (no icon library existed before it).
+Layout/structure unchanged from Sovereign Ledger (Settings hub, nav item set, mobile slide-in). Three real changes:
 
-Sidebar collapses to a slide-in menu below `md` (mobile topbar shows a plain text wordmark rather than the full logo lockup — tested and found illegible at 28px, full logo used only where it has room). ⚠️ **Deviation from the original brief:** the topbar does not show a persistent tax-registration-status chip (`Not registered` / `Registered · ...`) as this section originally specified — that never got built in this redesign and remains a real gap, not a deliberate cut. The Dashboard's onboarding block and Business profile page are still the only places that state is visible. Bell and Help icons ship as visual placeholders only (`title="...(coming soon)"`, no click handler) — no notifications backend or support destination exists yet to wire them to.
+1. **Icons: `@carbon/icons-react` replaces `lucide-react`** throughout (16 icon usages across `Shell.tsx`, `Dashboard.tsx`, `Settings.tsx`, `ComplianceChecklist.tsx`) — decided directly with the user, `lucide-react` having been the prior redesign's own first-ever icon library for this app.
+2. **Active-nav tint moved from Compliance Green to Financial-Blue-subtle.** Green is no longer available for "current nav item" once it means something specific and load-bearing (positive financial polarity) throughout the rest of the app — Carbon's own convention for "current" is the interactive/accent colour anyway, not the success colour, so this is a correction toward Carbon-authenticity as much as a polarity-conflict fix.
+3. **Sidebar/topbar entrance animation on load** (§10) — new, via the motion layer.
+
+⚠️ Same pre-existing gaps as Sovereign Ledger, untouched by this redesign: no persistent tax-registration-status chip in the topbar, Bell/Help remain inert visual placeholders (`title="...(coming soon)"`, no backend to wire to).
 
 ---
 
 ## 8. Key screens
 
-### 8.1 Dashboard *(shipped 2026-08-08 — `implementation_plan.md` 3.2-3.9, 3.12; remapped 2026-08-10 — Sovereign Ledger Phase D)*
+### 8.1 Dashboard — full rebuild against `docs/screens/dashboard_design.md`
 
-**2026-08-10 remap, on top of the 2026-08-08 shipment below:** the headline became **"How much is mine?"** (adopting this document's own §8.1 speculative phrase) with a "Year-to-date projection for {year}" subtitle. The instalment warning moved from a small bordered tile into a full-width Error Red banner above the tiles, so it reads as urgent rather than as one metric among several. Two new top tiles — **Total invoiced** and **Estimated expenses** — read `income_service.ytd_actuals()`, a figure the projection service already computed internally for its extrapolation ratio but had previously discarded rather than exposed; no new aggregation logic, just plumbing. The set-aside tile keeps its expand-in-place assumptions disclosure from the original ship, restyled with the gold left-border treatment and "View logic"/"Hide logic" copy. The quarterly GST/HST table (below) is joined, not replaced, by a new **Recent invoices** table sourced from the existing `GET /invoices` (now carrying `client_name` via a small join added specifically so this tile wouldn't show a raw client UUID — a real gap the original endpoint had, caught while building this table, not part of the original plan).
+The single largest deliverable of this redesign, shipped across three phases (CB.E/F/G) matching the one-phase-per-commit discipline the prior redesign used. Went from 100% text/table/progress-bar to a real charted financial control centre, per the brief's own ~30-section spec — most sections needed **zero new backend work** (`GET /projection` already carried the data), a handful needed new aggregate endpoints (§8.1.1).
 
-Metric tiles across the top in a responsive grid, then a quarterly GST/HST table, then Reports.
+**Hero KPI row** (`dashboard_design.md` §3): eight tiles across two rows — Revenue, Expenses, Net income, Safe to spend, Tax + CPP reserve, GST/HST owing, Outstanding, Projected annual revenue. Colour-polarity rule (§2.3) applied narrowly: only Net income, Safe to spend, and Outstanding carry Green/Red; GST/HST owing and the reserve/projected figures stay neutral even though `dashboard_design.md` itself doesn't explicitly forbid colouring them — this app's own polarity rule (stated once, §2.3) is stricter than the brief requires, deliberately.
 
-```
-┌──────────┐┌──────────┐┌──────────┐┌──────────┐
-│ Set aside││ Threshold││ GST/HST  ││Instalment│
-│ for tax  ││ tracker  ││ held for ││ reminder │
-│ $21,400  ││ 72%      ││ CRA      ││(only when│
-│ estimate ││ ▓▓▓▓▓░░  ││ $6,500   ││ it       │
-└──────────┘└──────────┘└──────────┘│ applies) │
-                                     └──────────┘
-```
+A real UX gap was caught and fixed during CB.E's own browser verification, not by a later audit: "Safe to spend" (full-year-*projected*-income basis) originally sat directly next to "Net income" (year-to-date-*actual* basis) with Safe-to-spend counterintuitively showing higher — both figures were individually correct but juxtaposed with no distinguishing caption, reading as a bug. Fixed by adding a clarifying sub-caption ("full-year projected income, after recommended tax + CPP reserve") rather than leaving two correct-but-confusing numbers unexplained.
 
-Shipped with four tiles built directly from Phase 3's own deliverables (set-aside, threshold, GST/HST net-owing, instalment warning) rather than the two additional revenue tiles (**Billed YTD**, **Collected**) originally sketched here — those read from ordinary invoice/payment aggregates already available elsewhere (Reports, Clients roll-up) and weren't part of what Phase 3 was building. Worth revisiting as a Dashboard polish pass later, not a gap in Phase 3 itself.
+**Business performance** (§6 above): 12-month Revenue/Expenses/Net-income chart, from the new `GET /reports/pnl` JSON endpoint (a thin wrapper around already-existing `reporting/service.py: pnl_rows`, zero new aggregation).
 
-The **set-aside block** is the product's signature element. It answers the question the user actually has — *how much of this is mine* — and it is the only place `--text-display` appears. It expands **in place** (not a modal, not a separate page — the tile grows to full width so the assumptions have room) to show net business income, estimated federal tax, estimated provincial tax, estimated CPP, the recommended set-aside percentage, and a plain accrual-basis / estimate disclaimer. From there, a **declared income** option is always one click away — entering a figure switches the whole block to declared mode, shows the gap against the derived (extrapolated) estimate, and "Use derived instead" reverts it, matching P3's "show both, never silently prefer one."
+**Where your revenue goes / Actual vs. projected revenue**: the waterfall and actual-vs-target line described in §6, both fully derivable from `GET /projection`'s existing fields.
 
-The **threshold tracker** uses a progress bar that shifts grey → `--color-status-attention` at 75% → `--color-status-overdue` at 90%, with copy that names the consequence rather than the number: *"$8,400 from the $30,000 registration threshold. Crossing it changes what you must charge."* A second line discloses that the figure is this account only (S9) — the threshold is legally shared across any associated businesses the product can't see.
+**Tax Reserve progress**: recommended (existing `set_aside` figure) vs. actually-reserved, a genuinely new user-enterable field (`tax_reserve` table, migration 0022, RLS-scoped exactly like `income_declaration`).
 
-The **instalment reminder** tile only renders when it applies (projected net income tax + CPP owing over the CRA's $3,000 threshold) — it never occupies dashboard space with a "no reminder" state. It is deliberately silent about GST/HST net-owing, which is a separate remittance with its own mechanics, not part of the same $3,000 test.
+**GST/HST control center + AR aging + Invoice status**: GST/HST and threshold tracker restyled from Sovereign Ledger's existing tiles plus a new quarterly chart; AR aging from a new `tenant_aging_summary` aggregate that adds a "not yet due" bucket the prior `tenant_aging_report` never surfaced (a real gap: `_aging_bucket()` returned `None`, silently excluded, for anything not yet past due); Invoice status is a **client-side tally** of the already-fetched `GET /invoices` list, deliberately not a new endpoint.
 
-A **year selector** (← / →) sits above the tiles, defaulting to the current calendar year — this is Phase 3's answer to keeping the income-tax calendar (always calendar-year) and the GST filing calendar (quarterly, shown in the table below the tiles) visibly separate without needing distinct navigation for each.
+**Revenue by client / Expenses by category / Receipt completeness / Recurring revenue / Accountant readiness / Business momentum / Year-over-year / Needs your attention / Recent activity**: each backed by either a small new aggregate endpoint (§8.1.1) or a client-side composition over data already fetched elsewhere on the page — no duplicate fetching. **Accountant Readiness is computed client-side** from already-fetched pieces (receipt completeness, profile/registration completeness) rather than an opaque server-computed score, a deliberate choice so "why is my score X%" is always answerable by reading the component, not a black box.
 
-The **year-end accountant pack** *(shipped 2026-08-08 — `implementation_plan.md` 3.11)* lives in the Reports block below the tiles, alongside the existing P&L CSV export: a year picker (defaulting to last year, the natural "closing out" case) and a **Generate pack** button. There's no separate progress UI for the zip assembly — it's fast enough at this data scale to just be the button's loading state — and the result is a plain download link plus a one-line reminder of what's inside and that the link expires in 7 days. A storage failure surfaces in the same red error-text style as everything else on this screen, never a blank retry with no explanation.
+#### 8.1.1 New backend endpoints (CB.D)
 
-### 8.2 Invoice builder *(rebuilt 2026-08-10 — Sovereign Ledger Phase F, on top of the pre-existing single-column form)*
-
-Split view: form left, live document preview right (sticky, `max-width: 480px`). The right-hand preview is not a bespoke mini-layout — it's the same `<InvoiceDocument>` component §9 describes, rendering real backend-computed data (`POST /invoices/preview-document`, debounced ~300ms) rather than a client-side approximation, so what the user sees while building is byte-for-byte the shape they'll get once issued.
-
-A **Compliance checklist** (§8.9) sits below the form, tracking Business name / BN number / Client address / Tax breakdown. Below `lg`, the preview and form both go single-column (checklist stays below the form) rather than moving behind a toggle as originally specified — the toggle was never built; scrolling was judged sufficient at this data density.
-
-Form blocks in order: **Client** → **Dates & terms** → **Line items** → **Notes**, followed by the checklist. ⚠️ The **read-only Tax block** with inline override described below was not built as its own dedicated block — tax lines render inside the live document preview itself (subtotal/tax breakdown/total), and any `tax/engine.compute()` warnings (e.g. X12's missing non-residency evidence) surface as alert blocks above the checklist, but there is no `[Override]` affordance in the UI yet. Overriding a derived tax treatment today requires setting `treatment_override_reason` directly on the client record (§2.3, `edgecases.md` X19) rather than at the point of invoicing — a real gap, not a deliberate cut.
-
-The **tax block is read-only and always visible.** It states the derived treatment, the jurisdiction it came from, and why:
-
-```
-┌───────────────────────────────────────────────────────┐
-│ Tax                                        [Override] │
-├───────────────────────────────────────────────────────┤
-│  ● Zero-rated 0%                                      │
-│                                                       │
-│  Born West Inc. is in the United States, so this      │
-│  supply is a zero-rated export. It still counts       │
-│  toward your $30,000 registration threshold.          │
-│                                                       │
-│  ⚠ No non-residency evidence on file.  [Upload]       │
-└───────────────────────────────────────────────────────┘
-```
-
-Overriding requires a typed reason, which is stored on the client record and audited. Making the override *slightly* effortful is the point — the derived value is right far more often than the user's assumption.
-
-**The line item table** switches layout by unit: choosing `hours` reveals `Hours × Rate` columns and an optional `Pull from time log` action. This directly serves the CRA-defensibility requirement — hours and rate must be visible on the document.
-
-**The issue action** lives in a sticky footer bar with the total, and opens a confirmation summarizing what cannot be undone: number allocated, tax frozen, corrections require a credit note.
-
-⚠️ **None of the three paragraphs above (dedicated Tax block with inline override UI, the hours/rate unit-switching line-item table, the sticky confirming footer) have been built** — this was true before the Sovereign Ledger redesign and remains true after it; the redesign rebuilt the surrounding layout (this section's opening paragraphs) without adding these specific pieces. Line items today are a flat description/qty/amount row set (the schema's `unit` field exists and is sent as `"fixed"` but has no picker), and `POST /invoices/{id}/issue` enforces compliance server-side (`invoices_service.issue_invoice`'s `ComplianceError`) with no confirmation dialog client-side — verified fail-safe (§8.9) but not the guided experience described here. Worth scoping as real future work, not re-litigated by this redesign.
-
-### 8.3 Ledger *(tokens/classes re-skinned to Sovereign Ledger 2026-08-10 — Phase H; layout otherwise unchanged by this redesign)*
-
-Filter bar above a table block. Filters as removable chips: date range, client, status, tax treatment, amount range, currency. Filter state lives in the URL so a view is shareable and survives refresh. Saved presets appear as a row of chips beneath.
-
-Columns: `Number · Date · Client · Service period · Tax · Amount · Status`. The tax column shows the treatment badge, not a percentage — this is what makes a year's work readable at a glance.
-
-Group-by-month is on by default with sticky month headers carrying that month's subtotal, which answers the *"in which month, how much"* requirement without a separate report.
-
-### 8.4 Client detail *(list view remapped 2026-08-10 — Sovereign Ledger Phase C; detail view itself re-skinned only, layout unchanged)*
-
-Header block (name, address, tax treatment, evidence status), then a period roll-up table (month / invoices / billed / collected / outstanding), then an aging block, then the invoice list scoped to the client.
-
-The **Clients list** (one level up from this detail page) gained a new **Outstanding** column and pagination as part of this redesign — `GET /clients/summary`, a `LEFT JOIN` aggregate deliberately not reusing `rollup_service.tenant_aging_report` (which excludes zero-balance and not-yet-due clients; the list needs every client to appear, aging report doesn't). This is the same "amount owed" concept the client detail page's aging block already showed per-client — the list view now surfaces it without a click-through, coloured Error Red when any invoice is overdue.
-
-### 8.5 Expenses
-
-**Receipt-first.** The primary surface is a large drop zone occupying the whole block, not a form:
-
-```
-┌───────────────────────────────────────────────────────┐
-│                                                       │
-│                    ⇪  Drop a receipt                  │
-│              or take a photo · or enter manually      │
-│                                                       │
-└───────────────────────────────────────────────────────┘
-```
-
-After upload, a three-field confirmation appears — vendor, date, amount — with OCR values pre-filled and low-confidence fields highlighted in `--color-status-attention`. Category is a single dropdown grouped by T2125 line. Everything else is behind `More details`.
-
-The whole flow is three taps and one glance. If it takes longer than fifteen seconds, expenses do not get logged, and the entire projection layer has nothing to work with.
-
-### 8.6 Template editor *(shipped 2026-08-08 — `implementation_plan.md` 4.2)*
-
-Left: block list with drag handles and visibility toggles. Centre: live document. Right: theme controls — brand colour, accent, font size scale, logo size and position, margins, show/hide optional blocks.
-
-The **compliance block is pinned, marked with a lock icon, and cannot be reordered out or hidden.** Its tooltip explains why: *"Required on every invoice — your client's accountant needs these fields."* Constraint stated as a service to the user rather than as a restriction imposed on them.
-
-**As shipped:** the "compliance block" is the 5 required block types (`supplier`, `document`, `bill_to`, `services`, `totals`) shown as one pinned, undraggable group — their *relative order among themselves* was never meaningful (`pdf_renderer.py` always renders them in a fixed sequence regardless of `blocks` array order), so there was nothing to preserve by letting them be dragged individually. `payment` and `footer` are the two blocks with a drag handle and a visibility toggle; reordering them is the one thing block order actually changes in the rendered PDF. Font scale is a slider (85%-115%, matching `templates/service.py`'s validated range); margins likewise (12mm-30mm). Logo position is a select (`top_left`/`top_center`/`top_right`/`none`) rather than a freeform drag, since the header layout has exactly those three anchor points. The live preview renders against the tenant's real business profile and logo but canned sample client/line-item data (`POST /templates/preview`), debounced ~500ms after the last change, and is never persisted.
-
-### 8.7 Send invoice (compose window) *(shipped 2026-08-07 — `implementation_plan.md` 2.16/2.17)*
-
-A modal, opened from "Email invoice" on an issued invoice's detail view. Never a silent action — opening it never sends anything, and it always ends on an explicit **Send** press, never an implicit one on close.
-
-Layout, top to bottom: **From** (the tenant's configured SMTP account — a select if more than one is set up), **To** and **Cc** as chip inputs (To defaults to the client's on-file email), **Subject** (pre-filled, editable), **Body** (pre-filled plain-text default, editable, generous height), then an **attachments row** — the invoice PDF as a removable chip (checked by default, per `edgecases.md` O5), plus an "Add attachment" control for arbitrary extra documents. Sticky footer: **Cancel** and **Send**, the same irreversibility weight as the invoice builder's issue footer (§8.2) — sending is a real action, styled with the same intent as issuing, not a throwaway toast-dismiss button.
-
-No SMTP account configured: the modal still opens, but the From/To/Cc/Subject/Body fields are replaced with a single message — "No email account configured yet" plus a link to the Email accounts settings page (§8.8) — rather than opening on a dead-end compose form with nowhere to send from.
-
-Unchecking the PDF with no other attachments added doesn't silently send an empty-handed email: **Send** asks for confirmation first (`edgecases.md` O5) — a reminder-only email is legitimate, but never sent without the user seeing that's what's about to happen.
-
-### 8.8 Email accounts (settings) *(shipped 2026-08-07 — `implementation_plan.md` 2.16/2.17)*
-
-A settings page, reachable via **Settings → Email accounts** (moved under the Settings hub 2026-08-10, previously a top-level nav item — see §7). Lists configured SMTP accounts as a table: label, from address, server, and a verified/unverified badge, each row with **Test** (connects and authenticates, sends nothing — the mechanism for confirming a saved password still works, since it is never shown again) and **Remove**. Below the list, an add-account form: label, from name/address, SMTP host/port/security/username, password, and a "default account" checkbox. Credentials are write-only from the moment they're saved — see `edgecases.md` O4.
-
-### 8.9 Compliance checklist (component) *(shipped 2026-08-10 — Sovereign Ledger Phase F)*
-
-A vertical stepper on the invoice builder (§8.2), tracking four items against the invoice currently being built:
-
-```
-✓ Business name        Acme Consulting
-✓ BN number             123456789RT0001
-✓ Client address        On file.
-○ Tax breakdown         Pending tax selection.
-```
-
-Incomplete items show a hollow dot in `--color-text-secondary`; complete items get a filled Compliance Green circle with a checkmark. **BN number** is treated as complete (not merely skipped) when the business isn't GST/HST-registered at all — an unregistered sole proprietor has nothing to enter here, and showing it as an outstanding task would be actively wrong, not just unhelpful.
-
-**This is advisory UX only, by explicit design, and this was verified rather than assumed.** `POST /invoices/{id}/issue`'s server-side `ComplianceError` (`invoices_service.issue_invoice`) remains the sole enforcement. The checklist has no due-date-ordering check at all, so a due date set before the invoice date shows all four items green — issuing was confirmed to still fail server-side with `Due date can't be before the invoice date.` in this exact state, proving the split fails safe rather than merely looking like it does.
-
-A real, pre-existing gap this component's verification surfaced: the Clients "Add client" form never collected `address_line1`/`city` at all (the schema supported them; nothing in the UI wrote them), which meant **Client address** could never show complete for any client created through the product. Fixed by adding optional address/city fields to client creation — a one-line schema-already-supports-it addition, not a new backend capability.
-
----
-
-## 9. Invoice document design *(web-rendered preview shipped 2026-08-10 — Sovereign Ledger Phases E-G, alongside the pre-existing PDF renderer)*
-
-**Now genuinely one design, rendered twice, not two designs that happen to agree.** `assemble_invoice_document`/`assemble_preview_document` (`api/src/tallyquo/billing/invoices_service.py`) extract the exact data-assembly logic `render_pdf` already used (draft-vs-issued branching, `template_version_history` pin resolution, payment-instruction/logo rules) into functions shared by the PDF renderer and three new JSON endpoints (`GET /invoices/:id/document`, `GET /public/invoices/:token/document`, `POST /invoices/preview-document`). A single `<InvoiceDocument>` React component (`web/src/components/InvoiceDocument.tsx`) consumes that shape everywhere a human views an invoice in the browser: the builder's live preview (§8.2), the authenticated invoice detail page, and the public share-link page — all three showed a flat subtotal/tax/total table before this redesign; all three now show the same document layout the PDF produces.
-
-**The X4/L14 byte-identical-forever guarantee extends to this new surface**, not just the PDF: an issued invoice's document view was verified — through the actual browser UI, not just the API-level test — to keep showing the original frozen supplier snapshot even after the business profile is edited afterward. Same test performed against the public share-link page with an unauthenticated browser context, same result.
-
-The generated document is a separate design system from the app, sharing only tokens. It is a printed business document, not a web page.
-
-**Layout:** A4 and US Letter, 20mm margins by default (12-30mm, template-configurable since 4.2), single column, logo top-left by default (position configurable since 4.2), document metadata top-right, then bill-to, then services, then totals right-aligned, then payment instructions, then footer.
-
-**Type:** Inter throughout, 10pt body, 9pt tabular figures for the amount table, 18pt document title. Labels `#757575` (verified against `pdf_renderer.py`'s actual `Label` style); body colour is reportlab's default black rather than a deliberately chosen `#1E1E1E` — a pre-existing inaccuracy in this document caught while reconciling it, not a Sovereign Ledger regression; `pdf_renderer.py` itself was untouched by this redesign.
-
-**Colour is minimal by default.** One accent colour, user-chosen, applied to the document title, the table header rule, and the totals rule. Nothing else is coloured. New templates default to Financial Blue `#1A365D` (updated 2026-08-10 from the earlier Figma-blue default — existing templates and already-issued invoices are untouched, since template colour is pinned per-invoice at issue time, not live-computed).
-
-**The tax line renders one of three forms**, exactly as in the reference invoice:
-
-```
-GST/HST — 13%:                                    CAD   936.00
-GST/HST — 0% zero-rated supply:                   CAD     0.00
-GST/HST: Not charged — supplier not yet registered
-```
-
-The third form has no amount column at all — it is a statement, not a figure, and formatting it as `CAD 0.00` would imply a tax calculation happened.
-
-**System templates:**
-
-| Template | Character |
+| Endpoint | Backing |
 |---|---|
-| Classic | Serif-free, rule-heavy, conservative. The default. |
-| Minimal | Hairlines only, generous whitespace, no fills |
-| Modern | Accent-filled header band, sans headings |
-| Consulting | Prominent service period and project reference, built for retainer work |
-| Trades | Larger line item area, materials/labour split |
+| `GET /reports/pnl` (JSON) | Wraps existing `pnl_rows`, no new logic |
+| `GET /reports/aging/summary` | New `tenant_aging_summary`, adds the not-due bucket |
+| `GET /reports/revenue-by-client` | New `tenant_revenue_by_client` |
+| `GET /expenses/by-category` | New `expenses_by_category` |
+| `GET /expenses/receipt-completeness` | New, sibling to existing `unprocessed_receipts()` |
+| `GET /projection/recurring-forecast` | Refactor of existing `scheduled_recurring_income()` into period-bucketed rows |
+| `GET /reports/payment-speed` | New `average_days_to_payment` — **v1 scope**: tenant-wide average only |
+| `GET/PUT /projection/tax-reserve/{year}` | New `tax_reserve` table |
+
+⚠️ **Deliberately deferred, not built**: payment-speed's trend sparkline and fastest/slowest-paying-client breakdown — both need real additional complexity (historical-period computation, a minimum-sample-size guard) beyond what a v1 tenant-wide average needed.
+
+### 8.2-8.9 Everything else — cascaded automatically, verified not assumed
+
+Every other page (Ledger, ClientDetail, Clients, InvoiceBuilder, Settings, Profile, TemplateEditor, EmailAccounts, Recurring, InvoiceDetail, PublicInvoice, Login) needed **zero code changes** for the Carbon re-skin (CB.H) — Sovereign Ledger's own class-reuse architecture (everything flows through shared classes like `.block`, `.badge`, `table`/`th`/`td` rather than bespoke per-page CSS) meant the token/class rewrite in §2-6 cascaded automatically. This was verified, not assumed: every page was grepped for hardcoded hex colours (found: 2, both the intentional `#1A365D` invoice-template default, correctly out of Carbon's scope) and for colour-bearing inline `style={{}}` props (confirmed: 100% already `var(--color-*)`-driven), then walked through in a real browser with seeded data before being marked done with no diff.
+
+Business logic on every one of these pages is unchanged from whatever Sovereign Ledger or an earlier phase shipped — this redesign is a visual-system replacement, not a feature phase.
 
 ---
 
-## 10. Motion
+## 9. Invoice document design — unchanged, deliberately out of scope
 
-Restrained to the point of near-invisibility. This is an instrument.
+The generated invoice document (`InvoiceDocument.tsx`, `pdf_renderer.py`) remains **a separate design system from the app, sharing only tokens** — same principle Sovereign Ledger's own §9 established, carried forward unchanged. Carbon's flat 0-radius software-UI language does not belong on a printed business document sent to clients; the document keeps its own print-appropriate rounded/serif-adjacent treatment. The two `#1A365D` hex literals found during CB.H's audit (`TemplateEditor.tsx`, `Profile.tsx`) are this document's intentional default accent colour, correctly untouched by the Carbon token rewrite.
 
-```
---motion-fast    120ms cubic-bezier(0.2, 0, 0, 1)    hover, focus, toggles
---motion-base    180ms cubic-bezier(0.2, 0, 0, 1)    dropdowns, expansion
---motion-slow    240ms cubic-bezier(0.2, 0, 0, 1)    modals, drawers
-```
+---
 
-Permitted: state transitions, panel expansion, toast entry, skeleton loading, the threshold progress bar animating on data change. Not permitted: scroll-triggered reveals, parallax, entrance animations on page load, animated numbers counting up. A money figure that animates from zero is a money figure the user has to wait to read.
+## 10. Motion — the cinematic layer (CB.I)
 
-`prefers-reduced-motion: reduce` disables all of it except opacity fades.
+This section was previously named "Motion" and specified `--motion-*` tokens that were **never actually implemented** as CSS custom properties or real transitions anywhere in the app, with an explicit rule against animating numbers from zero. Both of those are now different: the tokens are real (§5), and the "never animate from zero" rule is **deliberately overridden** per this redesign's own explicit brief — the user asked for "extremely polished, smooth, cinematic," which a Sovereign-Ledger-era instrument aesthetic doesn't deliver on its own.
 
-⚠️ Like `--elev-*` (§4), `--motion-*` were never implemented as CSS custom properties. The handful of shipped transitions (sidebar slide, settings-card hover) use plain `0.15s`/`0.2s ease` rather than these exact durations/curves — close in spirit, not literally these tokens. `prefers-reduced-motion` is not currently handled anywhere in `index.css`.
+**Library: `motion`** (the current npm package name for what was `framer-motion`), decided directly with the user via AskUserQuestion as a "full cinematic pass," not a restrained one.
+
+**What actually animates**, all timed against `@carbon/motion`'s real tokens (§5), implemented in `web/src/motion/tokens.ts`:
+
+- **Route transitions**: `AnimatePresence` in `Shell.tsx`, keyed on `location.pathname`, wrapping `<Outlet />` — fade + 8px vertical offset, `slow-01`/`entrance-productive` in, `moderate-01`/`exit-productive` out.
+- **Shell entrance**: sidebar and topbar fade+slide in once on load.
+- **Staggered tile/panel entrance**: every hero KPI tile, chart card, and metric tile across the Dashboard's CB.E/F/G sections, orchestrated from a single root `staggerContainer` per major section rather than each tile carrying its own `initial`/`animate` — Framer Motion's variant propagation cascades the timing down automatically.
+- **KPI count-ups** (`useCountUp`, `web/src/motion/useCountUp.ts`): a tile's figure animates from its previously-displayed value to a newly-arrived one. **Deliberately does not animate on first mount** — the hook jumps straight to the real figure the first time it renders, since callers only mount it once real data exists. A money figure never climbs from zero or from a placeholder; it only ever tweens between two real, already-fetched values (e.g. after a period-selector change triggers a refetch).
+- **Chart draw-ins**: every Recharts `animationDuration`/`animationEasing` re-pointed at the shared tokens (§6).
+- **Hover/press feedback**: spring `whileHover`/`whileTap` on `KpiTile` (the shared dashboard-tile wrapper); plain-CSS Carbon-timed transitions on buttons, table rows, sidebar nav, and settings cards, which previously had no `transition` property at all and snapped instantly.
+
+**`prefers-reduced-motion: reduce` — implemented for the first time in this app's history**, in two layers:
+1. `<MotionConfig reducedMotion="user">` wraps the whole app (`main.tsx`), which every `motion.*` component and hook reads automatically.
+2. A global CSS media-query fallback in `index.css` collapses every plain-CSS `transition`/`animation` to near-zero duration.
+
+**⚠️ Verified nuance, not a bug:** under `reducedMotion="user"`, Framer Motion disables animation only for *positional* properties (`x`/`y`/`scale`/`rotate` — the actual vestibular-motion trigger WCAG 2.3.3 is concerned with) and deliberately **still animates simple opacity fades** at full duration — confirmed by reading Motion's own source (`motion-dom`'s `shouldReduceMotion && positionalKeys.has(key)` gate) after an initial screenshot comparison looked identical between reduced and non-reduced captures at the same early timestamp. This is Motion's own considered accessibility design, not an oversight this redesign introduced or failed to catch — a full opacity-and-transform-both-instant approach would arguably be *less* correct against the letter of the guideline, not more.
 
 ---
 
 ## 11. Voice and copy
 
-**Errors state what happened and what to do.** They do not apologize and they are never vague.
-
-| Situation | Copy |
-|---|---|
-| Missing required field on issue | `Add a service period before issuing. Your client's accountant needs it to match the invoice to a period.` |
-| Attempt to edit an issued invoice | `Issued invoices can't be edited. Create a credit note or issue a revision instead.` |
-| Client has no province | `Add a province for Acme Ltd. The tax rate depends on where your client is, not where you are.` |
-| Threshold crossed | `You've passed $30,000 in taxable revenue over the last four quarters. You now need to register for GST/HST and start charging it. Zero-rated exports count toward this total.` |
-| OCR uncertain | `Check the amount — the receipt was hard to read.` |
-| OTP failed | `That code didn't match. You have 3 attempts left.` |
-
-**Empty states are invitations with a single action.**
-
-| Screen | Copy |
-|---|---|
-| No invoices | `No invoices yet. Add a client, then bill them — most people are done in about two minutes.` → `Add your first client` |
-| No expenses | `Nothing logged yet. Drop in a receipt and we'll pull out the details.` → `Add a receipt` |
-| No clients | `Add the people you bill. We'll work out the right tax treatment for each one.` → `Add a client` |
-
-**Every estimated figure is labelled.** The word is *estimate*, always, in `--text-caption` directly beneath the number, with the assumptions one click away. Never "you owe", never "your tax bill". The product prepares; it does not advise.
+Unchanged from Sovereign Ledger — error copy, empty states, and the "every estimated figure is labelled" rule all carry forward verbatim. This redesign touched visual language and motion, not product copy.
 
 ---
 
 ## 12. Accessibility
 
-WCAG 2.1 AA as a floor, with these specifics. **Re-verified 2026-08-10 against the actual shipped Sovereign Ledger values** (computed via the WCAG relative-luminance formula, not estimated):
+WCAG 2.1 AA as a floor, unchanged. **Re-verified 2026-08-11 against the actual shipped Carbon values** (computed via the WCAG relative-luminance formula, not estimated, not assumed to pass because the hexes are "official IBM colours") — this is the same discipline the Sovereign Ledger reconciliation used, which is what caught two real AA failures nobody had checked before that redesign. This pass caught different, also-real ones:
 
-- `--color-text-secondary` / `--color-text-caption` `#64748B` on white is **4.76:1** — clears AA's 4.5:1 for normal text, but only just; the shipped tokens reuse the same value for both secondary and caption text rather than the original spec's approach of a separately-darkened caption colour, so there's less safety margin than this document originally called for.
-- `--color-accent-default` `#1A365D` on white is **12.14:1** — a large improvement over the old accent blue's 2.9:1 (which failed for text and needed a separate darker link colour). Financial Blue is dark enough to use directly as link/focus/body-emphasis text; `--color-text-link` is the same value, no separate variant needed.
-- `--color-text-primary` `#0F172A` on white is **17.85:1**.
-- ⚠️ **Badge text-on-tint contrast was checked for the first time during this reconciliation and two of three fail AA at the badge's 11px size:** `--color-secondary-default` (Compliance Green) `#2F855A` on `--color-secondary-subtle` `#E6F4EC` is **4.00:1**; `--color-tertiary-default` (Set-aside Gold) `#B7791F` on `--color-tertiary-subtle` `#FBF0DF` is **3.23:1**. Only `--color-status-overdue` (Error Red) on its own subtle background clears the bar at **4.70:1**. This is a real gap introduced by the redesign's badge-tint values, not previously caught because the original Figma-era badges were never audited either — worth a follow-up pass (darken the tint background or the text colour on the two failing badges) before treating badge legibility as verified.
-- Never colour alone: every tax badge, status, and error carries a text label; the threshold bar carries a percentage.
-- Full keyboard operation of the invoice builder including the line item table (Tab between cells, Enter to add a row, Cmd/Ctrl+Enter to issue).
-- Visible focus everywhere, at 2px, never suppressed.
-- Money announced to screen readers with currency spelled out: `seven thousand two hundred Canadian dollars`.
-- Touch targets 44×44 minimum on mobile; the receipt drop zone is deliberately oversized.
-- Form errors associated with fields via `aria-describedby`, and the error summary receives focus on failed submit.
+- `--color-accent-default` `#1A365D` on white: **12.14:1** — unchanged from Sovereign Ledger (same hex).
+- `--color-text-primary` `#161616` on white: **18.10:1**. `--color-text-secondary` `#525252` on white: **7.81:1** — both comfortably clear AA, an improvement over Sovereign Ledger's tighter 4.76:1 secondary-text margin.
+- **⚠️ Tag/badge text-on-tint, re-checked against the real Carbon hexes, not assumed to pass:**
+  - Green 50 `#24A148` on its own paired Green-10-equivalent tint `#DEFBE6`: **3.04:1** — fails AA's 4.5:1 floor for the Tag's 12px/400 text, and is **worse** than Sovereign Ledger's already-failing Compliance Green (4.00:1). Carbon's real "50" and "10" steps, paired directly, simply don't clear AA at Tag text size — this is a property of the authentic Carbon palette itself, not a mistake in choosing it.
+  - Gold `#B7791F` on `#FBF0DF`: **3.23:1** — still fails, an unchanged carry-over from Sovereign Ledger (same token, same failure, not newly introduced).
+  - Red 60 `#DA1E28` on `#FFF1F1`: **4.55:1** — passes, though by a narrower margin than Sovereign Ledger's Error Red (4.70:1).
+  - Recommendation for a follow-up pass, not applied in this reconciliation (review-only phase, per this redesign's own plan): darken the Green/Gold *text* colour specifically when paired with their light tint backgrounds, rather than reusing the same "default" token for both fill-on-white and text-on-tint roles — a real Carbon pattern elsewhere in IBM's own product UIs.
+- **⚠️ New finding, outside the Tag component entirely:** Green 50 and Gold used as plain body/table text directly on white (not on a tint) fall under the *normal-text* 4.5:1 threshold, not the 3:1 *large-text* threshold the KPI hero figures get to use (§8.1's 32px/700 display type passes at 3.35:1/5.00:1). Two real usages fail at normal size: the Business Momentum table's year-over-year `%change` cells (Green 50 on white, **3.35:1**) and the "Needs your attention" list's medium-severity items (Gold on white, **3.64:1**). Both are genuine, previously-unchecked AA failures surfaced by this reconciliation's contrast pass, not by assumption. Flagged for the same follow-up as the Tag issue above, not fixed in this phase.
+- Never colour alone: unchanged — every tax Tag, status, and error still carries a text label.
+- Touch targets, focus rings, `aria-describedby` form-error association: unchanged from Sovereign Ledger.
 
 ---
 
 ## 13. Token reference
 
-**This block is copied verbatim from the shipped `web/src/index.css` `:root` rule (2026-08-10), not re-derived** — it's the actual source of truth, not a paper description of it. `--elev-*` and `--motion-*` tokens from earlier revisions of this document were never implemented as CSS custom properties (elevation/motion values are still expressed inline per-component where used, if at all) — they're omitted below rather than listed as if they exist. Same for `--text-h1` through `--text-caption`: only `--text-display` exists as a literal custom property; the rest of the type scale is baked directly into per-selector rules (`h1`, `h2`, `label`, `th`, `.caption`, etc. in `index.css`) rather than exposed as reusable tokens.
+**Copied verbatim from the shipped `web/src/index.css` `:root` rule (2026-08-11), not re-derived.**
 
 ```css
 :root {
   /* surface */
   --color-bg-default: #ffffff;
-  --color-bg-secondary: #f8fafc;
-  --color-bg-tertiary: #f1f5f9;
-  --color-bg-hover: #f1f5f9;
-  --color-bg-pressed: #e2e8f0;
+  --color-bg-secondary: #f4f4f4;
+  --color-bg-tertiary: #e8e8e8;
+  --color-bg-hover: #e8e8e8;
+  --color-bg-pressed: #c6c6c6;
   --color-bg-selected: #e6ecf3;
 
   /* border */
-  --color-border-default: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-  --color-border-subtle: #f1f5f9;
+  --color-border-default: #e0e0e0;
+  --color-border-strong: #8d8d8d;
+  --color-border-subtle: #e0e0e0;
   --color-border-focus: #1a365d;
 
   /* text */
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #64748b;
-  --color-text-tertiary: #94a3b8;
-  --color-text-caption: #64748b;
+  --color-text-primary: #161616;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #8d8d8d;
+  --color-text-caption: #525252;
   --color-text-link: #1a365d;
   --color-text-onbrand: #ffffff;
 
-  /* accent -- Financial Blue: interactive elements, focus, app chrome */
+  /* accent -- Financial Blue, unchanged from Sovereign Ledger */
   --color-accent-default: #1a365d;
   --color-accent-hover: #15294a;
   --color-accent-pressed: #0f1d36;
   --color-accent-subtle: #e6ecf3;
   --color-accent-border: #b8c7da;
 
-  /* secondary (Compliance Green) / tertiary (Set-aside Gold) */
-  --color-secondary-default: #2f855a;
-  --color-secondary-subtle: #e6f4ec;
+  /* secondary (Carbon Green 50) / tertiary (Set-aside Gold, kept) -- see §2.3 */
+  --color-secondary-default: #24a148;
+  --color-secondary-subtle: #defbe6;
   --color-tertiary-default: #b7791f;
   --color-tertiary-subtle: #fbf0df;
 
-  /* tax + status semantics -- see §2.3 for the full remap rationale */
-  --color-state-taxable: #2f855a;       --color-state-taxable-bg: #e6f4ec;
+  /* tax + status semantics */
+  --color-state-taxable: #24a148;       --color-state-taxable-bg: #defbe6;
   --color-state-zero-rated: #b7791f;    --color-state-zero-rated-bg: #fbf0df;
-  --color-state-unregistered: #64748b;  --color-state-unregistered-bg: #f1f5f9;
-  --color-status-paid: #2f855a;         --color-status-paid-bg: #e6f4ec;
-  --color-status-overdue: #c53030;      --color-status-overdue-bg: #fbeaea;
+  --color-state-unregistered: #525252;  --color-state-unregistered-bg: #e8e8e8;
+  --color-status-paid: #24a148;         --color-status-paid-bg: #defbe6;
+  --color-status-overdue: #da1e28;      --color-status-overdue-bg: #fff1f1;
   --color-status-attention: #b7791f;    --color-status-attention-bg: #fbf0df;
 
+  /* chart categorical palette -- Carbon's real dataviz sequence, see §2.4 */
+  --color-chart-1: #8a3ffc;  --color-chart-2: #0072c3;  --color-chart-3: #007d79;
+  --color-chart-4: #d02670;  --color-chart-5: #ba4e00;  --color-chart-6: #6f6f6f;
+
   /* type */
-  --font-ui: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-ui: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --text-display: 700 32px/40px var(--font-ui);
 
-  /* space -- only 1 through 6 are defined; nothing shipped needed 7/8 */
+  /* space -- Carbon's real 2px-based scale */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
-  --space-4: 16px; --space-5: 24px; --space-6: 32px;
+  --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 40px;
 
-  /* radius -- per component type, see §4 */
-  --radius-xs: 2px;    --radius-badge: 2px; --radius-sm: 4px;
-  --radius-md: 8px;    --radius-lg: 8px;    --radius-full: 9999px;
+  /* radius -- zero everywhere except Tags/circular elements, Carbon's defining trait */
+  --radius-xs: 0; --radius-sm: 0; --radius-md: 0; --radius-lg: 0;
+  --radius-badge: var(--radius-full); --radius-full: 9999px;
+
+  /* motion -- @carbon/motion's real tokens, see §5/§10 */
+  --motion-fast-01: 70ms;     --motion-fast-02: 110ms;
+  --motion-moderate-01: 150ms; --motion-moderate-02: 240ms;
+  --motion-slow-01: 400ms;    --motion-slow-02: 700ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --motion-ease-entrance: cubic-bezier(0, 0, 0.38, 0.9);
+  --motion-ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
 }
 ```
 
-Template `theme` JSON (`datamodel.md` §8) is a constrained subset of these tokens: accent colour, font scale multiplier, logo dimensions and position, margins, and block visibility flags. Users pick from the system; they do not extend it. New templates default to `#1A365D` (§9); existing templates keep whatever accent they were saved with.
+Template `theme` JSON is unchanged — still a constrained subset of these tokens, still defaults new templates to `#1A365D`.
+
+---
+
+## 14. Known gaps carried into this redesign, not fixed by it
+
+Stated plainly, matching this document's own long-standing convention of an honest record over a flattering one:
+
+- **No frontend CI workflow exists in this repo.** `.github/workflows/` only has `api-ci.yml` (path-filtered to `api/**`) plus two scheduled jobs. Every frontend-only phase of this redesign (CB.A, B, C, E, F, G, H, I, J) was verified via local `npm run build`/`npm run lint` plus real Playwright browser walkthroughs with seeded data and screenshots read back — never a CI gate. Pre-existing gap, not introduced or fixed here.
+- **Tag/badge and plain-text Green/Gold-on-white contrast failures** (§12) — flagged, not fixed; this redesign's own plan scoped the reconciliation phase as review-only.
+- **Topbar tax-registration-status chip, Bell/Help notification backends** — unchanged gaps from Sovereign Ledger (§7).
+- **Payment-speed trend sparkline and fastest/slowest-client breakdown** (§8.1.1) — deliberately deferred v1 scoping, not a cut feature.
