@@ -186,6 +186,24 @@ button.primary {
 button.primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
 }
+/* Secondary matches the bare, unclassed button style (white/bordered) --
+   this class exists for callers that want to be explicit about intent
+   even though it's visually identical to the default. Ghost is
+   Carbon's borderless/transparent variant for toolbar and row actions. */
+button.secondary {
+  background: var(--color-bg-default);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-secondary);
+}
+button.ghost:hover:not(:disabled) {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
 button.danger {
   color: var(--color-status-overdue);
   border-color: var(--color-status-overdue);
@@ -210,16 +228,10 @@ td {
   padding: var(--space-3);
   border-bottom: 1px solid var(--color-border-subtle);
 }
-/* Structured Tables (Sovereign Ledger): a subtle Financial Blue hover
-   tint, and every 5th row tinted to aid horizontal eye-tracking across
-   wide data sets. */
+/* Carbon DataTables use hairline row dividers plus a hover state only --
+   no periodic zebra tint, a deliberate departure from the prior system's
+   every-5th-row shading. */
 tbody tr:hover {
-  background: var(--color-bg-hover);
-}
-tbody tr:nth-child(5n) {
-  background: var(--color-bg-tertiary);
-}
-tbody tr:nth-child(5n):hover {
   background: var(--color-bg-hover);
 }
 .amount {
@@ -227,16 +239,20 @@ tbody tr:nth-child(5n):hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* Carbon Tag proportions (24px height, 8px inline padding, label-01 type
+   style at 12px/16px, sentence case not uppercase) -- verified against
+   @carbon/styles' actual _tag.scss, not the prior system's 20px/6px/
+   uppercase spec. Radius reuses --radius-full (Carbon's real 16px Tag
+   radius renders identically to a full pill at this height). */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 20px;
-  padding: 0 6px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: var(--radius-badge);
-  font: 600 10px/16px var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font: 400 12px/16px var(--font-ui);
+  text-transform: capitalize;
 }
 .badge.taxable {
   background: var(--color-state-taxable-bg);
@@ -396,12 +412,12 @@ tbody tr:nth-child(5n):hover {
   transition: border-color 0.15s ease;
 }
 .settings-card:hover {
-  border-color: var(--color-secondary-default);
+  border-color: var(--color-accent-default);
 }
 .settings-card .nav-icon {
   flex-shrink: 0;
   margin-top: 2px;
-  color: var(--color-secondary-default);
+  color: var(--color-accent-default);
 }
 .settings-card strong {
   display: block;
@@ -617,14 +633,19 @@ tbody tr:nth-child(5n):hover {
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
+/* Active/hover nav uses the Financial Blue accent, not Compliance Green
+   -- green is reserved for positive financial polarity throughout the
+   rest of the app (design.md's colour-polarity rule), and "current nav
+   item" is Carbon's own interactive-colour convention, not its success
+   colour. */
 .sidebar a.active,
 .sidebar a:hover {
-  background: var(--color-secondary-subtle);
-  color: var(--color-secondary-default);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-default);
 }
 .sidebar a.active .nav-icon,
 .sidebar a:hover .nav-icon {
-  color: var(--color-secondary-default);
+  color: var(--color-accent-default);
 }
 .sidebar-footer {
   margin-top: auto;
