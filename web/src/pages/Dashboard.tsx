@@ -6,6 +6,9 @@ import KpiTile from '../components/dashboard/KpiTile'
 import RevenueExpenseChart, { type PnlRow } from '../components/dashboard/RevenueExpenseChart'
 import SafeToSpendWaterfall from '../components/dashboard/SafeToSpendWaterfall'
 import ActualVsProjectedChart from '../components/dashboard/ActualVsProjectedChart'
+import GstQuarterlyChart from '../components/dashboard/GstQuarterlyChart'
+import AgingChart from '../components/dashboard/AgingChart'
+import InvoiceStatusDonut from '../components/dashboard/InvoiceStatusDonut'
 
 interface TaxBand {
   income_from: string
@@ -104,6 +107,11 @@ interface RecentInvoice {
   total: string
 }
 
+interface TaxReserve {
+  year: number
+  reserved_amount: string | null
+}
+
 const RECENT_INVOICES_LIMIT = 8
 
 function formatDisplay(amount: string | number): string {
@@ -119,25 +127,44 @@ export default function Dashboard() {
   const [assumptionsOpen, setAssumptionsOpen] = useState(false)
   const [declaredDraft, setDeclaredDraft] = useState('')
   const [editingDeclared, setEditingDeclared] = useState(false)
-  const [recentInvoices, setRecentInvoices] = useState<RecentInvoice[]>([])
+  const [allInvoices, setAllInvoices] = useState<RecentInvoice[]>([])
+  const [taxReserve, setTaxReserve] = useState<TaxReserve | null>(null)
+  const [editingReserve, setEditingReserve] = useState(false)
+  const [reserveDraft, setReserveDraft] = useState('')
 
   async function loadProjection(year?: number) {
     try {
       const data = await api.get<Projection>(`/projection${year ? `?year=${year}` : ''}`)
       setProjection(data)
       setProjectionError(null)
+      await loadTaxReserve(data.year)
     } catch (err) {
       setProjection(null)
       setProjectionError(err instanceof ApiError ? err.message : 'Could not load projection.')
     }
   }
 
+  async function loadTaxReserve(year: number) {
+    const data = await api.get<TaxReserve>(`/projection/tax-reserve/${year}`)
+    setTaxReserve(data)
+  }
+
   useEffect(() => {
     loadProjection()
     api.get<PnlRow[]>('/reports/pnl?group_by=month').then(setPnlRows)
     api.get<AgingSummary>('/reports/aging/summary').then(setAgingSummary)
-    api.get<RecentInvoice[]>('/invoices').then((rows) => setRecentInvoices(rows.slice(0, RECENT_INVOICES_LIMIT)))
+    api.get<RecentInvoice[]>('/invoices').then(setAllInvoices)
   }, [])
+
+  const recentInvoices = allInvoices.slice(0, RECENT_INVOICES_LIMIT)
+
+  async function handleSaveReserve(e: React.FormEvent) {
+    e.preventDefault()
+    if (!projection) return
+    await api.put('/projection/tax-reserve', { year: projection.year, reserved_amount: reserveDraft })
+    setEditingReserve(false)
+    await loadTaxReserve(projection.year)
+  }
 
   async function handleSaveDeclared(e: React.FormEvent) {
     e.preventDefault()
@@ -426,6 +453,64 @@ export default function Dashboard() {
           </div>
 
           <div className="metric-grid">
+            {/* Tax Reserve progress (dashboard_design.md §7): the
+                recommended figure is already computed above; this tracks
+                what the user says they've actually moved into a reserve
+                account. Careful language throughout -- "recommended
+                reserve" and "shortfall", never "you owe", matching §7's
+                explicit copy guidance. */}
+            <div className="metric-tile">
+              <div className="metric-label">Tax reserve progress</div>
+              {(() => {
+                const recommended = Number(projection.set_aside.total_estimated_tax_and_cpp)
+                const reserved = Number(taxReserve?.reserved_amount ?? 0)
+                const pct = recommended > 0 ? Math.min(100, (reserved / recommended) * 100) : 0
+                const shortfall = recommended - reserved
+                return (
+                  <>
+                    <div className="metric-value">{pct.toFixed(0)}%</div>
+                    <div className="progress-bar">
+                      <div
+                        className={`progress-bar-fill${pct < 100 ? ' attention' : ''}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="caption metric-sub">
+                      CAD {reserved.toFixed(2)} reserved of CAD {recommended.toFixed(2)} recommended
+                      {shortfall > 0.01 && ` -- CAD ${shortfall.toFixed(2)} below the recommended amount`}
+                    </p>
+                    {editingReserve ? (
+                      <form onSubmit={handleSaveReserve} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Amount actually reserved"
+                          value={reserveDraft}
+                          onChange={(e) => setReserveDraft(e.target.value)}
+                          style={{ width: 160 }}
+                          required
+                        />
+                        <button type="submit">Save</button>
+                        <button type="button" className="link-button" onClick={() => setEditingReserve(false)}>
+                          Cancel
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        className="assumptions-toggle"
+                        onClick={() => {
+                          setReserveDraft(taxReserve?.reserved_amount ?? '')
+                          setEditingReserve(true)
+                        }}
+                      >
+                        Update reserved amount
+                      </button>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+
             <div className="metric-tile">
               <div className="metric-label">Threshold tracker</div>
               <div className="metric-value">{projection.threshold.pct_of_threshold}%</div>
@@ -444,6 +529,70 @@ export default function Dashboard() {
                 Based on this account only -- the $30,000 threshold is shared across any associated businesses you
                 also run.
               </p>
+            </div>
+          </div>
+
+          {/* GST/HST Control Center (dashboard_design.md §8) + AR Aging
+              (§10) -- both already had a home in this app before this
+              redesign (a plain quarterly table, and the client-level
+              aging report); this adds the tenant-wide chart view each
+              section's spec calls for, keeping the underlying data. */}
+          <div className="dashboard-chart-grid">
+            <div className="block">
+              <div className="block-header">
+                <h2>GST/HST control center</h2>
+              </div>
+              <div className="block-body">
+                <GstQuarterlyChart rows={projection.quarterly_net_owing} />
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Quarter</th>
+                    <th>Collected</th>
+                    <th>ITCs claimable</th>
+                    <th>Net owing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projection.quarterly_net_owing.map((q) => (
+                    <tr key={q.period}>
+                      <td>{q.period}</td>
+                      <td>CAD {q.collected}</td>
+                      <td>CAD {q.itcs_claimable}</td>
+                      <td>CAD {q.net_owing}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="block">
+              <div className="block-header">
+                <h2>Accounts receivable aging</h2>
+              </div>
+              <div className="block-body">
+                {agingSummary && (
+                  <>
+                    <AgingChart summary={agingSummary} />
+                    {Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 && (
+                      <p className="caption" style={{ marginTop: 8, color: 'var(--color-status-overdue)' }}>
+                        CAD {(Number(agingSummary.total_outstanding) - Number(agingSummary.not_due)).toFixed(2)} is
+                        currently overdue.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="block">
+            <div className="block-header">
+              <h2>Invoice status</h2>
+            </div>
+            <div className="block-body">
+              <InvoiceStatusDonut invoices={allInvoices} />
             </div>
           </div>
         </>
@@ -498,34 +647,6 @@ export default function Dashboard() {
           </tbody>
         </table>
       </div>
-
-      {projection && (
-        <div className="block">
-          <div className="block-header">
-            <h2>GST/HST net-owing by quarter</h2>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Quarter</th>
-                <th>Collected</th>
-                <th>ITCs claimable</th>
-                <th>Net owing</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projection.quarterly_net_owing.map((q) => (
-                <tr key={q.period}>
-                  <td>{q.period}</td>
-                  <td>CAD {q.collected}</td>
-                  <td>CAD {q.itcs_claimable}</td>
-                  <td>CAD {q.net_owing}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   )
 }
