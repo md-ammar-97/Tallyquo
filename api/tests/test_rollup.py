@@ -202,3 +202,66 @@ async def test_not_yet_due_invoice_excluded_from_aging():
         assert all(v in ("0", "0.00") for v in aging.values())
     finally:
         await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_aging_summary_includes_not_due_bucket():
+    """Carbon redesign: unlike /reports/aging (per-client, overdue-only),
+    /reports/aging/summary surfaces a not_due bucket too, since
+    tenant_aging_report's _aging_bucket() excludes not-yet-due invoices
+    entirely -- a real gap the new AR chart needs filled."""
+    client, headers = await _tenant()
+    try:
+        client_id = await _client(client, headers)
+        today = date.today()
+        # Not yet due -- excluded from /reports/aging, must show in not_due here.
+        await _issue(
+            client, headers, client_id,
+            invoice_date=today.isoformat(), due_date="2030-01-01", amount="500.00",
+        )
+        # Overdue -- must land in bucket_0_30.
+        due = (today - timedelta(days=5)).isoformat()
+        invoice_date = (today - timedelta(days=35)).isoformat()
+        await _issue(client, headers, client_id, invoice_date=invoice_date, due_date=due, amount="300.00")
+
+        r = await client.get("/reports/aging/summary", headers=headers)
+        assert r.status_code == 200, r.text
+        summary = r.json()
+        # The fixture client is "taxable" (ON, 13% HST) -- amounts below
+        # are the invoiced totals including tax, not the raw line amounts.
+        assert summary["not_due"] == "565.00"
+        assert summary["bucket_0_30"] == "339.00"
+        assert summary["total_outstanding"] == "904.00"
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_revenue_by_client_sums_billed_not_outstanding():
+    """Carbon redesign: revenue-by-client sums total billed (regardless of
+    payment status), distinct from the aging report's outstanding-only
+    figures -- a fully paid invoice must still count here."""
+    client, headers = await _tenant()
+    try:
+        big_client = await _client(client, headers, name="Big Client")
+        small_client = await _client(client, headers, name="Small Client")
+
+        paid_id = await _issue(
+            client, headers, big_client, invoice_date="2026-05-01", due_date="2030-01-01", amount="5000.00"
+        )
+        await client.post(
+            f"/invoices/{paid_id}/payments",
+            json={"amount": "5650.00", "received_date": "2026-05-10"},
+            headers=headers,
+        )
+        await _issue(client, headers, small_client, invoice_date="2026-05-01", due_date="2030-01-01", amount="100.00")
+
+        r = await client.get("/reports/revenue-by-client", headers=headers)
+        assert r.status_code == 200, r.text
+        rows = r.json()
+        assert rows[0]["client_name"] == "Big Client"
+        assert rows[0]["billed_cad"] == "5650.00"
+        assert rows[1]["client_name"] == "Small Client"
+        assert rows[1]["billed_cad"] == "113.00"
+    finally:
+        await client.aclose()

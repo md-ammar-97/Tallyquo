@@ -12,9 +12,11 @@ from tallyquo.core.storage import UnrecognizedFileType
 from tallyquo.expenses import receipts_service
 from tallyquo.expenses import service
 from tallyquo.expenses.schemas import (
+    ExpenseByCategoryOut,
     ExpenseCategoryOut,
     ExpenseIn,
     ExpenseOut,
+    ReceiptCompletenessOut,
     ReceiptUploadOut,
     UnprocessedReceiptOut,
 )
@@ -97,6 +99,22 @@ async def create_expense(
 async def unprocessed_receipts(db: AsyncSession = Depends(get_db)) -> list[UnprocessedReceiptOut]:
     rows = await receipts_service.unprocessed_receipts(db)
     return [UnprocessedReceiptOut(**row) for row in rows]
+
+
+@router.get("/by-category", response_model=list[ExpenseByCategoryOut])
+async def expenses_by_category(
+    db: AsyncSession = Depends(get_db),
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> list[ExpenseByCategoryOut]:
+    rows = await service.expenses_by_category(db, date_from=date_from, date_to=date_to)
+    return [ExpenseByCategoryOut(**row) for row in rows]
+
+
+@router.get("/receipt-completeness", response_model=ReceiptCompletenessOut)
+async def receipt_completeness(db: AsyncSession = Depends(get_db)) -> ReceiptCompletenessOut:
+    row = await receipts_service.receipt_completeness(db)
+    return ReceiptCompletenessOut(**row)
 
 
 @router.post("/receipts", response_model=ReceiptUploadOut, status_code=201)

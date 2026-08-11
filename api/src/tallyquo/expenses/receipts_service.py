@@ -81,6 +81,29 @@ async def unprocessed_receipts(session: AsyncSession) -> list[dict]:
     return [dict(r) for r in result.mappings().all()]
 
 
+async def receipt_completeness(session: AsyncSession) -> dict:
+    """Carbon redesign Dashboard's Receipt Completeness KPI
+    (dashboard_design.md §17) and an input to the Accountant Readiness
+    score (§21). The inverse direction from `unprocessed_receipts` above
+    (which lists uploaded receipts with no expense attached) -- this
+    counts expenses with no receipt attached, via the same `receipt.
+    expense_id` nullable FK, joined from the other side."""
+    result = await session.execute(
+        text(
+            """
+            SELECT count(*) AS total, count(r.id) AS with_receipt
+            FROM expense e LEFT JOIN receipt r ON r.expense_id = e.id
+            WHERE e.deleted_at IS NULL
+            """
+        )
+    )
+    row = result.mappings().one()
+    total, with_receipt = row["total"], row["with_receipt"]
+    missing = total - with_receipt
+    pct = round(with_receipt / total * 100, 1) if total > 0 else None
+    return {"total": total, "with_receipt": with_receipt, "missing": missing, "pct": pct}
+
+
 async def signed_receipt_url(session: AsyncSession, receipt_id: UUID) -> str | None:
     row = (
         await session.execute(text("SELECT file_ref FROM receipt WHERE id = :id"), {"id": receipt_id})

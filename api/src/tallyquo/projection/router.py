@@ -1,9 +1,11 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.core.auth import CurrentUser, get_current_user, get_db
-from tallyquo.projection import service
+from tallyquo.projection import income_service, service
 from tallyquo.projection.engine import MarginalTaxResult
 from tallyquo.projection.schemas import (
     CppOut,
@@ -14,8 +16,11 @@ from tallyquo.projection.schemas import (
     MarginalTaxOut,
     ProjectionOut,
     QuarterNetOwingOut,
+    RecurringForecastRowOut,
     SetAsideOut,
     TaxBandOut,
+    TaxReserveIn,
+    TaxReserveOut,
     ThresholdOut,
     YtdActualsOut,
 )
@@ -135,3 +140,27 @@ async def delete_declared_income(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     await db.execute(text("DELETE FROM income_declaration WHERE year = :year"), {"year": year})
+
+
+@router.get("/recurring-forecast", response_model=list[RecurringForecastRowOut])
+async def get_recurring_forecast(
+    months: int = 3,
+    db: AsyncSession = Depends(get_db),
+) -> list[RecurringForecastRowOut]:
+    rows = await service.recurring_income_by_month(db, from_date=date.today(), months=months)
+    return [RecurringForecastRowOut(**row) for row in rows]
+
+
+@router.get("/tax-reserve/{year}", response_model=TaxReserveOut)
+async def get_tax_reserve(year: int, db: AsyncSession = Depends(get_db)) -> TaxReserveOut:
+    amount = await service.get_tax_reserve(db, year)
+    return TaxReserveOut(year=year, reserved_amount=amount)
+
+
+@router.put("/tax-reserve", status_code=204)
+async def put_tax_reserve(
+    body: TaxReserveIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await service.set_tax_reserve(db, current_user.tenant_id, body.year, body.reserved_amount)

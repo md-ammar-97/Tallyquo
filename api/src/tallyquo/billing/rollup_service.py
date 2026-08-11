@@ -157,3 +157,41 @@ async def tenant_aging_report(session: AsyncSession) -> list[dict]:
         entry["total_outstanding"] = sum((entry[b] for b in _AGING_BUCKETS), start=Decimal("0"))
     rows.sort(key=lambda e: e["total_outstanding"], reverse=True)
     return rows
+
+
+async def tenant_aging_summary(session: AsyncSession) -> dict:
+    """Carbon redesign Dashboard's AR aging chart (dashboard_design.md
+    §10): a single tenant-wide summed row, not per-client like
+    `tenant_aging_report`. Unlike that report, this also surfaces a
+    `not_due` bucket -- `_aging_bucket` returns None (excluded) for
+    anything not yet past due, which is right for `tenant_aging_report`
+    (an *overdue* list) but would silently drop not-yet-due outstanding
+    balances from a chart meant to show the full AR picture."""
+    today = date.today()
+    buckets = {"not_due": Decimal("0"), **_empty_buckets()}
+    for row in await _outstanding_invoices(session, client_id=None):
+        bucket = _aging_bucket(row["due_date"], today) or "not_due"
+        buckets[bucket] += row["outstanding_cad"]
+    buckets["total_outstanding"] = sum(buckets.values(), start=Decimal("0"))
+    return buckets
+
+
+async def tenant_revenue_by_client(session: AsyncSession) -> list[dict]:
+    """Carbon redesign Dashboard's Revenue by Client concentration chart
+    (dashboard_design.md §13): total billed (not outstanding) per client,
+    tenant-wide. Same total_cad-only discipline as `client_period_rollup`
+    (C6) -- a foreign-currency invoice whose FX fetch failed at issue is
+    excluded rather than folded in as if its native total were CAD."""
+    result = await session.execute(
+        text(
+            """
+            SELECT i.client_id, c.legal_name AS client_name,
+                   COALESCE(sum(i.total_cad), 0) AS billed_cad
+            FROM invoice i JOIN client c ON c.id = i.client_id
+            WHERE i.status NOT IN ('draft', 'cancelled') AND i.total_cad IS NOT NULL
+            GROUP BY i.client_id, c.legal_name
+            ORDER BY billed_cad DESC
+            """
+        )
+    )
+    return [dict(r) for r in result.mappings().all()]

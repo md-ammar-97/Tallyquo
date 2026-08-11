@@ -82,3 +82,16 @@ class UnprocessedReceiptOut(BaseModel):
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ExpenseByCategoryOut(BaseModel):
+    category_id: UUID | None
+    category_name: str
+    amount: Decimal
+
+
+class ReceiptCompletenessOut(BaseModel):
+    total: int
+    with_receipt: int
+    missing: int
+    pct: float | None

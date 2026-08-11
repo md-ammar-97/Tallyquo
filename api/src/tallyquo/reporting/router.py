@@ -6,8 +6,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tallyquo.core.auth import get_db
 from tallyquo.reporting import service
+from tallyquo.reporting.schemas import PnlRowOut
 
 router = APIRouter(prefix="/reports", tags=["reports"])
+
+
+@router.get("/pnl", response_model=list[PnlRowOut])
+async def get_pnl(group_by: str = "month", db: AsyncSession = Depends(get_db)) -> list[PnlRowOut]:
+    # Carbon redesign Dashboard's 12-month Revenue/Expenses/Net-Income
+    # chart and Monthly Expense Trend (dashboard_design.md §4, §16) --
+    # a thin JSON wrapper around the same pnl_rows() the CSV export
+    # below already uses, zero new aggregation logic.
+    try:
+        rows = await service.pnl_rows(db, group_by=group_by)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return [PnlRowOut(**row) for row in rows]
 
 
 @router.get("/pnl.csv")

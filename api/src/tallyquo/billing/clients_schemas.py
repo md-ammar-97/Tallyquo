@@ -113,3 +113,19 @@ class ClientSummaryOut(ClientOut):
 class ClientSummaryPageOut(BaseModel):
     items: list[ClientSummaryOut]
     total: int
+
+
+class AgingSummaryOut(AgingBucketsOut):
+    not_due: Decimal
+    total_outstanding: Decimal
+
+
+class RevenueByClientRowOut(BaseModel):
+    client_id: UUID
+    client_name: str
+    billed_cad: Decimal
+
+
+class PaymentSpeedOut(BaseModel):
+    invoice_count: int
+    average_days: float | None

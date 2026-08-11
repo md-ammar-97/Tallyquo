@@ -108,6 +108,46 @@ async def list_expenses(
     return [dict(r) for r in result.mappings().all()]
 
 
+async def expenses_by_category(
+    session: AsyncSession, *, date_from: date | None = None, date_to: date | None = None
+) -> list[dict]:
+    """Carbon redesign Dashboard's Expense Category donut
+    (dashboard_design.md §15) -- same deductible_pct/business_use_pct-
+    aware, capital/rebilled-excluding amount logic reporting/service.py's
+    `pnl_rows` already uses for its expense side, grouped by category
+    instead of by period."""
+    where = ["e.deleted_at IS NULL", "e.is_rebilled = false", "COALESCE(c.is_capital, false) = false"]
+    params: dict = {}
+    if date_from is not None:
+        where.append("e.expense_date >= :date_from")
+        params["date_from"] = date_from
+    if date_to is not None:
+        where.append("e.expense_date <= :date_to")
+        params["date_to"] = date_to
+
+    result = await session.execute(
+        text(
+            f"""
+            SELECT e.category_id, COALESCE(c.name, 'Uncategorized') AS category_name,
+                   COALESCE(sum(
+                     ROUND(
+                       COALESCE(e.amount_cad, e.amount_net)
+                       * (COALESCE(c.deductible_pct, 100) / 100)
+                       * (e.business_use_pct / 100),
+                       2
+                     )
+                   ), 0) AS amount
+            FROM {_FROM}
+            WHERE {' AND '.join(where)}
+            GROUP BY e.category_id, c.name
+            ORDER BY amount DESC
+            """
+        ),
+        params,
+    )
+    return [dict(r) for r in result.mappings().all()]
+
+
 async def create_expense(
     session: AsyncSession, tenant_id: UUID, actor_id: UUID, data: dict, *, receipt_id: UUID | None = None
 ) -> dict:

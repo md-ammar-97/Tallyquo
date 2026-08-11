@@ -149,3 +149,15 @@ async def build_projection(
 
 async def set_declared_income(session: AsyncSession, tenant_id: UUID, year: int, amount: Decimal) -> None:
     await income_service.set_declared_income(session, tenant_id, year, amount)
+
+
+async def get_tax_reserve(session: AsyncSession, year: int) -> Decimal | None:
+    return await income_service.get_tax_reserve(session, year)
+
+
+async def set_tax_reserve(session: AsyncSession, tenant_id: UUID, year: int, amount: Decimal) -> None:
+    await income_service.set_tax_reserve(session, tenant_id, year, amount)
+
+
+async def recurring_income_by_month(session: AsyncSession, *, from_date: date, months: int) -> list[dict]:
+    return await income_service.recurring_income_by_month(session, from_date=from_date, months=months)

@@ -257,3 +257,70 @@ async def test_set_aside_never_negative_on_a_loss_year():
         assert data["set_aside"]["recommended_set_aside_pct"] == "0.00"
     finally:
         await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_recurring_forecast_buckets_by_upcoming_month():
+    """Carbon redesign Dashboard's Recurring Revenue forecast
+    (dashboard_design.md §18): scheduled_recurring_income already
+    projects correctly over an arbitrary range -- this just checks the
+    new per-month bucketing calls it once per calendar month rather than
+    lumping the whole window into one total."""
+    from datetime import date, timedelta
+
+    client, headers = await _tenant()
+    try:
+        invoice_id = await _issue_invoice(client, headers, amount="1000.00", invoice_date="2026-01-01")
+        today = date.today()
+        next_month_start = (date(today.year, today.month, 28) + timedelta(days=4)).replace(day=1)
+        r = await client.post(
+            "/recurring",
+            json={
+                "client_id": (await client.get(f"/invoices/{invoice_id}", headers=headers)).json()["client_id"],
+                "source_invoice_id": invoice_id,
+                "cadence": "monthly",
+                "next_run_date": next_month_start.isoformat(),
+            },
+            headers=headers,
+        )
+        assert r.status_code == 201, r.text
+
+        r = await client.get("/projection/recurring-forecast?months=3", headers=headers)
+        assert r.status_code == 200, r.text
+        rows = r.json()
+        assert len(rows) == 3
+        # The rule's first occurrence lands in month 2 (next_run_date is
+        # next month) or later -- at least one of the 3 months should
+        # show the rule's $1000 estimate, and month 1 (this month, before
+        # the rule's next_run_date) should show 0.
+        assert rows[0]["amount"] == "0.00"
+        assert any(row["amount"] == "1000.00" for row in rows[1:])
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_tax_reserve_defaults_to_none_then_roundtrips():
+    client, headers = await _tenant()
+    try:
+        r = await client.get("/projection/tax-reserve/2026", headers=headers)
+        assert r.status_code == 200, r.text
+        assert r.json()["reserved_amount"] is None
+
+        r = await client.put(
+            "/projection/tax-reserve", json={"year": 2026, "reserved_amount": "16000.00"}, headers=headers
+        )
+        assert r.status_code == 204, r.text
+
+        r = await client.get("/projection/tax-reserve/2026", headers=headers)
+        assert r.json()["reserved_amount"] == "16000.00"
+
+        # Overwrite, same year -- upsert, not a second row.
+        r = await client.put(
+            "/projection/tax-reserve", json={"year": 2026, "reserved_amount": "17500.00"}, headers=headers
+        )
+        assert r.status_code == 204
+        r = await client.get("/projection/tax-reserve/2026", headers=headers)
+        assert r.json()["reserved_amount"] == "17500.00"
+    finally:
+        await client.aclose()

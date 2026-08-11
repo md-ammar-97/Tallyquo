@@ -302,3 +302,100 @@ async def test_filter_expenses_by_date_range():
         assert r.json()[0]["amount_total"] == "20.00"
     finally:
         await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_expenses_by_category_applies_deductible_pct():
+    """Carbon redesign Dashboard's Expense Category donut -- same
+    deductible_pct-aware amount logic as reporting/service.py's pnl_rows,
+    grouped by category instead of by period. Meals & entertainment is
+    seeded at 50% deductible."""
+    client, headers = await _tenant()
+    try:
+        meals_id = await _category_id(client, headers, "Meals & entertainment")
+        await client.post(
+            "/expenses",
+            json={
+                "expense_date": "2026-05-01",
+                "amount_total": "100.00",
+                "tax_amount": "0",
+                "category_id": meals_id,
+            },
+            headers=headers,
+        )
+        await client.post(
+            "/expenses",
+            json={"expense_date": "2026-05-02", "amount_total": "50.00", "tax_amount": "0"},
+            headers=headers,
+        )
+
+        r = await client.get("/expenses/by-category", headers=headers)
+        assert r.status_code == 200, r.text
+        rows = {row["category_name"]: row["amount"] for row in r.json()}
+        assert rows["Meals & entertainment"] == "50.00"
+        assert rows["Uncategorized"] == "50.00"
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_expenses_by_category_excludes_capital_and_rebilled():
+    client, headers = await _tenant()
+    try:
+        capital_id = await _category_id(client, headers, "Capital assets")
+        r = await client.post(
+            "/expenses",
+            json={
+                "expense_date": "2026-05-01",
+                "amount_total": "2000.00",
+                "tax_amount": "0",
+                "category_id": capital_id,
+            },
+            headers=headers,
+        )
+        assert r.status_code == 201, r.text
+
+        r = await client.get("/expenses/by-category", headers=headers)
+        rows = {row["category_name"]: row["amount"] for row in r.json()}
+        assert "Capital assets" not in rows
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_receipt_completeness_counts_expenses_missing_receipts():
+    client, headers = await _tenant()
+    try:
+        await client.post(
+            "/expenses",
+            json={"expense_date": "2026-05-01", "amount_total": "10.00", "tax_amount": "0"},
+            headers=headers,
+        )
+        await client.post(
+            "/expenses",
+            json={"expense_date": "2026-05-02", "amount_total": "20.00", "tax_amount": "0"},
+            headers=headers,
+        )
+
+        r = await client.get("/expenses/receipt-completeness", headers=headers)
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["total"] == 2
+        assert data["with_receipt"] == 0
+        assert data["missing"] == 2
+        assert data["pct"] == 0.0
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_receipt_completeness_zero_expenses_has_no_pct():
+    client, headers = await _tenant()
+    try:
+        r = await client.get("/expenses/receipt-completeness", headers=headers)
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["total"] == 0
+        assert data["pct"] is None
+    finally:
+        await client.aclose()

@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -94,3 +95,18 @@ class ProjectionOut(BaseModel):
     threshold: ThresholdOut
     instalment_warning: InstalmentWarningOut
     ytd: YtdActualsOut
+
+
+class RecurringForecastRowOut(BaseModel):
+    period: date
+    amount: Decimal
+
+
+class TaxReserveIn(BaseModel):
+    year: int
+    reserved_amount: Decimal
+
+
+class TaxReserveOut(BaseModel):
+    year: int
+    reserved_amount: Decimal | None

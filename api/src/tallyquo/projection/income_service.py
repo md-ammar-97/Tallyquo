@@ -10,7 +10,7 @@ scheduled recurring revenue, declared targets).
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -123,6 +123,29 @@ async def scheduled_recurring_income(
     return ScheduledRecurringIncome(amount=total, rule_count=rule_count)
 
 
+async def recurring_income_by_month(session: AsyncSession, *, from_date: date, months: int) -> list[dict]:
+    """Carbon redesign Dashboard's Recurring Revenue forecast
+    (dashboard_design.md §18): `scheduled_recurring_income` above already
+    projects correctly over an arbitrary date range, but returns one
+    lump total, not a per-upcoming-month breakdown a forecast table
+    needs. Rather than changing that function's return shape (it's
+    already relied on by `derived_income_projection` for the annual
+    projection), this calls it once per calendar month and collects the
+    results -- zero new estimation logic, just a different aggregation
+    shape."""
+    rows = []
+    period_start = date(from_date.year, from_date.month, 1)
+    for _ in range(months):
+        if period_start.month == 12:
+            period_end = date(period_start.year, 12, 31)
+        else:
+            period_end = date(period_start.year, period_start.month + 1, 1) - timedelta(days=1)
+        result = await scheduled_recurring_income(session, from_date=period_start, to_date=period_end)
+        rows.append({"period": period_start, "amount": result.amount})
+        period_start = period_end + timedelta(days=1)
+    return rows
+
+
 @dataclass(frozen=True)
 class DerivedProjection:
     extrapolated_annual_income: Decimal
@@ -185,6 +208,32 @@ async def set_declared_income(
             "VALUES (:tenant_id, :year, :amount, now()) "
             "ON CONFLICT (tenant_id, year) DO UPDATE SET "
             "declared_annual_income = EXCLUDED.declared_annual_income, updated_at = now()"
+        ),
+        {"tenant_id": tenant_id, "year": year, "amount": amount},
+    )
+
+
+async def get_tax_reserve(session: AsyncSession, year: int) -> Decimal | None:
+    # Carbon redesign Dashboard's Tax Reserve progress (dashboard_design.md
+    # §7): the amount the user says they've actually moved aside, shown
+    # against the already-computed recommended figure
+    # (set_aside.total_estimated_tax_and_cpp). Same one-row-per-tenant-
+    # per-year pattern as income_declaration above.
+    result = await session.execute(
+        text("SELECT reserved_amount FROM tax_reserve WHERE year = :year"),
+        {"year": year},
+    )
+    row = result.first()
+    return row.reserved_amount if row else None
+
+
+async def set_tax_reserve(session: AsyncSession, tenant_id: UUID, year: int, amount: Decimal) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO tax_reserve (tenant_id, year, reserved_amount, updated_at) "
+            "VALUES (:tenant_id, :year, :amount, now()) "
+            "ON CONFLICT (tenant_id, year) DO UPDATE SET "
+            "reserved_amount = EXCLUDED.reserved_amount, updated_at = now()"
         ),
         {"tenant_id": tenant_id, "year": year, "amount": amount},
     )

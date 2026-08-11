@@ -140,6 +140,52 @@ async def list_payments(session: AsyncSession, invoice_id: UUID) -> list[dict]:
     return [dict(row) for row in result.mappings().all()]
 
 
+async def average_days_to_payment(session: AsyncSession) -> dict:
+    """Carbon redesign Dashboard's Payment Collection Performance section
+    (dashboard_design.md §12) -- v1 scope, deliberately: for each fully
+    paid invoice, the gap between invoice_date and the LATEST payment
+    recorded against it, averaged tenant-wide. This assumes payments are
+    entered in roughly chronological order (a backdated, out-of-sequence
+    entry could skew an individual invoice's figure slightly) -- an
+    honest, stated simplification, not a silent one. The trend sparkline
+    and fastest/slowest-paying-client breakdown from the same spec
+    section are deliberately NOT built here: both need real additional
+    complexity (historical-period computation, and a minimum-sample-size
+    guard respectively, since a client with exactly one invoice would
+    otherwise look definitively "fastest" or "slowest" off one data
+    point) -- scoped-out follow-up work, not an oversight.
+
+    "Paid" is checked directly (amount_paid >= total AND total > 0)
+    rather than via invoices_service.py's full _EFFECTIVE_STATUS_EXPR --
+    equivalent for this branch (paid is evaluated before the overdue
+    check, which is the only branch needing the business_profile
+    timezone join), without pulling in that join for a query that
+    doesn't otherwise need it.
+    """
+    result = await session.execute(
+        text(
+            """
+            WITH paid_invoices AS (
+              SELECT i.id, i.invoice_date, max(p.received_date) AS last_payment_date
+              FROM invoice i JOIN payment p ON p.invoice_id = i.id
+              WHERE i.status NOT IN ('cancelled', 'draft')
+                AND i.amount_paid >= i.total AND i.total > 0
+              GROUP BY i.id, i.invoice_date
+            )
+            SELECT count(*) AS invoice_count,
+                   avg(last_payment_date - invoice_date) AS average_days
+            FROM paid_invoices
+            """
+        )
+    )
+    row = result.mappings().one()
+    average_days = row["average_days"]
+    return {
+        "invoice_count": row["invoice_count"],
+        "average_days": round(float(average_days), 1) if average_days is not None else None,
+    }
+
+
 async def reverse_payment(session: AsyncSession, tenant_id: UUID, payment_id: UUID, actor_id: UUID, reason: str) -> bool:
     # L12: "Delete the payment record with a reason; status recalculates.
     # Audited." -- an explicit hard delete, not a soft-delete flag, but the
