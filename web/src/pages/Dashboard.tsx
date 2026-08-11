@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { WarningAltFilled } from '@carbon/icons-react'
 import { api, ApiError } from '../api'
+import KpiTile from '../components/dashboard/KpiTile'
+import RevenueExpenseChart, { type PnlRow } from '../components/dashboard/RevenueExpenseChart'
+import SafeToSpendWaterfall from '../components/dashboard/SafeToSpendWaterfall'
+import ActualVsProjectedChart from '../components/dashboard/ActualVsProjectedChart'
 
 interface TaxBand {
   income_from: string
@@ -80,6 +84,15 @@ interface Projection {
   ytd: YtdActuals
 }
 
+interface AgingSummary {
+  not_due: string
+  bucket_0_30: string
+  bucket_31_60: string
+  bucket_61_90: string
+  bucket_90_plus: string
+  total_outstanding: string
+}
+
 interface RecentInvoice {
   id: string
   number: string | null
@@ -93,7 +106,7 @@ interface RecentInvoice {
 
 const RECENT_INVOICES_LIMIT = 8
 
-function formatDisplay(amount: string): string {
+function formatDisplay(amount: string | number): string {
   const n = Number(amount)
   return n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
@@ -101,6 +114,8 @@ function formatDisplay(amount: string): string {
 export default function Dashboard() {
   const [projection, setProjection] = useState<Projection | null>(null)
   const [projectionError, setProjectionError] = useState<string | null>(null)
+  const [pnlRows, setPnlRows] = useState<PnlRow[]>([])
+  const [agingSummary, setAgingSummary] = useState<AgingSummary | null>(null)
   const [assumptionsOpen, setAssumptionsOpen] = useState(false)
   const [declaredDraft, setDeclaredDraft] = useState('')
   const [editingDeclared, setEditingDeclared] = useState(false)
@@ -119,6 +134,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadProjection()
+    api.get<PnlRow[]>('/reports/pnl?group_by=month').then(setPnlRows)
+    api.get<AgingSummary>('/reports/aging/summary').then(setAgingSummary)
     api.get<RecentInvoice[]>('/invoices').then((rows) => setRecentInvoices(rows.slice(0, RECENT_INVOICES_LIMIT)))
   }, [])
 
@@ -144,6 +161,13 @@ export default function Dashboard() {
     loadProjection(projection.year + delta)
   }
 
+  const safeToSpend = projection
+    ? Number(projection.set_aside.net_business_income) - Number(projection.set_aside.total_estimated_tax_and_cpp)
+    : 0
+  const gstHeldTotal = projection
+    ? projection.quarterly_net_owing.reduce((sum, q) => sum + Number(q.net_owing), 0)
+    : 0
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -154,6 +178,14 @@ export default function Dashboard() {
           </p>
         </div>
         {projection && (
+          // Full period granularity (This month/Last month/This
+          // quarter/Last quarter/Last year/Custom, dashboard_design.md
+          // §2) is deliberately narrower here: the hero tax/CPP figures
+          // are inherently annual concepts (income tax and CPP are
+          // calculated on a calendar year, not an arbitrary window), so
+          // a year selector -- not a full date-range picker -- is what
+          // actually stays meaningful across everything on this page. A
+          // noted v1 scope, not an oversight.
           <span>
             <button className="link-button" onClick={() => changeYear(-1)}>
               &larr; {projection.year - 1}
@@ -214,24 +246,36 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Hero KPIs (dashboard_design.md §3): Revenue/Expenses/Net
+              Income/Safe-to-Spend on row 1, Tax+CPP Reserve/GST-HST
+              Owing/Outstanding/Projected Annual Revenue on row 2. Green/
+              red apply only where a figure is a genuine financial
+              outcome (Net income sign, Safe to spend, Outstanding) --
+              GST/HST owing and the projected/reserve figures stay
+              neutral, matching design.md's colour-polarity rule. */}
           <div className="metric-grid">
-            <div className="metric-tile">
-              <div className="metric-label">Total invoiced</div>
-              <div className="metric-value display">{formatDisplay(projection.ytd.income)}</div>
-              <p className="caption metric-sub">year to date, excludes tax collected</p>
-            </div>
+            <KpiTile label="Revenue" value={formatDisplay(projection.ytd.income)} sub="year to date, excludes tax collected" />
+            <KpiTile label="Expenses" value={formatDisplay(projection.ytd.expenses)} sub="year to date, deductible portion only" />
+            <KpiTile
+              label="Net income"
+              value={formatDisplay(projection.ytd.net_income)}
+              sub="revenue minus expenses, year to date"
+              polarity={Number(projection.ytd.net_income) >= 0 ? 'positive' : 'negative'}
+            />
+            <KpiTile
+              label="Safe to spend"
+              value={formatDisplay(safeToSpend)}
+              sub="full-year projected income, after recommended tax + CPP reserve"
+              polarity={safeToSpend >= 0 ? 'positive' : 'negative'}
+            />
+          </div>
 
-            <div className="metric-tile">
-              <div className="metric-label">Estimated expenses</div>
-              <div className="metric-value display">{formatDisplay(projection.ytd.expenses)}</div>
-              <p className="caption metric-sub">year to date, deductible portion only</p>
-            </div>
-
+          <div className="metric-grid">
             <div
               className={`metric-tile${assumptionsOpen ? ' expanded' : ''}`}
               style={{ borderLeft: '4px solid var(--color-tertiary-default)' }}
             >
-              <div className="metric-label">Recommended set-aside</div>
+              <div className="metric-label">Tax + CPP reserve</div>
               <div className="metric-value display">{formatDisplay(projection.set_aside.total_estimated_tax_and_cpp)}</div>
               <p className="caption metric-sub">
                 {projection.income.mode === 'declared' ? 'based on declared income' : 'estimate'}
@@ -245,6 +289,14 @@ export default function Dashboard() {
               {assumptionsOpen && (
                 <div className="assumptions-list">
                   <div className="row">
+                    <span className="label">Province</span>
+                    <span>{projection.jurisdiction}</span>
+                  </div>
+                  <div className="row">
+                    <span className="label">Tax year</span>
+                    <span>{projection.year}</span>
+                  </div>
+                  <div className="row">
                     <span className="label">Net business income</span>
                     <span>CAD {projection.set_aside.net_business_income}</span>
                   </div>
@@ -255,6 +307,13 @@ export default function Dashboard() {
                   <div className="row">
                     <span className="label">{projection.jurisdiction} income tax (est.)</span>
                     <span>CAD {projection.set_aside.provincial_tax.total_tax}</span>
+                  </div>
+                  <div className="row">
+                    <span className="label">Tax brackets applied</span>
+                    <span>
+                      {projection.set_aside.federal_tax.bands.length} federal, {projection.set_aside.provincial_tax.bands.length}{' '}
+                      provincial
+                    </span>
                   </div>
                   <div className="row">
                     <span className="label">CPP (self-employed, both halves)</span>
@@ -308,6 +367,62 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+
+            <KpiTile
+              label="GST/HST owing (this year)"
+              value={formatDisplay(gstHeldTotal)}
+              sub="collected minus input tax credits -- never revenue"
+            />
+            <KpiTile
+              label="Outstanding"
+              value={formatDisplay(agingSummary?.total_outstanding ?? '0')}
+              sub={agingSummary ? `CAD ${Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 ? (Number(agingSummary.total_outstanding) - Number(agingSummary.not_due)).toFixed(2) : '0.00'} overdue` : undefined}
+              polarity={agingSummary && Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 ? 'negative' : 'neutral'}
+            />
+            <KpiTile
+              label="Projected annual revenue"
+              value={formatDisplay(projection.income.active_projected_income)}
+              sub={projection.income.mode === 'declared' ? 'your declared target' : 'straight-line extrapolation'}
+            />
+          </div>
+
+          <div className="block">
+            <div className="block-header">
+              <h2>Business performance</h2>
+            </div>
+            <div className="block-body">
+              <RevenueExpenseChart rows={pnlRows} />
+            </div>
+          </div>
+
+          <div className="dashboard-chart-grid">
+            <div className="block">
+              <div className="block-header">
+                <h2>Where your revenue goes</h2>
+              </div>
+              <div className="block-body">
+                <SafeToSpendWaterfall
+                  netBusinessIncome={Number(projection.set_aside.net_business_income)}
+                  federalTax={Number(projection.set_aside.federal_tax.total_tax)}
+                  provincialTax={Number(projection.set_aside.provincial_tax.total_tax)}
+                  cpp={Number(projection.set_aside.cpp.total_contribution)}
+                  jurisdiction={projection.jurisdiction}
+                />
+              </div>
+            </div>
+            <div className="block">
+              <div className="block-header">
+                <h2>Actual vs. projected revenue</h2>
+              </div>
+              <div className="block-body">
+                <ActualVsProjectedChart
+                  rows={pnlRows}
+                  year={projection.year}
+                  projectedAnnualIncome={Number(projection.income.active_projected_income)}
+                  declaredAnnualIncome={projection.income.declared_annual_income ? Number(projection.income.declared_annual_income) : null}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="metric-grid">
@@ -329,14 +444,6 @@ export default function Dashboard() {
                 Based on this account only -- the $30,000 threshold is shared across any associated businesses you
                 also run.
               </p>
-            </div>
-
-            <div className="metric-tile">
-              <div className="metric-label">GST/HST held for CRA (this year)</div>
-              <div className="metric-value display">
-                CAD {projection.quarterly_net_owing.reduce((sum, q) => sum + Number(q.net_owing), 0).toFixed(2)}
-              </div>
-              <p className="caption metric-sub">collected minus input tax credits, by quarter -- never revenue</p>
             </div>
           </div>
         </>
