@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle } from 'lucide-react'
+import { WarningAltFilled } from '@carbon/icons-react'
 import { api, ApiError } from '../api'
 
 interface TaxBand {
@@ -201,7 +201,7 @@ export default function Dashboard() {
               }}
             >
               <div className="block-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <AlertTriangle size={18} color="var(--color-status-overdue)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <WarningAltFilled size={18} color="var(--color-status-overdue)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
                   <strong style={{ color: 'var(--color-status-overdue)' }}>Quarterly instalment warning</strong>
                   <p className="caption" style={{ marginTop: 4 }}>

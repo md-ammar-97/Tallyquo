@@ -1,77 +1,102 @@
-/* Design tokens from docs/screens/DESIGN.md -- "Sovereign Ledger": a
-   Minimalist/Corporate Modern system for a product that carries legal
-   financial weight. Financial Blue anchors stability; Compliance Green
-   is reserved for success/locked-record states; Set-aside Gold is a
-   high-visibility warning reserved for tax liabilities and threshold
-   alerts. Dark mode still deferred; tokens stay named so it's a value
-   swap later. */
+/* Design tokens: IBM Carbon Design System v11, Tallyquo-themed. Neutral
+   values below are pulled directly from @carbon/themes' White theme and
+   @carbon/colors (verified via `node -e "require('@carbon/themes')..."`
+   during implementation, not hand-transcribed from memory). Two brand
+   accents survive the migration deliberately: Financial Blue replaces
+   Carbon's default Blue 60 (#0f62fe) everywhere -- buttons, focus, links,
+   active nav, primary chart series -- and Set-aside Gold is kept rather
+   than converted to Carbon's actual (yellow) warning colour, since it
+   already carries a specific "tax liability held aside" meaning Carbon's
+   generic warning support colour doesn't. Green/Red are Carbon's real
+   Support Success/Error hexes, reserved strictly for financial polarity
+   (profit/loss, receivable/payable) -- never applied to neutral-magnitude
+   figures like GST/HST collected. Dark mode still deferred; tokens stay
+   named so it's a value swap later. */
 :root {
   --color-bg-default: #ffffff;
-  --color-bg-secondary: #f8fafc;
-  --color-bg-tertiary: #f1f5f9;
-  --color-bg-hover: #f1f5f9;
-  --color-bg-pressed: #e2e8f0;
+  --color-bg-secondary: #f4f4f4;
+  --color-bg-tertiary: #e8e8e8;
+  --color-bg-hover: #e8e8e8;
+  --color-bg-pressed: #c6c6c6;
   --color-bg-selected: #e6ecf3;
 
-  --color-border-default: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-  --color-border-subtle: #f1f5f9;
+  --color-border-default: #e0e0e0;
+  --color-border-strong: #8d8d8d;
+  --color-border-subtle: #e0e0e0;
   --color-border-focus: #1a365d;
 
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #64748b;
-  --color-text-tertiary: #94a3b8;
-  --color-text-caption: #64748b;
+  --color-text-primary: #161616;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #8d8d8d;
+  --color-text-caption: #525252;
   --color-text-link: #1a365d;
   --color-text-onbrand: #ffffff;
 
-  /* Primary (Financial Blue) -- interactive elements, focus, the one
-     accent used for chrome. */
+  /* Primary (Financial Blue) -- kept unchanged from the prior system;
+     replaces Carbon's default Blue 60 everywhere. */
   --color-accent-default: #1a365d;
   --color-accent-hover: #15294a;
   --color-accent-pressed: #0f1d36;
   --color-accent-subtle: #e6ecf3;
   --color-accent-border: #b8c7da;
 
-  /* Secondary (Compliance Green) -- success states, "locked"/compliant
-     records. Tertiary (Set-aside Gold) -- warnings: tax liabilities,
-     threshold alerts, zero-rated's "special case" flag. */
-  --color-secondary-default: #2f855a;
-  --color-secondary-subtle: #e6f4ec;
+  /* Secondary (Carbon Green 50, #24a148) -- positive financial polarity
+     only. Tertiary (Set-aside Gold, kept) -- tax-liability/threshold
+     warnings specifically, not Carbon's generic yellow. */
+  --color-secondary-default: #24a148;
+  --color-secondary-subtle: #defbe6;
   --color-tertiary-default: #b7791f;
   --color-tertiary-subtle: #fbf0df;
 
-  --color-state-taxable: #2f855a;
-  --color-state-taxable-bg: #e6f4ec;
+  --color-state-taxable: #24a148;
+  --color-state-taxable-bg: #defbe6;
   --color-state-zero-rated: #b7791f;
   --color-state-zero-rated-bg: #fbf0df;
-  --color-state-unregistered: #64748b;
-  --color-state-unregistered-bg: #f1f5f9;
-  --color-status-paid: #2f855a;
-  --color-status-paid-bg: #e6f4ec;
-  --color-status-overdue: #c53030;
-  --color-status-overdue-bg: #fbeaea;
+  --color-state-unregistered: #525252;
+  --color-state-unregistered-bg: #e8e8e8;
+  --color-status-paid: #24a148;
+  --color-status-paid-bg: #defbe6;
+  /* Error (Carbon Red 60, #da1e28) -- negative financial polarity only. */
+  --color-status-overdue: #da1e28;
+  --color-status-overdue-bg: #fff1f1;
   --color-status-attention: #b7791f;
   --color-status-attention-bg: #fbf0df;
 
-  --font-ui: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Carbon dataviz categorical palette (@carbon/colors' 60-step hues) --
+     neutral multi-category chart series only (expense categories, client
+     concentration). Never used for the green/red polarity rule above. */
+  --color-chart-1: #8a3ffc;
+  --color-chart-2: #0072c3;
+  --color-chart-3: #007d79;
+  --color-chart-4: #d02670;
+  --color-chart-5: #ba4e00;
+  --color-chart-6: #6f6f6f;
 
+  --font-ui: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Carbon's actual 2px-based spacing scale -- verified, not shifted:
+     the prior system's 4/8/12/16/24/32px values already land exactly on
+     Carbon's spacing-02 through spacing-07, so space-1..6 are unchanged.
+     space-7 extends the range to Carbon's spacing-08 (40px). */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 40px;
 
-  /* Sovereign Ledger gives each component type its own radius rather
-     than one shared scale: 4px buttons/inputs, 8px cards/documents,
-     2px badges (a sharper, "stamped" look for status indicators). */
-  --radius-xs: 2px;
-  --radius-badge: 2px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 8px;
+  /* Carbon's defining visual signature: zero radius everywhere. Tags and
+     circular elements (avatars, checklist dots) are the only real
+     rounding exceptions in Carbon -- badge radius reuses --radius-full
+     rather than a new token, since Carbon's actual Tag radius (16px)
+     renders identically to a full pill at this app's 20px badge height. */
+  --radius-xs: 0;
+  --radius-badge: var(--radius-full);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
   --radius-full: 9999px;
 
   /* design.md §8.1: the set-aside block is the only place this appears --

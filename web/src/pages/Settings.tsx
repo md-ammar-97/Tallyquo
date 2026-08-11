@@ -1,22 +1,22 @@
 import { Link } from 'react-router-dom'
-import { Building2, Mail, Repeat } from 'lucide-react'
+import { Building, Email, Renew } from '@carbon/icons-react'
 
 const SETTINGS_LINKS = [
   {
     to: '/settings/profile',
-    icon: Building2,
+    icon: Building,
     label: 'Business profile',
     description: 'Legal identity, address, GST/HST registration, payment instructions, and invoice templates.',
   },
   {
     to: '/settings/email-accounts',
-    icon: Mail,
+    icon: Email,
     label: 'Email accounts',
     description: 'Connect the address invoices are sent from.',
   },
   {
     to: '/settings/recurring',
-    icon: Repeat,
+    icon: Renew,
     label: 'Recurring invoices',
     description: 'Rules that auto-generate or draft invoices on a schedule.',
   },

@@ -1,27 +1,27 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  BarChart3,
-  Bell,
-  FileText,
-  HelpCircle,
-  LayoutDashboard,
-  LogOut,
-  Plus,
+  Add,
+  ChartBar,
+  Dashboard as DashboardIcon,
+  Document,
+  Logout,
+  Notification,
   Receipt,
   Settings as SettingsIcon,
-  User,
-  Users,
-} from 'lucide-react'
+  UserAvatar,
+  UserMultiple,
+  Help,
+} from '@carbon/icons-react'
 import { logout } from '../api'
 import logo from '../assets/logo.svg'
 
 const NAV_ITEMS = [
-  { to: '/', end: true, label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/invoices', label: 'Invoices', icon: FileText },
+  { to: '/', end: true, label: 'Dashboard', icon: DashboardIcon },
+  { to: '/invoices', label: 'Invoices', icon: Document },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
-  { to: '/clients', label: 'Clients', icon: Users },
-  { to: '/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/clients', label: 'Clients', icon: UserMultiple },
+  { to: '/reports', label: 'Reports', icon: ChartBar },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
@@ -76,7 +76,7 @@ export default function Shell() {
           <img src={logo} alt="Tallyquo" className="brand-mark" />
         </div>
         <button type="button" className="primary sidebar-cta" onClick={() => navigate('/expenses?new=1')}>
-          <Plus size={16} />
+          <Add size={16} />
           Add Expense
         </button>
         <div className="sidebar-nav">
@@ -89,7 +89,7 @@ export default function Shell() {
         </div>
         <div className="sidebar-footer">
           <button type="button" onClick={handleLogout}>
-            <LogOut size={16} className="nav-icon" />
+            <Logout size={16} className="nav-icon" />
             Sign out
           </button>
         </div>
@@ -102,10 +102,10 @@ export default function Shell() {
               Create Invoice
             </button>
             <button type="button" className="icon-button" title="Notifications (coming soon)">
-              <Bell size={18} />
+              <Notification size={18} />
             </button>
             <button type="button" className="icon-button" title="Help (coming soon)">
-              <HelpCircle size={18} />
+              <Help size={18} />
             </button>
             <div className="avatar-menu">
               <button
@@ -114,12 +114,12 @@ export default function Shell() {
                 onClick={() => setAvatarOpen((o) => !o)}
                 aria-label="Account menu"
               >
-                <User size={16} />
+                <UserAvatar size={16} />
               </button>
               {avatarOpen && (
                 <div className="avatar-dropdown">
                   <button type="button" onClick={handleLogout}>
-                    <LogOut size={14} className="nav-icon" />
+                    <Logout size={14} className="nav-icon" />
                     Sign out
                   </button>
                 </div>
