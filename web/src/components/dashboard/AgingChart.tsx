@@ -30,24 +30,24 @@ export default function AgingChart({ summary }: { summary: AgingSummary }) {
   ]
 
   if (Number(summary.total_outstanding) === 0) {
-    return <p className="caption">Nothing outstanding right now.</p>
+    return <p className="text-body-sm text-mute">Nothing outstanding right now.</p>
   }
 
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} layout="vertical" margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-divider)" horizontal={false} />
         <XAxis
           type="number"
-          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+          tick={{ fontSize: 12, fill: 'var(--color-mute)' }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v: number) => formatCurrency(v)}
         />
-        <YAxis type="category" dataKey="label" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} width={80} />
+        <YAxis type="category" dataKey="label" tick={{ fontSize: 12, fill: 'var(--color-mute)' }} axisLine={false} tickLine={false} width={80} />
         <Tooltip
           formatter={(value) => formatCurrency(Number(value))}
-          contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
+          contentStyle={{ background: 'var(--color-canvas)', border: '1px solid var(--color-divider)', borderRadius: 12, fontSize: 12 }}
         />
         <Bar
           dataKey="value"
@@ -56,7 +56,7 @@ export default function AgingChart({ summary }: { summary: AgingSummary }) {
           animationEasing={rechartsEasing.entrance}
         >
           {data.map((_d, i) => (
-            <Cell key={i} fill={i === 4 ? 'var(--color-status-overdue)' : 'var(--color-accent-default)'} />
+            <Cell key={i} fill={i === 4 ? 'var(--color-negative)' : 'var(--color-chart-2)'} />
           ))}
         </Bar>
       </BarChart>

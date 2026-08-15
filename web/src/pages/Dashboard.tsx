@@ -6,6 +6,9 @@ import { api, ApiError } from '../api'
 import { staggerContainer, tileEntrance } from '../motion/tokens'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import KpiTile from '../components/dashboard/KpiTile'
 import RevenueExpenseChart, { type PnlRow } from '../components/dashboard/RevenueExpenseChart'
 import SafeToSpendWaterfall from '../components/dashboard/SafeToSpendWaterfall'
@@ -662,83 +665,88 @@ export default function Dashboard() {
             </motion.div>
           </motion.div>
 
-          <motion.div className="metric-grid" variants={staggerContainer}>
+          <motion.div className="grid grid-cols-1 gap-4 sm:grid-cols-2" variants={staggerContainer}>
             {/* Tax Reserve progress (dashboard_design.md §7): the
                 recommended figure is already computed above; this tracks
                 what the user says they've actually moved into a reserve
                 account. Careful language throughout -- "recommended
                 reserve" and "shortfall", never "you owe", matching §7's
                 explicit copy guidance. */}
-            <motion.div className="metric-tile" variants={tileEntrance}>
-              <div className="metric-label">Tax reserve progress</div>
-              {(() => {
-                const recommended = Number(projection.set_aside.total_estimated_tax_and_cpp)
-                const reserved = Number(taxReserve?.reserved_amount ?? 0)
-                const pct = recommended > 0 ? Math.min(100, (reserved / recommended) * 100) : 0
-                const shortfall = recommended - reserved
-                return (
-                  <>
-                    <div className="metric-value">{pct.toFixed(0)}%</div>
-                    <div className="progress-bar">
-                      <div
-                        className={`progress-bar-fill${pct < 100 ? ' attention' : ''}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <p className="caption metric-sub">
-                      CAD {reserved.toFixed(2)} reserved of CAD {recommended.toFixed(2)} recommended
-                      {shortfall > 0.01 && ` -- CAD ${shortfall.toFixed(2)} below the recommended amount`}
-                    </p>
-                    {editingReserve ? (
-                      <form onSubmit={handleSaveReserve} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Amount actually reserved"
-                          value={reserveDraft}
-                          onChange={(e) => setReserveDraft(e.target.value)}
-                          style={{ width: 160 }}
-                          required
-                        />
-                        <button type="submit">Save</button>
-                        <button type="button" className="link-button" onClick={() => setEditingReserve(false)}>
-                          Cancel
-                        </button>
-                      </form>
-                    ) : (
-                      <button
-                        className="assumptions-toggle"
-                        onClick={() => {
-                          setReserveDraft(taxReserve?.reserved_amount ?? '')
-                          setEditingReserve(true)
-                        }}
-                      >
-                        Update reserved amount
-                      </button>
-                    )}
-                  </>
-                )
-              })()}
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full py-5">
+                <CardContent className="flex flex-col gap-1">
+                  <p className="text-body-sm font-semibold text-mute">Tax reserve progress</p>
+                  {(() => {
+                    const recommended = Number(projection.set_aside.total_estimated_tax_and_cpp)
+                    const reserved = Number(taxReserve?.reserved_amount ?? 0)
+                    const pct = recommended > 0 ? Math.min(100, (reserved / recommended) * 100) : 0
+                    const shortfall = recommended - reserved
+                    return (
+                      <>
+                        <p className="font-display text-display-xs text-ink">{pct.toFixed(0)}%</p>
+                        <Progress value={pct} className={pct < 100 ? '[&_[data-slot=progress-indicator]]:bg-warning' : undefined} />
+                        <p className="mt-1 text-caption text-mute">
+                          CAD {reserved.toFixed(2)} reserved of CAD {recommended.toFixed(2)} recommended
+                          {shortfall > 0.01 && ` -- CAD ${shortfall.toFixed(2)} below the recommended amount`}
+                        </p>
+                        {editingReserve ? (
+                          <form onSubmit={handleSaveReserve} className="mt-2 flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Amount actually reserved"
+                              value={reserveDraft}
+                              onChange={(e) => setReserveDraft(e.target.value)}
+                              className="h-9 w-40 rounded-md border border-ink px-3 text-body-sm"
+                              required
+                            />
+                            <Button type="submit" size="sm">Save</Button>
+                            <button
+                              type="button"
+                              className="text-body-sm font-medium text-mute hover:text-ink"
+                              onClick={() => setEditingReserve(false)}
+                            >
+                              Cancel
+                            </button>
+                          </form>
+                        ) : (
+                          <button
+                            className="mt-1 self-start text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                            onClick={() => {
+                              setReserveDraft(taxReserve?.reserved_amount ?? '')
+                              setEditingReserve(true)
+                            }}
+                          >
+                            Update reserved amount
+                          </button>
+                        )}
+                      </>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
             </motion.div>
 
-            <motion.div className="metric-tile" variants={tileEntrance}>
-              <div className="metric-label">Threshold tracker</div>
-              <div className="metric-value">{projection.threshold.pct_of_threshold}%</div>
-              <div className="progress-bar">
-                <div
-                  className={`progress-bar-fill ${projection.threshold.escalation !== 'ok' ? projection.threshold.escalation : ''}`}
-                  style={{ width: `${Math.min(100, Number(projection.threshold.pct_of_threshold))}%` }}
-                />
-              </div>
-              <p className="caption metric-sub">
-                {Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue) > 0
-                  ? `CAD ${(Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue)).toFixed(2)} from the CAD ${projection.threshold.threshold} registration threshold. Crossing it changes what you must charge.`
-                  : 'Threshold reached -- registration is required.'}
-              </p>
-              <p className="caption" style={{ marginTop: 4 }}>
-                Based on this account only -- the $30,000 threshold is shared across any associated businesses you
-                also run.
-              </p>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full py-5">
+                <CardContent className="flex flex-col gap-1">
+                  <p className="text-body-sm font-semibold text-mute">Threshold tracker</p>
+                  <p className="font-display text-display-xs text-ink">{projection.threshold.pct_of_threshold}%</p>
+                  <Progress
+                    value={Math.min(100, Number(projection.threshold.pct_of_threshold))}
+                    className={projection.threshold.escalation === 'overdue' ? '[&_[data-slot=progress-indicator]]:bg-negative' : projection.threshold.escalation === 'attention' ? '[&_[data-slot=progress-indicator]]:bg-warning' : undefined}
+                  />
+                  <p className="mt-1 text-caption text-mute">
+                    {Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue) > 0
+                      ? `CAD ${(Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue)).toFixed(2)} from the CAD ${projection.threshold.threshold} registration threshold. Crossing it changes what you must charge.`
+                      : 'Threshold reached -- registration is required.'}
+                  </p>
+                  <p className="text-caption text-mute">
+                    Based on this account only -- the $30,000 threshold is shared across any associated businesses you
+                    also run.
+                  </p>
+                </CardContent>
+              </Card>
             </motion.div>
           </motion.div>
 
@@ -747,63 +755,69 @@ export default function Dashboard() {
               redesign (a plain quarterly table, and the client-level
               aging report); this adds the tenant-wide chart view each
               section's spec calls for, keeping the underlying data. */}
-          <motion.div className="dashboard-chart-grid" variants={staggerContainer}>
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>GST/HST control center</h2>
-              </div>
-              <div className="block-body">
-                <GstQuarterlyChart rows={projection.quarterly_net_owing} />
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Quarter</th>
-                    <th>Collected</th>
-                    <th>ITCs claimable</th>
-                    <th>Net owing</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projection.quarterly_net_owing.map((q) => (
-                    <tr key={q.period}>
-                      <td>{q.period}</td>
-                      <td>CAD {q.collected}</td>
-                      <td>CAD {q.itcs_claimable}</td>
-                      <td>CAD {q.net_owing}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <motion.div className="grid grid-cols-1 gap-4 lg:grid-cols-2" variants={staggerContainer}>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">GST/HST control center</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <GstQuarterlyChart rows={projection.quarterly_net_owing} />
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Quarter</TableHead>
+                        <TableHead>Collected</TableHead>
+                        <TableHead>ITCs claimable</TableHead>
+                        <TableHead>Net owing</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projection.quarterly_net_owing.map((q) => (
+                        <TableRow key={q.period}>
+                          <TableCell>{q.period}</TableCell>
+                          <TableCell>CAD {q.collected}</TableCell>
+                          <TableCell>CAD {q.itcs_claimable}</TableCell>
+                          <TableCell>CAD {q.net_owing}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </motion.div>
 
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Accounts receivable aging</h2>
-              </div>
-              <div className="block-body">
-                {agingSummary && (
-                  <>
-                    <AgingChart summary={agingSummary} />
-                    {Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 && (
-                      <p className="caption" style={{ marginTop: 8, color: 'var(--color-status-overdue)' }}>
-                        CAD {(Number(agingSummary.total_outstanding) - Number(agingSummary.not_due)).toFixed(2)} is
-                        currently overdue.
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Accounts receivable aging</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {agingSummary && (
+                    <>
+                      <AgingChart summary={agingSummary} />
+                      {Number(agingSummary.total_outstanding) - Number(agingSummary.not_due) > 0 && (
+                        <p className="mt-2 text-body-sm text-negative">
+                          CAD {(Number(agingSummary.total_outstanding) - Number(agingSummary.not_due)).toFixed(2)} is
+                          currently overdue.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </motion.div>
           </motion.div>
 
-          <motion.div className="block" variants={tileEntrance}>
-            <div className="block-header">
-              <h2>Invoice status</h2>
-            </div>
-            <div className="block-body">
-              <InvoiceStatusDonut invoices={allInvoices} />
-            </div>
+          <motion.div variants={tileEntrance}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display text-display-xs font-semibold text-ink">Invoice status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <InvoiceStatusDonut invoices={allInvoices} />
+              </CardContent>
+            </Card>
           </motion.div>
 
           {/* Revenue by Client (dashboard_design.md §13) + Expense
@@ -812,74 +826,86 @@ export default function Dashboard() {
               above already plots monthly expenses as its own bar series,
               and a second standalone expense-only trend chart would just
               repeat that data, not add anything. */}
-          <motion.div className="dashboard-chart-grid" variants={staggerContainer}>
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Revenue by client</h2>
-              </div>
-              <div className="block-body">
-                <RevenueByClientChart rows={revenueByClient} />
-                {revenueByClient.length > 0 && (
-                  <p className="caption" style={{ marginTop: 8 }}>
-                    {(
-                      (Number(revenueByClient[0].billed_cad) / revenueByClient.reduce((s, r) => s + Number(r.billed_cad), 0)) *
-                      100
-                    ).toFixed(0)}
-                    % of revenue currently comes from {revenueByClient[0].client_name}.
-                  </p>
-                )}
-              </div>
+          <motion.div className="grid grid-cols-1 gap-4 lg:grid-cols-2" variants={staggerContainer}>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Revenue by client</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RevenueByClientChart rows={revenueByClient} />
+                  {revenueByClient.length > 0 && (
+                    <p className="mt-2 text-body-sm text-mute">
+                      {(
+                        (Number(revenueByClient[0].billed_cad) / revenueByClient.reduce((s, r) => s + Number(r.billed_cad), 0)) *
+                        100
+                      ).toFixed(0)}
+                      % of revenue currently comes from {revenueByClient[0].client_name}.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </motion.div>
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Expenses by category</h2>
-              </div>
-              <div className="block-body">
-                <ExpenseCategoryDonut rows={expenseByCategory} />
-              </div>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Expenses by category</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpenseCategoryDonut rows={expenseByCategory} />
+                </CardContent>
+              </Card>
             </motion.div>
           </motion.div>
 
-          <motion.div className="metric-grid" variants={staggerContainer}>
+          <motion.div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" variants={staggerContainer}>
             {/* Receipt Completeness (§17) */}
             {receiptCompleteness && receiptCompleteness.total > 0 && (
-              <motion.div className="metric-tile" variants={tileEntrance}>
-                <div className="metric-label">Receipts on file</div>
-                <div className="metric-value">{receiptCompleteness.pct?.toFixed(0) ?? 0}%</div>
-                <div className="progress-bar">
-                  <div className="progress-bar-fill" style={{ width: `${receiptCompleteness.pct ?? 0}%` }} />
-                </div>
-                <p className="caption metric-sub">
-                  {receiptCompleteness.with_receipt} / {receiptCompleteness.total} expenses supported
-                  {receiptCompleteness.missing > 0 && ` -- ${receiptCompleteness.missing} missing`}
-                </p>
+              <motion.div variants={tileEntrance}>
+                <Card className="h-full py-5">
+                  <CardContent className="flex flex-col gap-1">
+                    <p className="text-body-sm font-semibold text-mute">Receipts on file</p>
+                    <p className="font-display text-display-xs text-ink">{receiptCompleteness.pct?.toFixed(0) ?? 0}%</p>
+                    <Progress value={receiptCompleteness.pct ?? 0} />
+                    <p className="mt-1 text-caption text-mute">
+                      {receiptCompleteness.with_receipt} / {receiptCompleteness.total} expenses supported
+                      {receiptCompleteness.missing > 0 && ` -- ${receiptCompleteness.missing} missing`}
+                    </p>
+                  </CardContent>
+                </Card>
               </motion.div>
             )}
 
             {/* Recurring Revenue (§18) */}
-            <motion.div className="metric-tile" variants={tileEntrance}>
-              <div className="metric-label">Recurring revenue (next month)</div>
-              <div className="metric-value display">{formatDisplay(recurringForecast[0]?.amount ?? '0')}</div>
-              <p className="caption metric-sub">from active recurring invoice schedules</p>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full py-5">
+                <CardContent className="flex flex-col gap-1">
+                  <p className="text-body-sm font-semibold text-mute">Recurring revenue (next month)</p>
+                  <p className="font-display text-display-xs text-ink">{formatDisplay(recurringForecast[0]?.amount ?? '0')}</p>
+                  <p className="text-caption text-mute">from active recurring invoice schedules</p>
+                </CardContent>
+              </Card>
             </motion.div>
 
             {/* Accountant Readiness (§21) */}
             {readinessFactors.length > 0 && (
-              <motion.div className="metric-tile" variants={tileEntrance}>
-                <div className="metric-label">Accountant readiness</div>
-                <div className="metric-value">{readinessPct}%</div>
-                <div className="progress-bar">
-                  <div className={`progress-bar-fill${readinessPct < 100 ? ' attention' : ''}`} style={{ width: `${readinessPct}%` }} />
-                </div>
-                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {readinessFactors
-                    .filter((f) => !f.done)
-                    .map((f) => (
-                      <p key={f.label} className="caption">
-                        {f.label}: {f.detail}
-                      </p>
-                    ))}
-                </div>
+              <motion.div variants={tileEntrance}>
+                <Card className="h-full py-5">
+                  <CardContent className="flex flex-col gap-1">
+                    <p className="text-body-sm font-semibold text-mute">Accountant readiness</p>
+                    <p className="font-display text-display-xs text-ink">{readinessPct}%</p>
+                    <Progress value={readinessPct} className={readinessPct < 100 ? '[&_[data-slot=progress-indicator]]:bg-warning' : undefined} />
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      {readinessFactors
+                        .filter((f) => !f.done)
+                        .map((f) => (
+                          <p key={f.label} className="text-caption text-mute">
+                            {f.label}: {f.detail}
+                          </p>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             )}
           </motion.div>
@@ -888,71 +914,81 @@ export default function Dashboard() {
               comparison actually available from a year-scoped
               projection -- see the year-selector note above. */}
           {priorYearProjection && (
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Business momentum</h2>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Metric</th>
-                    <th className="amount">{projection.year}</th>
-                    <th className="amount">{priorYearProjection.year}</th>
-                    <th className="amount">Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(
-                    [
-                      ['Revenue', Number(projection.ytd.income), Number(priorYearProjection.ytd.income)],
-                      ['Expenses', Number(projection.ytd.expenses), Number(priorYearProjection.ytd.expenses)],
-                      ['Net income', Number(projection.ytd.net_income), Number(priorYearProjection.ytd.net_income)],
-                    ] as [string, number, number][]
-                  ).map(([label, current, prior]) => {
-                    const pctChange = prior !== 0 ? ((current - prior) / Math.abs(prior)) * 100 : null
-                    return (
-                      <tr key={label}>
-                        <td>{label}</td>
-                        <td className="amount">CAD {current.toFixed(2)}</td>
-                        <td className="amount">CAD {prior.toFixed(2)}</td>
-                        <td className="amount" style={{ color: pctChange != null && pctChange >= 0 ? 'var(--color-secondary-default)' : pctChange != null ? 'var(--color-status-overdue)' : undefined }}>
-                          {pctChange != null ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(0)}%` : '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <motion.div variants={tileEntrance}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Business momentum</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Metric</TableHead>
+                        <TableHead className="text-right">{projection.year}</TableHead>
+                        <TableHead className="text-right">{priorYearProjection.year}</TableHead>
+                        <TableHead className="text-right">Change</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(
+                        [
+                          ['Revenue', Number(projection.ytd.income), Number(priorYearProjection.ytd.income)],
+                          ['Expenses', Number(projection.ytd.expenses), Number(priorYearProjection.ytd.expenses)],
+                          ['Net income', Number(projection.ytd.net_income), Number(priorYearProjection.ytd.net_income)],
+                        ] as [string, number, number][]
+                      ).map(([label, current, prior]) => {
+                        const pctChange = prior !== 0 ? ((current - prior) / Math.abs(prior)) * 100 : null
+                        return (
+                          <TableRow key={label}>
+                            <TableCell>{label}</TableCell>
+                            <TableCell className="text-right">CAD {current.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">CAD {prior.toFixed(2)}</TableCell>
+                            <TableCell
+                              className={`text-right ${pctChange != null && pctChange >= 0 ? 'text-positive' : pctChange != null ? 'text-negative' : ''}`}
+                            >
+                              {pctChange != null ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(0)}%` : '—'}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
           {/* Year-over-Year (§20): gated behind at least one prior year
               of data existing, per the spec. */}
           {hasYoyData && yoyRows.length > 1 && (
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Year-over-year</h2>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Year</th>
-                    <th className="amount">Revenue</th>
-                    <th className="amount">Expenses</th>
-                    <th className="amount">Net income</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {yoyRows.map((r) => (
-                    <tr key={r.period}>
-                      <td>{r.period.slice(0, 4)}</td>
-                      <td className="amount">CAD {r.income}</td>
-                      <td className="amount">CAD {r.expenses}</td>
-                      <td className="amount">CAD {r.net_income}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <motion.div variants={tileEntrance}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Year-over-year</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Year</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">Expenses</TableHead>
+                        <TableHead className="text-right">Net income</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {yoyRows.map((r) => (
+                        <TableRow key={r.period}>
+                          <TableCell>{r.period.slice(0, 4)}</TableCell>
+                          <TableCell className="text-right">CAD {r.income}</TableCell>
+                          <TableCell className="text-right">CAD {r.expenses}</TableCell>
+                          <TableCell className="text-right">CAD {r.net_income}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
@@ -961,31 +997,32 @@ export default function Dashboard() {
               records, then informational items -- per §22's own
               guidance. */}
           {attentionItems.length > 0 && (
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Needs your attention</h2>
-              </div>
-              <div className="block-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {attentionItems.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                    <span
-                      style={{
-                        color:
+            <motion.div variants={tileEntrance}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Needs your attention</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  {attentionItems.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3">
+                      <span
+                        className={
                           item.level === 'high'
-                            ? 'var(--color-status-overdue)'
+                            ? 'text-body-sm text-negative'
                             : item.level === 'medium'
-                              ? 'var(--color-tertiary-default)'
-                              : 'var(--color-text-primary)',
-                      }}
-                    >
-                      {item.text}
-                    </span>
-                    <Link className="link-button" to={item.to}>
-                      {item.cta}
-                    </Link>
-                  </div>
-                ))}
-              </div>
+                              ? 'text-body-sm text-warning-deep'
+                              : 'text-body-sm text-ink'
+                        }
+                      >
+                        {item.text}
+                      </span>
+                      <Link className="shrink-0 text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute" to={item.to}>
+                        {item.cta}
+                      </Link>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </motion.div>
           )}
         </motion.div>
@@ -995,70 +1032,79 @@ export default function Dashboard() {
           and expense data already fetched for other sections -- not a
           full audit log. */}
       {activity.length > 0 && (
-        <div className="block">
-          <div className="block-header">
-            <h2>Recent activity</h2>
-          </div>
-          <div className="block-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">Recent activity</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
             {activity.map((a, i) => (
-              <Link key={i} to={a.to} style={{ display: 'flex', justifyContent: 'space-between', color: 'inherit', textDecoration: 'none' }}>
-                <span>{a.text}</span>
-                <span className="caption">{a.date}</span>
+              <Link key={i} to={a.to} className="flex justify-between text-ink no-underline hover:text-mute">
+                <span className="text-body-sm">{a.text}</span>
+                <span className="text-caption text-mute">{a.date}</span>
               </Link>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Recent invoices</h2>
-          <Link className="link-button" to="/invoices">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Recent invoices</CardTitle>
+          <Link className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute" to="/invoices">
             View all
           </Link>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Date</th>
-              <th>Tax treatment</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentInvoices.map((inv) => (
-              <tr key={inv.id}>
-                <td>
-                  <Link to={`/invoices/${inv.id}`}>{inv.client_name ?? '—'}</Link>
-                </td>
-                <td>{inv.invoice_date ?? '—'}</td>
-                <td>
-                  {inv.tax_treatment_snapshot && (
-                    <span className={`badge ${inv.tax_treatment_snapshot}`}>
-                      {inv.tax_treatment_snapshot.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                </td>
-                <td className="amount">
-                  {inv.currency} {inv.total}
-                </td>
-                <td>
-                  <span className={`badge ${inv.status}`}>{inv.status.replace(/_/g, ' ')}</span>
-                </td>
-              </tr>
-            ))}
-            {recentInvoices.length === 0 && (
-              <tr>
-                <td colSpan={5} className="caption" style={{ padding: 24 }}>
-                  No invoices yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Client</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Tax treatment</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentInvoices.map((inv) => (
+                <TableRow key={inv.id}>
+                  <TableCell>
+                    <Link className="text-ink underline underline-offset-2 hover:text-mute" to={`/invoices/${inv.id}`}>
+                      {inv.client_name ?? '—'}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{inv.invoice_date ?? '—'}</TableCell>
+                  <TableCell>
+                    {inv.tax_treatment_snapshot && (
+                      <Badge variant="secondary" className="capitalize">
+                        {inv.tax_treatment_snapshot.replace(/_/g, ' ')}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {inv.currency} {inv.total}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={inv.status === 'overdue' ? 'destructive' : 'secondary'}
+                      className={`capitalize ${inv.status === 'paid' ? 'bg-positive/15 text-positive-deep' : ''}`}
+                    >
+                      {inv.status.replace(/_/g, ' ')}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {recentInvoices.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-body-sm text-mute">
+                    No invoices yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

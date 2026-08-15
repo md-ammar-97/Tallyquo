@@ -17,23 +17,28 @@ export default function InvoiceStatusDonut({ invoices }: { invoices: Invoice[] }
     counts[inv.status] = (counts[inv.status] ?? 0) + 1
   }
 
+  // Recharts' pie-sector entrance animation interpolates `fill` through
+  // react-smooth, which can't parse CSS custom properties as colours (it
+  // silently resolves var(...) to black once the animation settles) --
+  // so these are literal hex values (matching tailwind.css's tokens),
+  // not var() strings like every other (non-animated-fill) chart here.
   const COLORS: Record<string, string> = {
-    paid: 'var(--color-secondary-default)',
-    issued: 'var(--color-accent-default)',
-    partially_paid: 'var(--color-tertiary-default)',
-    overdue: 'var(--color-status-overdue)',
-    draft: 'var(--color-text-tertiary)',
-    cancelled: 'var(--color-border-strong)',
+    paid: '#2ead4b', // --color-positive
+    issued: '#38c8ff', // --color-chart-2 / --color-accent-cyan
+    partially_paid: '#ffd11a', // --color-warning
+    overdue: '#d03238', // --color-negative
+    draft: '#868685', // --color-mute
+    cancelled: '#ffc091', // --color-chart-3 / --color-accent-orange
   }
 
   const data = Object.entries(counts).map(([status, count]) => ({
     name: status.replace(/_/g, ' '),
     value: count,
-    color: COLORS[status] ?? 'var(--color-chart-6)',
+    color: COLORS[status] ?? '#d03238',
   }))
 
   if (data.length === 0) {
-    return <p className="caption">No invoices yet.</p>
+    return <p className="text-body-sm text-mute">No invoices yet.</p>
   }
 
   return (
@@ -55,7 +60,7 @@ export default function InvoiceStatusDonut({ invoices }: { invoices: Invoice[] }
         </Pie>
         <Tooltip
           formatter={(value, name) => [value, name]}
-          contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
+          contentStyle={{ background: 'var(--color-canvas)', border: '1px solid var(--color-divider)', borderRadius: 12, fontSize: 12 }}
         />
         <Legend wrapperStyle={{ fontSize: 12, textTransform: 'capitalize' }} />
       </PieChart>

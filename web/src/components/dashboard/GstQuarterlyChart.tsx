@@ -26,10 +26,10 @@ export default function GstQuarterlyChart({ rows }: { rows: QuarterRow[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" vertical={false} />
-        <XAxis dataKey="period" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={{ stroke: 'var(--color-border-default)' }} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-divider)" vertical={false} />
+        <XAxis dataKey="period" tick={{ fontSize: 12, fill: 'var(--color-mute)' }} axisLine={{ stroke: 'var(--color-divider)' }} tickLine={false} />
         <YAxis
-          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+          tick={{ fontSize: 12, fill: 'var(--color-mute)' }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v: number) => formatCurrency(v)}
@@ -37,13 +37,13 @@ export default function GstQuarterlyChart({ rows }: { rows: QuarterRow[] }) {
         />
         <Tooltip
           formatter={(value) => formatCurrency(Number(value))}
-          contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
+          contentStyle={{ background: 'var(--color-canvas)', border: '1px solid var(--color-divider)', borderRadius: 12, fontSize: 12 }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Bar
           dataKey="collected"
           name="Collected"
-          fill="var(--color-accent-default)"
+          fill="var(--color-chart-2)"
           radius={[2, 2, 0, 0]}
           animationDuration={rechartsDurationMs.entrance}
           animationEasing={rechartsEasing.entrance}
@@ -51,7 +51,7 @@ export default function GstQuarterlyChart({ rows }: { rows: QuarterRow[] }) {
         <Bar
           dataKey="itcs"
           name="ITCs claimable"
-          fill="var(--color-text-tertiary)"
+          fill="var(--color-mute)"
           radius={[2, 2, 0, 0]}
           animationDuration={rechartsDurationMs.entrance}
           animationEasing={rechartsEasing.entrance}
