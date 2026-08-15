@@ -13,10 +13,14 @@ import {
   CircleUser,
   Users,
   HelpCircle,
+  Menu,
+  X,
 } from 'lucide-react'
 import { logout } from '../api'
 import logo from '../assets/logo.svg'
 import { duration, ease, pageTransition, shellEntrance } from '../motion/tokens'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 const NAV_ITEMS = [
   { to: '/', end: true, label: 'Dashboard', icon: DashboardIcon },
@@ -66,73 +70,123 @@ export default function Shell() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="mobile-topbar">
-        <span className="mobile-wordmark">Tallyquo</span>
-        <button aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((o) => !o)}>
-          {menuOpen ? '✕' : '☰'}
+    <div className="flex min-h-screen bg-background font-sans">
+      {/* Mobile topbar: hamburger toggle only, real topbar lives below */}
+      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-divider bg-card px-4 py-3 md:hidden">
+        <span className="font-display text-display-xs text-ink">Tallyquo</span>
+        <button
+          type="button"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setMenuOpen((o) => !o)}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-ink"
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
+      {menuOpen && (
+        <div className="fixed inset-0 z-30 bg-ink/40 md:hidden" onClick={() => setMenuOpen(false)} />
+      )}
+
       <motion.nav
-        className={`sidebar${menuOpen ? ' open' : ''}`}
         variants={shellEntrance}
         initial="initial"
         animate="animate"
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col gap-6 border-r border-divider bg-card p-5 transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0',
+          menuOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
       >
-        <div className="brand-block">
-          <img src={logo} alt="Tallyquo" className="brand-mark" />
+        <div className="flex items-center justify-between">
+          <img src={logo} alt="Tallyquo" className="h-10 w-auto" />
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-mute md:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <button type="button" className="primary sidebar-cta" onClick={() => navigate('/expenses?new=1')}>
-          <Plus size={16} />
-          Add Expense
-        </button>
-        <div className="sidebar-nav">
+
+        <Button className="h-11 w-full text-button-md" onClick={() => navigate('/expenses?new=1')}>
+          <Plus className="h-4 w-4" />
+          Add expense
+        </Button>
+
+        <div className="flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map(({ to, end, label, icon: Icon }) => (
-            <NavLink key={to} to={to} end={end} onClick={handleNavClick}>
-              <Icon size={16} className="nav-icon" />
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              onClick={handleNavClick}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-body-sm font-semibold text-ink transition-colors',
+                  isActive ? 'bg-primary-pale text-positive-deep' : 'hover:bg-canvas-soft',
+                )
+              }
+            >
+              <Icon className="h-[18px] w-[18px]" />
               {label}
             </NavLink>
           ))}
         </div>
-        <div className="sidebar-footer">
-          <button type="button" onClick={handleLogout}>
-            <LogOut size={16} className="nav-icon" />
-            Sign out
-          </button>
-        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-3 rounded-md px-3 py-2.5 text-body-sm font-semibold text-mute transition-colors hover:bg-canvas-soft hover:text-negative"
+        >
+          <LogOut className="h-[18px] w-[18px]" />
+          Sign out
+        </button>
       </motion.nav>
-      <div className="content-column">
+
+      <div className="flex min-w-0 flex-1 flex-col pt-[57px] md:pt-0">
         <motion.div
-          className="topbar"
           variants={shellEntrance}
           initial="initial"
           animate="animate"
           transition={{ duration: duration.moderate02, ease: ease.entranceProductive, delay: 0.04 }}
+          className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-divider bg-card px-6"
         >
-          <h2 className="topbar-title">{pageTitle(location.pathname)}</h2>
-          <div className="topbar-actions">
-            <button type="button" className="primary" onClick={() => navigate('/invoices/new')}>
-              Create Invoice
+          <h2 className="font-display text-display-xs text-ink">{pageTitle(location.pathname)}</h2>
+          <div className="flex items-center gap-2">
+            <Button className="h-10 text-button-md" onClick={() => navigate('/invoices/new')}>
+              Create invoice
+            </Button>
+            <button
+              type="button"
+              title="Notifications (coming soon)"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-mute transition-colors hover:bg-canvas-soft hover:text-ink"
+            >
+              <Bell className="h-[18px] w-[18px]" />
             </button>
-            <button type="button" className="icon-button" title="Notifications (coming soon)">
-              <Bell size={18} />
+            <button
+              type="button"
+              title="Help (coming soon)"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-mute transition-colors hover:bg-canvas-soft hover:text-ink"
+            >
+              <HelpCircle className="h-[18px] w-[18px]" />
             </button>
-            <button type="button" className="icon-button" title="Help (coming soon)">
-              <HelpCircle size={18} />
-            </button>
-            <div className="avatar-menu">
+            <div className="relative">
               <button
                 type="button"
-                className="avatar-button"
                 onClick={() => setAvatarOpen((o) => !o)}
                 aria-label="Account menu"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-ink"
               >
-                <CircleUser size={16} />
+                <CircleUser className="h-5 w-5" />
               </button>
               {avatarOpen && (
-                <div className="avatar-dropdown">
-                  <button type="button" onClick={handleLogout}>
-                    <LogOut size={14} className="nav-icon" />
+                <div className="absolute right-0 top-12 z-30 min-w-[160px] rounded-md border border-divider bg-card p-1 shadow-[0_12px_32px_-12px_rgba(14,15,12,0.25)]">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-sm font-semibold text-ink hover:bg-canvas-soft"
+                  >
+                    <LogOut className="h-4 w-4" />
                     Sign out
                   </button>
                 </div>
@@ -140,7 +194,7 @@ export default function Shell() {
             </div>
           </div>
         </motion.div>
-        <div className="main">
+        <div className="flex-1 p-6">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div key={location.pathname} variants={pageTransition} initial="initial" animate="animate" exit="exit">
               <Outlet />

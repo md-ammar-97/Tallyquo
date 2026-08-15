@@ -1,48 +1,31 @@
-import {
-  durationFast01,
-  durationFast02,
-  durationModerate01,
-  durationModerate02,
-  durationSlow01,
-  durationSlow02,
-  easings,
-} from '@carbon/motion'
 import type { Variants } from 'motion/react'
 
-function msToSeconds(ms: string): number {
-  return parseFloat(ms) / 1000
-}
-
-// Motion's `ease` transition prop takes a 4-number cubic-bezier tuple;
-// @carbon/motion ships its curves as CSS `cubic-bezier(...)` strings.
-function toBezierTuple(css: string): [number, number, number, number] {
-  const [x1, y1, x2, y2] = css.match(/-?[\d.]+/g)!.map(Number)
-  return [x1, y1, x2, y2]
-}
-
+// Static duration/easing values -- originally sourced from @carbon/motion's
+// published tokens (a well-tuned, real production motion system) during the
+// IBM Carbon redesign; kept as plain literals here rather than a live
+// package dependency since @carbon/motion is being removed in the Wise-
+// inspired redesign's cleanup phase (WI.G) and the Wise-inspired brief
+// itself specifies no motion-timing system of its own to replace it with.
 export const duration = {
-  fast01: msToSeconds(durationFast01), // 0.07s -- hover/press micro-feedback
-  fast02: msToSeconds(durationFast02), // 0.11s
-  moderate01: msToSeconds(durationModerate01), // 0.15s
-  moderate02: msToSeconds(durationModerate02), // 0.24s -- tile/panel entrance
-  slow01: msToSeconds(durationSlow01), // 0.4s -- page transitions, count-ups, chart draw-in
-  slow02: msToSeconds(durationSlow02), // 0.7s
+  fast01: 0.07, // hover/press micro-feedback
+  fast02: 0.11,
+  moderate01: 0.15,
+  moderate02: 0.24, // tile/panel entrance
+  slow01: 0.4, // page transitions, count-ups, chart draw-in
+  slow02: 0.7,
 }
 
 export const ease = {
-  standardProductive: toBezierTuple(easings.standard.productive),
-  standardExpressive: toBezierTuple(easings.standard.expressive),
-  entranceProductive: toBezierTuple(easings.entrance.productive),
-  entranceExpressive: toBezierTuple(easings.entrance.expressive),
-  exitProductive: toBezierTuple(easings.exit.productive),
-  exitExpressive: toBezierTuple(easings.exit.expressive),
+  standardProductive: [0.2, 0, 0.38, 0.9] as [number, number, number, number],
+  standardExpressive: [0.4, 0.14, 0.3, 1] as [number, number, number, number],
+  entranceProductive: [0, 0, 0.38, 0.9] as [number, number, number, number],
+  entranceExpressive: [0, 0, 0.3, 1] as [number, number, number, number],
+  exitProductive: [0.2, 0, 1, 0.9] as [number, number, number, number],
+  exitExpressive: [0.4, 0.14, 1, 1] as [number, number, number, number],
 }
 
 // Recharts' animationEasing prop accepts a raw CSS cubic-bezier() string,
-// but types it as a template literal with no spaces between numbers --
-// @carbon/motion's strings have spaces ("cubic-bezier(0.4, 0.14, ...)"),
-// so re-serialize from the already-parsed tuples above rather than
-// passing the source string straight through.
+// typed as a template literal with no spaces between numbers.
 function toRechartsBezier(tuple: [number, number, number, number]): `cubic-bezier(${number},${number},${number},${number})` {
   return `cubic-bezier(${tuple[0]},${tuple[1]},${tuple[2]},${tuple[3]})`
 }
@@ -52,7 +35,7 @@ export const rechartsEasing = {
   standard: toRechartsBezier(ease.standardProductive),
 }
 export const rechartsDurationMs = {
-  entrance: parseFloat(durationSlow01), // 400ms chart draw-in
+  entrance: 400, // chart draw-in
 }
 
 // Route transitions (Shell.tsx, keyed on pathname via AnimatePresence).
