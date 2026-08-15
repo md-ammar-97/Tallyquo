@@ -50,10 +50,10 @@ export default function ActualVsProjectedChart({ rows, year, projectedAnnualInco
   return (
     <ResponsiveContainer width="100%" height={260}>
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={{ stroke: 'var(--color-border-default)' }} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-divider)" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--color-mute)' }} axisLine={{ stroke: 'var(--color-divider)' }} tickLine={false} />
         <YAxis
-          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+          tick={{ fontSize: 12, fill: 'var(--color-mute)' }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v: number) => formatCurrency(v)}
@@ -61,21 +61,21 @@ export default function ActualVsProjectedChart({ rows, year, projectedAnnualInco
         />
         <Tooltip
           formatter={(value) => (value == null ? '—' : formatCurrency(Number(value)))}
-          contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
+          contentStyle={{ background: 'var(--color-canvas)', border: '1px solid var(--color-divider)', borderRadius: 12, fontSize: 12 }}
         />
         {declaredAnnualIncome != null && (
           <ReferenceLine
             y={declaredAnnualIncome}
-            stroke="var(--color-tertiary-default)"
+            stroke="var(--color-warning-deep)"
             strokeDasharray="2 2"
-            label={{ value: 'Target', fontSize: 11, fill: 'var(--color-tertiary-default)', position: 'insideTopRight' }}
+            label={{ value: 'Target', fontSize: 11, fill: 'var(--color-warning-deep)', position: 'insideTopRight' }}
           />
         )}
         <Line
           type="monotone"
           dataKey="actual"
           name="Actual"
-          stroke="var(--color-accent-default)"
+          stroke="var(--color-positive)"
           strokeWidth={2}
           dot={{ r: 3 }}
           connectNulls={false}
@@ -86,7 +86,7 @@ export default function ActualVsProjectedChart({ rows, year, projectedAnnualInco
           type="monotone"
           dataKey="projected"
           name="Projected"
-          stroke="var(--color-accent-default)"
+          stroke="var(--color-positive)"
           strokeWidth={2}
           strokeDasharray="5 4"
           dot={{ r: 3 }}

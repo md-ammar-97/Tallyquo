@@ -38,10 +38,10 @@ export default function SafeToSpendWaterfall({ netBusinessIncome, federalTax, pr
   return (
     <ResponsiveContainer width="100%" height={280}>
       <BarChart data={steps} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={{ stroke: 'var(--color-border-default)' }} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-divider)" vertical={false} />
+        <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--color-mute)' }} axisLine={{ stroke: 'var(--color-divider)' }} tickLine={false} />
         <YAxis
-          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+          tick={{ fontSize: 12, fill: 'var(--color-mute)' }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v: number) => formatCurrency(v)}
@@ -49,7 +49,7 @@ export default function SafeToSpendWaterfall({ netBusinessIncome, federalTax, pr
         />
         <Tooltip
           formatter={(_value, _name, entry) => [formatCurrency(entry.payload.display), 'Amount']}
-          contentStyle={{ background: 'var(--color-bg-default)', border: '1px solid var(--color-border-default)', fontSize: 12 }}
+          contentStyle={{ background: 'var(--color-canvas)', border: '1px solid var(--color-divider)', borderRadius: 12, fontSize: 12 }}
         />
         {/* Invisible base bar floats the visible bar to the right height. */}
         <Bar dataKey="base" stackId="waterfall" fill="transparent" isAnimationActive={false} />
@@ -69,8 +69,8 @@ export default function SafeToSpendWaterfall({ netBusinessIncome, federalTax, pr
               // consistently elsewhere in this app (design.md §2.3).
               fill={
                 step.kind === 'start' || step.kind === 'end'
-                  ? 'var(--color-accent-default)'
-                  : 'var(--color-tertiary-default)'
+                  ? 'var(--color-positive)'
+                  : 'var(--color-warning)'
               }
             />
           ))}

@@ -4,6 +4,8 @@ import { motion } from 'motion/react'
 import { TriangleAlert } from 'lucide-react'
 import { api, ApiError } from '../api'
 import { staggerContainer, tileEntrance } from '../motion/tokens'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import KpiTile from '../components/dashboard/KpiTile'
 import RevenueExpenseChart, { type PnlRow } from '../components/dashboard/RevenueExpenseChart'
 import SafeToSpendWaterfall from '../components/dashboard/SafeToSpendWaterfall'
@@ -362,11 +364,11 @@ export default function Dashboard() {
   const hasYoyData = annualPnlRows.some((r) => Number(r.period.slice(0, 4)) < (projection?.year ?? 0))
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1>How much is mine?</h1>
-          <p className="caption" style={{ marginTop: -8, marginBottom: 16 }}>
+          <h1 className="font-display text-display-sm text-ink">How much is mine?</h1>
+          <p className="text-body-sm text-mute">
             {projection ? `Year-to-date projection for ${projection.year}` : 'Year-to-date projection'}
           </p>
         </div>
@@ -379,62 +381,56 @@ export default function Dashboard() {
           // a year selector -- not a full date-range picker -- is what
           // actually stays meaningful across everything on this page. A
           // noted v1 scope, not an oversight.
-          <span>
-            <button className="link-button" onClick={() => changeYear(-1)}>
+          <div className="flex items-center gap-3 text-body-sm font-medium">
+            <button className="text-mute transition-colors hover:text-ink" onClick={() => changeYear(-1)}>
               &larr; {projection.year - 1}
-            </button>{' '}
-            <button className="link-button" onClick={() => changeYear(1)}>
+            </button>
+            <button className="text-mute transition-colors hover:text-ink" onClick={() => changeYear(1)}>
               {projection.year + 1} &rarr;
             </button>
-          </span>
+          </div>
         )}
       </div>
 
-      <div className="block">
-        <div className="block-body">
-          <p style={{ marginBottom: 16 }}>
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-body-sm text-body">
             Set up your business profile and a client, then issue a correctly-taxed invoice in under two minutes.
           </p>
-          <Link to="/settings/profile">
-            <button>1. Business profile</button>
-          </Link>{' '}
-          <Link to="/clients">
-            <button>2. Add a client</button>
-          </Link>{' '}
-          <Link to="/invoices/new">
-            <button className="primary">3. Issue an invoice</button>
-          </Link>
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="outline" asChild>
+              <Link to="/settings/profile">1. Business profile</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/clients">2. Add a client</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/invoices/new">3. Issue an invoice</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {projectionError && (
-        <div className="block">
-          <div className="block-body">
-            <p className="caption">{projectionError}</p>
-          </div>
-        </div>
+        <Card>
+          <CardContent>
+            <p className="text-body-sm text-mute">{projectionError}</p>
+          </CardContent>
+        </Card>
       )}
 
       {projection && (
-        <motion.div variants={staggerContainer} initial="initial" animate="animate">
+        <motion.div className="flex flex-col gap-6" variants={staggerContainer} initial="initial" animate="animate">
           {projection.instalment_warning.applies && (
-            <div
-              className="block alert"
-              style={{
-                borderLeft: '3px solid var(--color-status-overdue)',
-                background: 'var(--color-status-overdue-bg)',
-              }}
-            >
-              <div className="block-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <TriangleAlert size={18} color="var(--color-status-overdue)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <strong style={{ color: 'var(--color-status-overdue)' }}>Quarterly instalment warning</strong>
-                  <p className="caption" style={{ marginTop: 4 }}>
-                    Projected net income tax + CPP owing (CAD {projection.instalment_warning.projected_net_tax_owing})
-                    is over CAD {projection.instalment_warning.threshold} -- the CRA may expect quarterly instalments.
-                    Confirm with your accountant.
-                  </p>
-                </div>
+            <div className="flex items-start gap-3 rounded-xl border border-negative/30 bg-negative-bg/5 py-4 pr-4 pl-4 border-l-4 border-l-negative">
+              <TriangleAlert size={18} className="mt-0.5 shrink-0 text-negative" />
+              <div>
+                <strong className="text-body-sm font-semibold text-negative">Quarterly instalment warning</strong>
+                <p className="mt-1 text-body-sm text-mute">
+                  Projected net income tax + CPP owing (CAD {projection.instalment_warning.projected_net_tax_owing})
+                  is over CAD {projection.instalment_warning.threshold} -- the CRA may expect quarterly instalments.
+                  Confirm with your accountant.
+                </p>
               </div>
             </div>
           )}
@@ -446,7 +442,12 @@ export default function Dashboard() {
               outcome (Net income sign, Safe to spend, Outstanding) --
               GST/HST owing and the projected/reserve figures stay
               neutral, matching design.md's colour-polarity rule. */}
-          <motion.div className="metric-grid" variants={staggerContainer} initial="initial" animate="animate">
+          <motion.div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
             <KpiTile
               label="Revenue"
               value={formatDisplay(projection.ytd.income)}
@@ -479,103 +480,117 @@ export default function Dashboard() {
             />
           </motion.div>
 
-          <motion.div className="metric-grid" variants={staggerContainer} initial="initial" animate="animate">
-            <motion.div
-              className={`metric-tile${assumptionsOpen ? ' expanded' : ''}`}
-              style={{ borderLeft: '4px solid var(--color-tertiary-default)' }}
-              variants={tileEntrance}
-            >
-              <div className="metric-label">Tax + CPP reserve</div>
-              <div className="metric-value display">{formatDisplay(projection.set_aside.total_estimated_tax_and_cpp)}</div>
-              <p className="caption metric-sub">
-                {projection.income.mode === 'declared' ? 'based on declared income' : 'estimate'}
-                {projection.income.derived.is_low_confidence &&
-                  projection.income.mode === 'derived' &&
-                  ' -- low confidence, early in the year'}
-              </p>
-              <button className="assumptions-toggle" onClick={() => setAssumptionsOpen((o) => !o)}>
-                {assumptionsOpen ? 'Hide logic' : 'View logic'}
-              </button>
-              {assumptionsOpen && (
-                <div className="assumptions-list">
-                  <div className="row">
-                    <span className="label">Province</span>
-                    <span>{projection.jurisdiction}</span>
-                  </div>
-                  <div className="row">
-                    <span className="label">Tax year</span>
-                    <span>{projection.year}</span>
-                  </div>
-                  <div className="row">
-                    <span className="label">Net business income</span>
-                    <span>CAD {projection.set_aside.net_business_income}</span>
-                  </div>
-                  <div className="row">
-                    <span className="label">Federal income tax (est.)</span>
-                    <span>CAD {projection.set_aside.federal_tax.total_tax}</span>
-                  </div>
-                  <div className="row">
-                    <span className="label">{projection.jurisdiction} income tax (est.)</span>
-                    <span>CAD {projection.set_aside.provincial_tax.total_tax}</span>
-                  </div>
-                  <div className="row">
-                    <span className="label">Tax brackets applied</span>
-                    <span>
-                      {projection.set_aside.federal_tax.bands.length} federal, {projection.set_aside.provincial_tax.bands.length}{' '}
-                      provincial
-                    </span>
-                  </div>
-                  <div className="row">
-                    <span className="label">CPP (self-employed, both halves)</span>
-                    <span>CAD {projection.set_aside.cpp.total_contribution}</span>
-                  </div>
-                  <div className="row">
-                    <span className="label">Recommended set-aside</span>
-                    <span>{projection.set_aside.recommended_set_aside_pct}% of net income</span>
-                  </div>
-                  <p className="caption" style={{ marginTop: 4 }}>
-                    Estimate only, not tax advice. Based on{' '}
-                    {projection.income.mode === 'declared'
-                      ? 'your declared annual income'
-                      : `${projection.income.derived.method.replace(/_/g, ' ')}`}{' '}
-                    of CAD {projection.income.active_projected_income}, accrual basis (by invoice and expense date,
-                    not when cash actually changed hands).
+          <motion.div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            <motion.div variants={tileEntrance} className="sm:col-span-2">
+              <Card className="h-full border-l-4 border-l-warning py-5">
+                <CardContent className="flex flex-col gap-1">
+                  <p className="text-body-sm font-semibold text-mute">Tax + CPP reserve</p>
+                  <p className="font-display text-display-xs text-ink">
+                    {formatDisplay(projection.set_aside.total_estimated_tax_and_cpp)}
                   </p>
+                  <p className="text-caption text-mute">
+                    {projection.income.mode === 'declared' ? 'based on declared income' : 'estimate'}
+                    {projection.income.derived.is_low_confidence &&
+                      projection.income.mode === 'derived' &&
+                      ' -- low confidence, early in the year'}
+                  </p>
+                  <button
+                    className="mt-1 self-start text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                    onClick={() => setAssumptionsOpen((o) => !o)}
+                  >
+                    {assumptionsOpen ? 'Hide logic' : 'View logic'}
+                  </button>
+                  {assumptionsOpen && (
+                    <div className="mt-2 flex flex-col gap-1.5 border-t border-divider pt-3">
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">Province</span>
+                        <span>{projection.jurisdiction}</span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">Tax year</span>
+                        <span>{projection.year}</span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">Net business income</span>
+                        <span>CAD {projection.set_aside.net_business_income}</span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">Federal income tax (est.)</span>
+                        <span>CAD {projection.set_aside.federal_tax.total_tax}</span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">{projection.jurisdiction} income tax (est.)</span>
+                        <span>CAD {projection.set_aside.provincial_tax.total_tax}</span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">Tax brackets applied</span>
+                        <span>
+                          {projection.set_aside.federal_tax.bands.length} federal, {projection.set_aside.provincial_tax.bands.length}{' '}
+                          provincial
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">CPP (self-employed, both halves)</span>
+                        <span>CAD {projection.set_aside.cpp.total_contribution}</span>
+                      </div>
+                      <div className="flex justify-between text-body-sm">
+                        <span className="text-mute">Recommended set-aside</span>
+                        <span>{projection.set_aside.recommended_set_aside_pct}% of net income</span>
+                      </div>
+                      <p className="mt-1 text-caption text-mute">
+                        Estimate only, not tax advice. Based on{' '}
+                        {projection.income.mode === 'declared'
+                          ? 'your declared annual income'
+                          : `${projection.income.derived.method.replace(/_/g, ' ')}`}{' '}
+                        of CAD {projection.income.active_projected_income}, accrual basis (by invoice and expense date,
+                        not when cash actually changed hands).
+                      </p>
 
-                  {projection.income.mode === 'declared' ? (
-                    <p className="caption">
-                      Derived (extrapolated) estimate: CAD {projection.income.derived.projected_annual_income}
-                      {projection.income.variance_from_derived && ` (gap: CAD ${projection.income.variance_from_derived})`}{' '}
-                      <button className="link-button" onClick={handleClearDeclared}>
-                        Use derived instead
-                      </button>
-                    </p>
-                  ) : editingDeclared ? (
-                    <form
-                      onSubmit={handleSaveDeclared}
-                      style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}
-                    >
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Declared annual income"
-                        value={declaredDraft}
-                        onChange={(e) => setDeclaredDraft(e.target.value)}
-                        style={{ width: 160 }}
-                        required
-                      />
-                      <button type="submit">Save</button>
-                      <button type="button" className="link-button" onClick={() => setEditingDeclared(false)}>
-                        Cancel
-                      </button>
-                    </form>
-                  ) : (
-                    <button className="link-button" onClick={() => setEditingDeclared(true)}>
-                      Declare your own income figure instead
-                    </button>
+                      {projection.income.mode === 'declared' ? (
+                        <p className="text-caption text-mute">
+                          Derived (extrapolated) estimate: CAD {projection.income.derived.projected_annual_income}
+                          {projection.income.variance_from_derived && ` (gap: CAD ${projection.income.variance_from_derived})`}{' '}
+                          <button className="font-medium text-ink underline underline-offset-2" onClick={handleClearDeclared}>
+                            Use derived instead
+                          </button>
+                        </p>
+                      ) : editingDeclared ? (
+                        <form onSubmit={handleSaveDeclared} className="mt-2 flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Declared annual income"
+                            value={declaredDraft}
+                            onChange={(e) => setDeclaredDraft(e.target.value)}
+                            className="h-9 w-40 rounded-md border border-ink px-3 text-body-sm"
+                            required
+                          />
+                          <Button type="submit" size="sm">Save</Button>
+                          <button
+                            type="button"
+                            className="text-body-sm font-medium text-mute hover:text-ink"
+                            onClick={() => setEditingDeclared(false)}
+                          >
+                            Cancel
+                          </button>
+                        </form>
+                      ) : (
+                        <button
+                          className="mt-1 self-start text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                          onClick={() => setEditingDeclared(true)}
+                        >
+                          Declare your own income figure instead
+                        </button>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
+                </CardContent>
+              </Card>
             </motion.div>
 
             <KpiTile
@@ -602,42 +617,48 @@ export default function Dashboard() {
             />
           </motion.div>
 
-          <motion.div className="block" variants={tileEntrance}>
-            <div className="block-header">
-              <h2>Business performance</h2>
-            </div>
-            <div className="block-body">
-              <RevenueExpenseChart rows={pnlRows} />
-            </div>
+          <motion.div variants={tileEntrance}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display text-display-xs font-semibold text-ink">Business performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RevenueExpenseChart rows={pnlRows} />
+              </CardContent>
+            </Card>
           </motion.div>
 
-          <motion.div className="dashboard-chart-grid" variants={staggerContainer}>
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Where your revenue goes</h2>
-              </div>
-              <div className="block-body">
-                <SafeToSpendWaterfall
-                  netBusinessIncome={Number(projection.set_aside.net_business_income)}
-                  federalTax={Number(projection.set_aside.federal_tax.total_tax)}
-                  provincialTax={Number(projection.set_aside.provincial_tax.total_tax)}
-                  cpp={Number(projection.set_aside.cpp.total_contribution)}
-                  jurisdiction={projection.jurisdiction}
-                />
-              </div>
+          <motion.div className="grid grid-cols-1 gap-4 lg:grid-cols-2" variants={staggerContainer}>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Where your revenue goes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SafeToSpendWaterfall
+                    netBusinessIncome={Number(projection.set_aside.net_business_income)}
+                    federalTax={Number(projection.set_aside.federal_tax.total_tax)}
+                    provincialTax={Number(projection.set_aside.provincial_tax.total_tax)}
+                    cpp={Number(projection.set_aside.cpp.total_contribution)}
+                    jurisdiction={projection.jurisdiction}
+                  />
+                </CardContent>
+              </Card>
             </motion.div>
-            <motion.div className="block" variants={tileEntrance}>
-              <div className="block-header">
-                <h2>Actual vs. projected revenue</h2>
-              </div>
-              <div className="block-body">
-                <ActualVsProjectedChart
-                  rows={pnlRows}
-                  year={projection.year}
-                  projectedAnnualIncome={Number(projection.income.active_projected_income)}
-                  declaredAnnualIncome={projection.income.declared_annual_income ? Number(projection.income.declared_annual_income) : null}
-                />
-              </div>
+            <motion.div variants={tileEntrance}>
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="font-display text-display-xs font-semibold text-ink">Actual vs. projected revenue</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ActualVsProjectedChart
+                    rows={pnlRows}
+                    year={projection.year}
+                    projectedAnnualIncome={Number(projection.income.active_projected_income)}
+                    declaredAnnualIncome={projection.income.declared_annual_income ? Number(projection.income.declared_annual_income) : null}
+                  />
+                </CardContent>
+              </Card>
             </motion.div>
           </motion.div>
 
