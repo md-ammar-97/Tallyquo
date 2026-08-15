@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Lock, GripVertical } from 'lucide-react'
 import { API_BASE_URL, api, ApiError } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface Theme {
   accent_color: string
@@ -173,45 +178,48 @@ export default function TemplateEditor() {
     }
   }
 
-  if (!loaded) return <p className="caption">Loading…</p>
+  if (!loaded) return <p className="text-body-sm text-mute">Loading…</p>
+
+  const fileInputClass =
+    'text-body-sm text-mute file:mr-3 file:h-8 file:rounded-md file:border file:border-ink file:bg-canvas file:px-3 file:text-body-sm file:font-medium'
 
   return (
-    <div>
-      <h1>{id ? 'Edit template' : 'New template'}</h1>
-      <div className="editor-layout">
-        <div className="block">
-          <div className="block-header">
-            <h2>Blocks</h2>
-          </div>
-          <div className="block-body">
-            <p className="caption" style={{ marginBottom: 12 }}>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">{id ? 'Edit template' : 'New template'}</h1>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_1fr_300px]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">Blocks</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-body-sm text-mute">
               Required on every invoice — your client's accountant needs these fields.
             </p>
-            <ul className="block-list">
-              <li className="block-list-item locked">
-                <span title="Required on every invoice — your client's accountant needs these fields.">
-                  🔒 Supplier, invoice details, bill-to, line items, totals
-                </span>
+            <ul className="flex flex-col gap-2">
+              <li
+                className="flex items-center gap-2 rounded-md border border-divider bg-canvas-soft px-3 py-2 text-body-sm text-mute"
+                title="Required on every invoice — your client's accountant needs these fields."
+              >
+                <Lock size={14} className="shrink-0" />
+                Supplier, invoice details, bill-to, line items, totals
               </li>
             </ul>
-            <p className="caption" style={{ margin: '16px 0 8px' }}>
-              Optional — drag to reorder, toggle to show or hide.
-            </p>
-            <ul className="block-list">
+            <p className="text-body-sm text-mute">Optional — drag to reorder, toggle to show or hide.</p>
+            <ul className="flex flex-col gap-2">
               {optionalBlocks.map((b, i) => (
                 <li
                   key={b.key}
-                  className="block-list-item"
+                  className="flex cursor-grab items-center gap-2 rounded-md border border-divider px-3 py-2"
                   draggable
                   onDragStart={() => handleDragStart(i)}
                   onDragOver={(e) => handleDragOver(e, i)}
                   onDragEnd={handleDragEnd}
                 >
-                  <span className="drag-handle">⠿</span>
-                  <label style={{ flex: 1 }}>
+                  <GripVertical size={14} className="shrink-0 text-mute" />
+                  <label className="flex flex-1 items-center gap-2 text-body-sm text-ink">
                     <input
                       type="checkbox"
-                      style={{ width: 'auto', marginRight: 8 }}
+                      className="size-4 accent-ink"
                       checked={b.enabled}
                       onChange={(e) => {
                         const next = [...optionalBlocks]
@@ -224,43 +232,45 @@ export default function TemplateEditor() {
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="block editor-preview">
-          <div className="block-header">
-            <h2>Preview</h2>
-          </div>
-          <div className="block-body">
+        <Card className="min-h-[500px]">
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
             {previewUrl ? (
-              <iframe title="Template preview" src={previewUrl} className="preview-frame" />
+              <iframe title="Template preview" src={previewUrl} className="h-[700px] w-full rounded-md border border-divider" />
             ) : (
-              <p className="caption">Rendering…</p>
+              <p className="text-body-sm text-mute">Rendering…</p>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="block">
-          <div className="block-header">
-            <h2>Theme</h2>
-          </div>
-          <div className="block-body">
-            <div className="field">
-              <label>Name</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} required />
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">Theme</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
-            <div className="field">
-              <label>Accent colour</label>
+            <div className="flex flex-col gap-1.5">
+              <Label>Accent colour</Label>
               <input
                 type="color"
+                className="h-9 w-16 rounded-md border border-ink bg-canvas"
                 value={theme.accent_color}
                 onChange={(e) => setTheme({ ...theme, accent_color: e.target.value })}
               />
             </div>
-            <div className="field">
-              <label>Font size ({Math.round(theme.font_scale * 100)}%)</label>
+            <div className="flex flex-col gap-1.5">
+              <Label>Font size ({Math.round(theme.font_scale * 100)}%)</Label>
               <input
                 type="range"
+                className="accent-ink"
                 min={0.85}
                 max={1.15}
                 step={0.05}
@@ -268,10 +278,11 @@ export default function TemplateEditor() {
                 onChange={(e) => setTheme({ ...theme, font_scale: Number(e.target.value) })}
               />
             </div>
-            <div className="field">
-              <label>Margins ({theme.margins_mm}mm)</label>
+            <div className="flex flex-col gap-1.5">
+              <Label>Margins ({theme.margins_mm}mm)</Label>
               <input
                 type="range"
+                className="accent-ink"
                 min={12}
                 max={30}
                 step={1}
@@ -279,9 +290,10 @@ export default function TemplateEditor() {
                 onChange={(e) => setTheme({ ...theme, margins_mm: Number(e.target.value) })}
               />
             </div>
-            <div className="field">
-              <label>Logo position</label>
+            <div className="flex flex-col gap-1.5">
+              <Label>Logo position</Label>
               <select
+                className="h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm"
                 value={theme.logo_position}
                 onChange={(e) => setTheme({ ...theme, logo_position: e.target.value as Theme['logo_position'] })}
               >
@@ -291,24 +303,24 @@ export default function TemplateEditor() {
                 <option value="none">Hidden</option>
               </select>
             </div>
-            <div className="field">
-              <label>Logo</label>
-              {hasLogo === false && <p className="caption">No logo uploaded yet.</p>}
-              <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/gif" onChange={handleLogoChange} />
-              {logoUploading && <p className="caption">Uploading…</p>}
+            <div className="flex flex-col gap-1.5">
+              <Label>Logo</Label>
+              {hasLogo === false && <p className="text-body-sm text-mute">No logo uploaded yet.</p>}
+              <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/gif" onChange={handleLogoChange} className={fileInputClass} />
+              {logoUploading && <p className="text-body-sm text-mute">Uploading…</p>}
             </div>
 
-            {error && <p className="error-text">{error}</p>}
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button type="button" className="primary" disabled={saving} onClick={handleSave}>
+            {error && <p className="text-body-sm text-negative">{error}</p>}
+            <div className="flex gap-2">
+              <Button type="button" disabled={saving} onClick={handleSave}>
                 {saving ? 'Saving…' : 'Save template'}
-              </button>
-              <button type="button" onClick={() => navigate('/settings/profile')}>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/settings/profile')}>
                 Cancel
-              </button>
+              </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

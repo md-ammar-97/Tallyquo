@@ -4,6 +4,14 @@ import { api, ApiError, downloadFile } from '../api'
 import { todayLocal } from '../dateUtils'
 import InvoiceDocument, { type InvoiceDocumentData } from '../components/InvoiceDocument'
 import ComplianceChecklist, { type ComplianceProfile } from '../components/ComplianceChecklist'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+
+const selectClass = 'h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm'
+const fieldCol = 'flex flex-1 flex-col gap-1.5'
 
 interface Client {
   id: string
@@ -171,34 +179,32 @@ export default function InvoiceBuilder() {
 
   if (issuedInvoice) {
     return (
-      <div>
-        <h1>Invoice issued</h1>
-        <div className="block">
-          <div className="block-body">
-            <p style={{ marginBottom: 8 }}>
-              <span className="badge issued">Issued</span>
-            </p>
-            <h2>{issuedInvoice.number}</h2>
-            <p className="caption" style={{ margin: '8px 0 16px' }}>
+      <div className="flex flex-col gap-6">
+        <h1 className="font-display text-display-sm text-ink">Invoice issued</h1>
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <Badge variant="secondary" className="w-fit">Issued</Badge>
+            <h2 className="font-display text-display-xs font-semibold text-ink">{issuedInvoice.number}</h2>
+            <p className="text-body-sm text-mute">
               Total: {currency} {issuedInvoice.total}
             </p>
-            <button
-              className="primary"
-              onClick={() => downloadFile(`/invoices/${issuedInvoice.id}/pdf`, `${issuedInvoice.number}.pdf`)}
-            >
-              Download PDF
-            </button>{' '}
-            <button
-              onClick={() => {
-                setIssuedInvoice(null)
-                setLines([emptyLine()])
-              }}
-            >
-              Create another
-            </button>{' '}
-            <button onClick={() => navigate('/invoices')}>View ledger</button>
-          </div>
-        </div>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => downloadFile(`/invoices/${issuedInvoice.id}/pdf`, `${issuedInvoice.number}.pdf`)}>
+                Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIssuedInvoice(null)
+                  setLines([emptyLine()])
+                }}
+              >
+                Create another
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/invoices')}>View ledger</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -206,29 +212,29 @@ export default function InvoiceBuilder() {
   const selectedClient = clients.find((c) => c.id === clientId) || null
 
   return (
-    <div>
-      <h1>New invoice</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">New invoice</h1>
 
-      <div className="invoice-builder-layout">
-        <div>
-          <div className="block">
-            <div className="block-header">
-              <h2>Invoice details</h2>
-            </div>
-            <div className="block-body">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display text-display-xs font-semibold text-ink">Invoice details</CardTitle>
+            </CardHeader>
+            <CardContent>
               {clients.length === 0 ? (
-                <p className="caption">
+                <p className="text-body-sm text-mute">
                   No clients yet.{' '}
-                  <a href="/clients" style={{ color: 'var(--color-text-link)' }}>
+                  <a href="/clients" className="font-medium text-ink underline underline-offset-2 hover:text-mute">
                     Add a client
                   </a>{' '}
                   first.
                 </p>
               ) : (
-                <>
-                  <div className="field">
-                    <label>Client</label>
-                    <select value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                <div className="flex flex-col gap-4">
+                  <div className={fieldCol}>
+                    <Label>Client</Label>
+                    <select className={selectClass} value={clientId} onChange={(e) => setClientId(e.target.value)}>
                       {clients.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.legal_name}
@@ -236,20 +242,20 @@ export default function InvoiceBuilder() {
                       ))}
                     </select>
                   </div>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Issue date</label>
-                      <input type="date" value={invoiceDate} onChange={(e) => handleInvoiceDateChange(e.target.value)} />
+                  <div className="flex flex-wrap gap-4">
+                    <div className={fieldCol}>
+                      <Label>Issue date</Label>
+                      <Input type="date" value={invoiceDate} onChange={(e) => handleInvoiceDateChange(e.target.value)} />
                     </div>
-                    <div className="field">
-                      <label>Due date</label>
-                      <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                    <div className={fieldCol}>
+                      <Label>Due date</Label>
+                      <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                     </div>
                   </div>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Terms</label>
-                      <select value={termsDays} onChange={(e) => handleTermsChange(Number(e.target.value))}>
+                  <div className="flex flex-wrap gap-4">
+                    <div className={fieldCol}>
+                      <Label>Terms</Label>
+                      <select className={selectClass} value={termsDays} onChange={(e) => handleTermsChange(Number(e.target.value))}>
                         {TERMS_OPTIONS.map((t) => (
                           <option key={t.days} value={t.days}>
                             {t.label}
@@ -257,87 +263,97 @@ export default function InvoiceBuilder() {
                         ))}
                       </select>
                     </div>
-                    <div className="field">
-                      <label>Currency</label>
-                      <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                    <div className={fieldCol}>
+                      <Label>Currency</Label>
+                      <select className={selectClass} value={currency} onChange={(e) => setCurrency(e.target.value)}>
                         <option value="CAD">CAD</option>
                         <option value="USD">USD</option>
                       </select>
                     </div>
                   </div>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Service period start (optional)</label>
-                      <input
-                        type="date"
-                        value={servicePeriodStart}
-                        onChange={(e) => setServicePeriodStart(e.target.value)}
-                      />
+                  <div className="flex flex-wrap gap-4">
+                    <div className={fieldCol}>
+                      <Label>Service period start (optional)</Label>
+                      <Input type="date" value={servicePeriodStart} onChange={(e) => setServicePeriodStart(e.target.value)} />
                     </div>
-                    <div className="field">
-                      <label>Service period end (optional)</label>
-                      <input type="date" value={servicePeriodEnd} onChange={(e) => setServicePeriodEnd(e.target.value)} />
+                    <div className={fieldCol}>
+                      <Label>Service period end (optional)</Label>
+                      <Input type="date" value={servicePeriodEnd} onChange={(e) => setServicePeriodEnd(e.target.value)} />
                     </div>
                   </div>
-                  <div className="field">
-                    <label>PO reference (optional)</label>
-                    <input value={poReference} onChange={(e) => setPoReference(e.target.value)} />
+                  <div className={fieldCol}>
+                    <Label>PO reference (optional)</Label>
+                    <Input value={poReference} onChange={(e) => setPoReference(e.target.value)} />
                   </div>
-                </>
+                </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="block">
-            <div className="block-header">
-              <h2>Line items</h2>
-            </div>
-            <div className="block-body">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display text-display-xs font-semibold text-ink">Line items</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
               {lines.map((line, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-end' }}>
-                  <div className="field" style={{ flex: 3, marginBottom: 0 }}>
-                    {i === 0 && <label>Description</label>}
-                    <input
+                <div key={i} className="flex items-end gap-2">
+                  <div className="flex flex-[3] flex-col gap-1.5">
+                    {i === 0 && <Label>Description</Label>}
+                    <Input
                       value={line.description}
                       onChange={(e) => updateLine(i, { description: e.target.value })}
                       placeholder="Consulting services"
                     />
                   </div>
-                  <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                    {i === 0 && <label>Qty</label>}
-                    <input value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    {i === 0 && <Label>Qty</Label>}
+                    <Input value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} />
                   </div>
-                  <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                    {i === 0 && <label>Amount</label>}
-                    <input
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    {i === 0 && <Label>Amount</Label>}
+                    <Input
                       value={line.amount}
                       onChange={(e) => updateLine(i, { amount: e.target.value, unit_rate: e.target.value })}
                       placeholder="0.00"
                     />
                   </div>
-                  <button onClick={() => removeLine(i)} disabled={lines.length === 1} style={{ flexShrink: 0 }}>
+                  <button
+                    className="h-9 shrink-0 px-2 text-body-sm text-mute hover:text-ink"
+                    onClick={() => removeLine(i)}
+                    disabled={lines.length === 1}
+                  >
                     &times;
                   </button>
                 </div>
               ))}
-              <button onClick={addLine}>+ Add line</button>
-            </div>
-          </div>
+              <button
+                className="self-start text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                onClick={addLine}
+              >
+                + Add line
+              </button>
+            </CardContent>
+          </Card>
 
-          <div className="field">
-            <label>Notes (optional, shown on invoice)</label>
-            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <div className="flex flex-col gap-1.5">
+            <Label>Notes (optional, shown on invoice)</Label>
+            <textarea
+              rows={3}
+              className="rounded-md border border-ink bg-canvas px-3 py-2 text-body-sm"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
 
           {previewError && (
-            <div className="block alert">
-              <div className="block-body">{previewError}</div>
-            </div>
+            <Card className="border-l-4 border-l-negative">
+              <CardContent className="text-body-sm text-negative">{previewError}</CardContent>
+            </Card>
           )}
           {preview?.warnings.map((w, i) => (
-            <div key={i} className="block alert">
-              <div className="block-body">{w}</div>
-            </div>
+            <Card key={i} className="border-l-4 border-l-warning">
+              <CardContent className="text-body-sm text-warning-deep">{w}</CardContent>
+            </Card>
           ))}
 
           <ComplianceChecklist
@@ -346,29 +362,28 @@ export default function InvoiceBuilder() {
             taxReady={!!preview && !previewError}
           />
 
-          {issueError && <p className="error-text">{issueError}</p>}
-          <button
-            className="primary"
+          {issueError && <p className="text-body-sm text-negative">{issueError}</p>}
+          <Button
             onClick={handleIssue}
             disabled={issuing || !preview || clients.length === 0}
-            style={{ height: 40, paddingInline: 24, marginTop: 16 }}
+            className="h-10 self-start px-6"
           >
             {issuing ? 'Issuing…' : 'Issue invoice'}
-          </button>
+          </Button>
         </div>
 
-        <div className="block invoice-builder-preview">
-          <div className="block-header">
-            <h2>Preview</h2>
-          </div>
-          <div className="block-body">
+        <Card className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-96px)] lg:overflow-y-auto">
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
             {preview ? (
               <InvoiceDocument data={preview} />
             ) : (
-              <p className="caption">Add a client and a line item to see the invoice preview.</p>
+              <p className="text-body-sm text-mute">Add a client and a line item to see the invoice preview.</p>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

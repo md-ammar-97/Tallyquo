@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 // design.md's Compliance Checklist: "a vertical stepper used during
 // invoice creation. Incomplete items use Text-muted; completed items
@@ -60,25 +61,29 @@ export default function ComplianceChecklist({ profile, client, taxReady }: Props
   ]
 
   return (
-    <div className="block">
-      <div className="block-header">
-        <h2>Compliance checklist</h2>
-      </div>
-      <div className="block-body">
-        <ul className="compliance-checklist">
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-display text-display-xs font-semibold text-ink">Compliance checklist</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-3">
           {items.map((item) => (
-            <li key={item.label} className={item.done ? 'done' : ''}>
-              <span className="compliance-checklist-icon">
-                {item.done ? <Check size={14} /> : <span className="compliance-checklist-dot" />}
+            <li key={item.label} className="flex items-start gap-3">
+              <span
+                className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${
+                  item.done ? 'bg-positive text-canvas' : 'border border-divider'
+                }`}
+              >
+                {item.done ? <Check size={13} /> : null}
               </span>
               <span>
-                <strong>{item.label}</strong>
-                <div className="caption">{item.detail}</div>
+                <strong className="text-body-sm font-semibold text-ink">{item.label}</strong>
+                <div className="text-caption text-mute">{item.detail}</div>
               </span>
             </li>
           ))}
         </ul>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -3,6 +3,17 @@ import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
 import { todayLocal } from '../dateUtils'
 import InvoiceDocument, { type InvoiceDocumentData } from '../components/InvoiceDocument'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { InvoiceStatusBadge, TaxTreatmentBadge } from '../components/InvoiceBadges'
+
+const selectClass = 'h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm'
+const fieldCol = 'flex flex-1 flex-col gap-1.5'
 
 interface LineItem {
   id: string
@@ -76,16 +87,17 @@ function ChipInput({
   }
 
   return (
-    <div className="chip-input">
+    <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-md border border-ink bg-canvas p-1">
       {values.map((v) => (
-        <span key={v} className="chip">
+        <span key={v} className="flex items-center gap-1 rounded-sm bg-canvas-soft px-2 py-0.5 text-caption">
           {v}
-          <button type="button" onClick={() => onChange(values.filter((x) => x !== v))}>
+          <button type="button" className="text-mute hover:text-ink" onClick={() => onChange(values.filter((x) => x !== v))}>
             &times;
           </button>
         </span>
       ))}
       <input
+        className="h-6 min-w-[120px] flex-1 border-none bg-transparent px-1 text-body-sm outline-none"
         value={draft}
         placeholder={values.length === 0 ? placeholder : ''}
         onChange={(e) => setDraft(e.target.value)}
@@ -305,9 +317,11 @@ export default function InvoiceDetail() {
 
   if (notFound) {
     return (
-      <div>
-        <h1>Invoice not found</h1>
-        <Link to="/invoices">Back to invoices</Link>
+      <div className="flex flex-col gap-4">
+        <h1 className="font-display text-display-sm text-ink">Invoice not found</h1>
+        <Link className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute" to="/invoices">
+          Back to invoices
+        </Link>
       </div>
     )
   }
@@ -317,89 +331,74 @@ export default function InvoiceDetail() {
   const canCancel = ['issued', 'partially_paid', 'overdue'].includes(invoice.status)
 
   return (
-    <div>
-      <h1>{invoice.number ?? '(draft)'}</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">{invoice.number ?? '(draft)'}</h1>
 
-      <div className="block">
-        <div className="block-body">
-          <p style={{ marginBottom: 8 }}>
-            <span className={`badge ${invoice.status}`}>{invoice.status.replace(/_/g, ' ')}</span>{' '}
-            {invoice.tax_treatment_snapshot && (
-              <span className={`badge ${invoice.tax_treatment_snapshot}`}>
-                {invoice.tax_treatment_snapshot.replace(/_/g, ' ')}
-              </span>
-            )}
-          </p>
-          <p className="caption">
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <InvoiceStatusBadge status={invoice.status} />
+            {invoice.tax_treatment_snapshot && <TaxTreatmentBadge treatment={invoice.tax_treatment_snapshot} />}
+          </div>
+          <p className="text-body-sm text-mute">
             Invoice date: {invoice.invoice_date ?? '—'} · Due: {invoice.due_date ?? '—'} · Paid: {invoice.currency}{' '}
             {invoice.amount_paid}
           </p>
           {invoice.currency !== 'CAD' && (
-            <p className="caption" style={{ marginTop: 8 }}>
+            <p className="text-body-sm text-mute">
               {invoice.total_cad ? (
                 <>
                   CAD {invoice.total_cad} at {invoice.fx_rate_to_cad} ({invoice.fx_rate_date})
                 </>
               ) : (
-                <span style={{ color: 'var(--color-status-attention)' }}>
+                <span className="text-warning-deep">
                   No CAD conversion available -- the FX rate source was unavailable at issue. Needs review.
                 </span>
               )}
             </p>
           )}
-          <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+          <div className="flex flex-wrap gap-3">
             {invoice.status !== 'draft' && (
-              <button onClick={() => downloadFile(`/invoices/${invoice.id}/pdf`, `${invoice.number}.pdf`)}>
+              <Button variant="outline" onClick={() => downloadFile(`/invoices/${invoice.id}/pdf`, `${invoice.number}.pdf`)}>
                 Download PDF
-              </button>
+              </Button>
             )}
             {canCancel && (
-              <button className="danger" onClick={handleCancel}>
+              <Button variant="destructive" onClick={handleCancel}>
                 Cancel invoice
-              </button>
+              </Button>
             )}
             {invoice.status !== 'draft' && !recurringDone && (
-              <button onClick={() => setShowRecurringForm((s) => !s)}>
+              <Button variant="outline" onClick={() => setShowRecurringForm((s) => !s)}>
                 {showRecurringForm ? 'Cancel' : 'Make recurring'}
-              </button>
+              </Button>
             )}
-            {recurringDone && <span className="caption">Recurring rule created.</span>}
+            {recurringDone && <span className="self-center text-body-sm text-mute">Recurring rule created.</span>}
             {invoice.status !== 'draft' && !shareToken && (
-              <button onClick={handleGetShareLink}>
+              <Button variant="outline" onClick={handleGetShareLink}>
                 {invoice.has_share_link ? 'View shareable link' : 'Get shareable link'}
-              </button>
+              </Button>
             )}
-            {invoice.status !== 'draft' && <button onClick={handleOpenEmailModal}>Email invoice</button>}
+            {invoice.status !== 'draft' && <Button variant="outline" onClick={handleOpenEmailModal}>Email invoice</Button>}
           </div>
-          {shareError && <p className="error-text">{shareError}</p>}
-          {emailResult && <p className="caption">{emailResult}</p>}
+          {shareError && <p className="text-body-sm text-negative">{shareError}</p>}
+          {emailResult && <p className="text-body-sm text-mute">{emailResult}</p>}
           {shareToken && (
-            <div
-              style={{
-                marginTop: 16,
-                paddingTop: 16,
-                borderTop: '1px solid var(--color-border-default)',
-                display: 'flex',
-                gap: 8,
-                alignItems: 'center',
-              }}
-            >
-              <input readOnly value={`${window.location.origin}/share/${shareToken}`} style={{ flex: 1 }} />
-              <button onClick={handleCopyShareLink}>{copied ? 'Copied!' : 'Copy'}</button>
-              <button className="danger" onClick={handleRevokeShareLink}>
+            <div className="flex items-center gap-2 border-t border-divider pt-4">
+              <Input readOnly value={`${window.location.origin}/share/${shareToken}`} className="flex-1" />
+              <Button variant="outline" onClick={handleCopyShareLink}>{copied ? 'Copied!' : 'Copy'}</Button>
+              <Button variant="destructive" onClick={handleRevokeShareLink}>
                 Revoke
-              </button>
+              </Button>
             </div>
           )}
           {showRecurringForm && (
-            <form
-              onSubmit={handleMakeRecurring}
-              style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-default)' }}
-            >
-              <div className="field-row">
-                <div className="field">
-                  <label>Cadence</label>
+            <form onSubmit={handleMakeRecurring} className="flex flex-col gap-4 border-t border-divider pt-4">
+              <div className="flex flex-wrap gap-4">
+                <div className={fieldCol}>
+                  <Label>Cadence</Label>
                   <select
+                    className={selectClass}
                     value={recurringForm.cadence}
                     onChange={(e) => setRecurringForm({ ...recurringForm, cadence: e.target.value })}
                   >
@@ -411,9 +410,9 @@ export default function InvoiceDetail() {
                     <option value="annual">Annual</option>
                   </select>
                 </div>
-                <div className="field">
-                  <label>Next run date</label>
-                  <input
+                <div className={fieldCol}>
+                  <Label>Next run date</Label>
+                  <Input
                     type="date"
                     required
                     value={recurringForm.next_run_date}
@@ -421,235 +420,209 @@ export default function InvoiceDetail() {
                   />
                 </div>
               </div>
-              <div className="field">
-                <label>
-                  <input
-                    type="checkbox"
-                    style={{ width: 'auto', marginRight: 8 }}
-                    checked={recurringForm.auto_issue}
-                    onChange={(e) => setRecurringForm({ ...recurringForm, auto_issue: e.target.checked })}
-                  />
-                  Auto-issue (default: create a draft and leave it for you to review)
-                </label>
-              </div>
-              {recurringError && <p className="error-text">{recurringError}</p>}
-              <button type="submit" className="primary" disabled={recurringSaving}>
+              <label className="flex items-center gap-2 text-body-sm text-ink">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-ink"
+                  checked={recurringForm.auto_issue}
+                  onChange={(e) => setRecurringForm({ ...recurringForm, auto_issue: e.target.checked })}
+                />
+                Auto-issue (default: create a draft and leave it for you to review)
+              </label>
+              {recurringError && <p className="text-body-sm text-negative">{recurringError}</p>}
+              <Button type="submit" disabled={recurringSaving} className="self-start">
                 {recurringSaving ? 'Saving…' : 'Create recurring rule'}
-              </button>
+              </Button>
             </form>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {doc && (
-        <div className="block">
-          <div className="block-body">
+        <Card>
+          <CardContent>
             <InvoiceDocument data={doc} />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Payments</h2>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Payments</CardTitle>
           {canRecordPayment && (
-            <button className="primary" onClick={() => setShowForm((s) => !s)}>
-              {showForm ? 'Cancel' : 'Record payment'}
-            </button>
+            <Button onClick={() => setShowForm((s) => !s)}>{showForm ? 'Cancel' : 'Record payment'}</Button>
           )}
-        </div>
+        </CardHeader>
         {showForm && (
-          <div className="block-body" style={{ borderBottom: '1px solid var(--color-border-default)' }}>
-            <form onSubmit={handleRecordPayment}>
-              <div className="field-row">
-                <div className="field">
-                  <label>Amount</label>
-                  <input
-                    required
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    placeholder="0.00"
-                  />
+          <CardContent className="border-b border-divider pb-6">
+            <form onSubmit={handleRecordPayment} className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-4">
+                <div className={fieldCol}>
+                  <Label>Amount</Label>
+                  <Input required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
                 </div>
-                <div className="field">
-                  <label>Received date</label>
-                  <input
-                    required
-                    type="date"
-                    value={form.received_date}
-                    onChange={(e) => setForm({ ...form, received_date: e.target.value })}
-                  />
+                <div className={fieldCol}>
+                  <Label>Received date</Label>
+                  <Input required type="date" value={form.received_date} onChange={(e) => setForm({ ...form, received_date: e.target.value })} />
                 </div>
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Method (optional)</label>
-                  <input value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} />
+              <div className="flex flex-wrap gap-4">
+                <div className={fieldCol}>
+                  <Label>Method (optional)</Label>
+                  <Input value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} />
                 </div>
-                <div className="field">
-                  <label>Reference (optional)</label>
-                  <input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
+                <div className={fieldCol}>
+                  <Label>Reference (optional)</Label>
+                  <Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
                 </div>
               </div>
-              {error && <p className="error-text">{error}</p>}
-              <button type="submit" className="primary" disabled={saving}>
+              {error && <p className="text-body-sm text-negative">{error}</p>}
+              <Button type="submit" disabled={saving} className="self-start">
                 {saving ? 'Saving…' : 'Record payment'}
-              </button>
+              </Button>
             </form>
-          </div>
+          </CardContent>
         )}
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Method</th>
-              <th>Reference</th>
-              <th className="amount">Amount</th>
-              {invoice.currency !== 'CAD' && <th className="amount">FX gain/loss</th>}
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((p) => (
-              <tr key={p.id}>
-                <td>{p.received_date}</td>
-                <td>{p.method ?? '—'}</td>
-                <td>{p.reference ?? '—'}</td>
-                <td className="amount">
-                  {p.currency} {p.amount}
-                  {p.currency !== 'CAD' && p.amount_cad && (
-                    <span className="caption"> (CAD {p.amount_cad})</span>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                {invoice.currency !== 'CAD' && <TableHead className="text-right">FX gain/loss</TableHead>}
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{p.received_date}</TableCell>
+                  <TableCell>{p.method ?? '—'}</TableCell>
+                  <TableCell>{p.reference ?? '—'}</TableCell>
+                  <TableCell className="text-right">
+                    {p.currency} {p.amount}
+                    {p.currency !== 'CAD' && p.amount_cad && <span className="text-caption text-mute"> (CAD {p.amount_cad})</span>}
+                  </TableCell>
+                  {invoice.currency !== 'CAD' && (
+                    <TableCell className="text-right">
+                      {p.fx_gain_loss === null ? '—' : `${Number(p.fx_gain_loss) >= 0 ? '+' : ''}${p.fx_gain_loss}`}
+                    </TableCell>
                   )}
-                </td>
-                {invoice.currency !== 'CAD' && (
-                  <td className="amount">
-                    {p.fx_gain_loss === null
-                      ? '—'
-                      : `${Number(p.fx_gain_loss) >= 0 ? '+' : ''}${p.fx_gain_loss}`}
-                  </td>
-                )}
-                <td>
-                  <button className="danger" onClick={() => handleReverse(p.id)}>
-                    Reverse
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {payments.length === 0 && (
-              <tr>
-                <td colSpan={invoice.currency !== 'CAD' ? 6 : 5} className="caption" style={{ padding: 24 }}>
-                  No payments recorded yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  <TableCell>
+                    <Button variant="destructive" size="sm" onClick={() => handleReverse(p.id)}>
+                      Reverse
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {payments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={invoice.currency !== 'CAD' ? 6 : 5} className="py-6 text-center text-body-sm text-mute">
+                    No payments recorded yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {showEmailModal && (
-        <div className="modal-backdrop" onClick={() => setShowEmailModal(false)}>
-          <div className="block modal" onClick={(e) => e.stopPropagation()}>
-            <div className="block-header">
-              <h2>Email invoice</h2>
+      <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-display-xs font-semibold text-ink">Email invoice</DialogTitle>
+          </DialogHeader>
+          {emailAccounts.length === 0 ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-body-sm text-mute">
+                No email account configured yet.{' '}
+                <Link to="/settings/email-accounts" className="font-medium text-ink underline underline-offset-2 hover:text-mute">
+                  Add one
+                </Link>{' '}
+                to send from your own address.
+              </p>
+              <Button variant="outline" className="self-start" onClick={() => setShowEmailModal(false)}>
+                Close
+              </Button>
             </div>
-            {emailAccounts.length === 0 ? (
-              <div className="block-body">
-                <p className="caption">
-                  No email account configured yet.{' '}
-                  <Link to="/settings/email-accounts" style={{ color: 'var(--color-text-link)' }}>
-                    Add one
-                  </Link>{' '}
-                  to send from your own address.
-                </p>
-                <button onClick={() => setShowEmailModal(false)} style={{ marginTop: 12 }}>
-                  Close
-                </button>
+          ) : (
+            <form onSubmit={handleSendEmail} className="flex flex-col gap-4">
+              <div className={fieldCol}>
+                <Label>From</Label>
+                <select className={selectClass} value={emailAccountId} onChange={(e) => setEmailAccountId(e.target.value)}>
+                  {emailAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label} ({a.from_address})
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <div className="block-body">
-                  <div className="field">
-                    <label>From</label>
-                    <select value={emailAccountId} onChange={(e) => setEmailAccountId(e.target.value)}>
-                      {emailAccounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.label} ({a.from_address})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>To</label>
-                    <ChipInput values={emailTo} onChange={setEmailTo} placeholder="client@example.com" />
-                  </div>
-                  <div className="field">
-                    <label>Cc</label>
-                    <ChipInput values={emailCc} onChange={setEmailCc} placeholder="optional" />
-                  </div>
-                  <div className="field">
-                    <label>Subject</label>
-                    <input required value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label>Body</label>
-                    <textarea
-                      required
-                      rows={8}
-                      value={emailBody}
-                      onChange={(e) => setEmailBody(e.target.value)}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Attachments</label>
-                    <div>
-                      <span className="chip">
-                        {attachPdf ? '📎 ' : ''}
-                        {invoice.number ?? 'invoice'}.pdf
-                        <button type="button" onClick={() => setAttachPdf((v) => !v)}>
-                          {attachPdf ? '×' : '+'}
-                        </button>
-                      </span>
-                      {extraFiles.map((f, i) => (
-                        <span key={i} className="chip">
-                          {f.name}
-                          <button
-                            type="button"
-                            onClick={() => setExtraFiles((files) => files.filter((_, idx) => idx !== i))}
-                          >
-                            &times;
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                    <label style={{ display: 'inline-block', marginTop: 8 }}>
-                      <input
-                        type="file"
-                        multiple
-                        style={{ display: 'none' }}
-                        onChange={(e) =>
-                          setExtraFiles((files) => [...files, ...Array.from(e.target.files ?? [])])
-                        }
-                      />
-                      <span style={{ color: 'var(--color-text-link)', cursor: 'pointer', fontSize: 12 }}>
-                        + Add attachment
-                      </span>
-                    </label>
-                  </div>
-                  {emailError && <p className="error-text">{emailError}</p>}
+              <div className={fieldCol}>
+                <Label>To</Label>
+                <ChipInput values={emailTo} onChange={setEmailTo} placeholder="client@example.com" />
+              </div>
+              <div className={fieldCol}>
+                <Label>Cc</Label>
+                <ChipInput values={emailCc} onChange={setEmailCc} placeholder="optional" />
+              </div>
+              <div className={fieldCol}>
+                <Label>Subject</Label>
+                <Input required value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
+              </div>
+              <div className={fieldCol}>
+                <Label>Body</Label>
+                <Textarea required rows={8} value={emailBody} onChange={(e) => setEmailBody(e.target.value)} />
+              </div>
+              <div className={fieldCol}>
+                <Label>Attachments</Label>
+                <div className="flex flex-wrap gap-1">
+                  <span className="flex items-center gap-1 rounded-sm bg-canvas-soft px-2 py-0.5 text-caption">
+                    {attachPdf ? '📎 ' : ''}
+                    {invoice.number ?? 'invoice'}.pdf
+                    <button type="button" className="text-mute hover:text-ink" onClick={() => setAttachPdf((v) => !v)}>
+                      {attachPdf ? '×' : '+'}
+                    </button>
+                  </span>
+                  {extraFiles.map((f, i) => (
+                    <span key={i} className="flex items-center gap-1 rounded-sm bg-canvas-soft px-2 py-0.5 text-caption">
+                      {f.name}
+                      <button
+                        type="button"
+                        className="text-mute hover:text-ink"
+                        onClick={() => setExtraFiles((files) => files.filter((_, idx) => idx !== i))}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
                 </div>
-                <div className="modal-footer">
-                  <button type="button" onClick={() => setShowEmailModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="primary" disabled={emailSending || emailTo.length === 0}>
-                    {emailSending ? 'Sending…' : 'Send'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+                <label className="mt-1 inline-block">
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => setExtraFiles((files) => [...files, ...Array.from(e.target.files ?? [])])}
+                  />
+                  <span className="cursor-pointer text-caption font-medium text-ink underline underline-offset-2 hover:text-mute">
+                    + Add attachment
+                  </span>
+                </label>
+              </div>
+              {emailError && <p className="text-body-sm text-negative">{emailError}</p>}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowEmailModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={emailSending || emailTo.length === 0}>
+                  {emailSending ? 'Sending…' : 'Send'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
