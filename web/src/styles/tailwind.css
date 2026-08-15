@@ -1,0 +1,254 @@
+/* Wise-inspired design tokens (docs/screens/DESIGN (2).md), Tailwind v4
+   @theme block -- verbatim hex/size values from the brief, not re-derived.
+   This coexists with the legacy Carbon ../index.css during the phased
+   rollout (WI.A-WI.G); index.css is deleted once every page has migrated
+   off it (WI.G). Kept as a separate file specifically so that deletion
+   is a clean one-file diff at the end, not a partial unwind.
+
+   Structure follows shadcn's own generated convention (raw values in
+   :root/.dark, re-exposed as Tailwind theme keys via `@theme inline`)
+   rather than a flatter hand-rolled one -- this is what shadcn- and
+   Watermelon-sourced components are actually built to reference, and
+   keeps dark-mode-ready infrastructure available for free even though,
+   same as every prior redesign in this app, dark mode itself stays
+   deferred (.dark currently just mirrors :root). */
+/* Pre-register cascade layer order (lowest to highest priority) before
+   Tailwind's own @import establishes theme/base/components/utilities --
+   CSS layer priority is fixed by first mention, so this line has to run
+   before Tailwind's internal layer declaration, not after. Without this,
+   legacy-carbon's plain unlayered selectors (e.g. index.css's bare
+   `button { ... }`) would beat ANY Tailwind utility class regardless of
+   specificity -- unlayered CSS always wins over layered CSS, full stop,
+   independent of selector specificity or source order. */
+@layer legacy-carbon, theme, base, components, utilities;
+@import '../index.css' layer(legacy-carbon);
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* radius -- the brief's fixed per-component scale, not Tailwind's own
+     smaller defaults or shadcn's default calc(--radius * N) cascade.
+     Card/Button use --radius-xl (24px, canonical/signature); text-input
+     uses --radius-md (12px) specifically, not the canonical xl -- see
+     the brief's own component table. */
+  --radius-none: 0px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+
+  /* type -- Manrope (display, weight 800/900) + Inter (body/UI, 400/600),
+     preserving the brief's own stated "two-face" contrast rather than
+     collapsing to one face. A self-hosted monospace for tabular money
+     figures is a net-addition beyond the literal brief -- flagged in
+     WI.H's docs reconciliation, not silent. */
+  --font-display: 'Manrope Variable', 'Manrope', system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-display-mega: 126px;
+  --text-display-mega--line-height: 107.1px;
+  --text-display-mega--font-weight: 900;
+  --text-display-xxl: 96px;
+  --text-display-xxl--line-height: 81.6px;
+  --text-display-xxl--font-weight: 900;
+  --text-display-xl: 64px;
+  --text-display-xl--line-height: 54.4px;
+  --text-display-xl--font-weight: 900;
+  --text-display-lg: 47px;
+  --text-display-lg--line-height: 70.5px;
+  --text-display-lg--font-weight: 400;
+  --text-display-lg--letter-spacing: -0.108px;
+  --text-display-md: 40px;
+  --text-display-md--line-height: 34px;
+  --text-display-md--font-weight: 900;
+  --text-display-sm: 32px;
+  --text-display-sm--line-height: 38.4px;
+  --text-display-sm--font-weight: 600;
+  --text-display-sm--letter-spacing: -0.96px;
+  --text-display-xs: 24px;
+  --text-display-xs--line-height: 31.2px;
+  --text-display-xs--font-weight: 600;
+  --text-display-xs--letter-spacing: -0.48px;
+
+  --text-body-lg: 20px;
+  --text-body-lg--line-height: 30px;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-button-md: 16px;
+  --text-button-md--line-height: 24px;
+  --text-button-md--font-weight: 600;
+
+  /* brand tokens -- verbatim from docs/screens/DESIGN (2).md, no shadcn
+     semantic equivalent, used directly (e.g. bg-primary-pale). */
+  --color-primary-active: #cdffad;
+  --color-primary-neutral: #c5edab;
+  --color-primary-pale: #e2f6d5;
+  --color-ink: #0e0f0c;
+  --color-ink-deep: #163300;
+  --color-body: #454745;
+  --color-mute: #868685;
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #e8ebe6;
+  --color-positive: #2ead4b;
+  --color-positive-deep: #054d28;
+  --color-warning: #ffd11a;
+  --color-warning-deep: #b86700;
+  --color-warning-content: #4a3b1c;
+  --color-negative: #d03238;
+  --color-negative-deep: #a72027;
+  --color-negative-darkest: #a7000d;
+  --color-negative-bg: #320707;
+  --color-accent-orange: #ffc091;
+  --color-accent-cyan: #38c8ff;
+
+  /* net-addition beyond the literal brief: the brief's only border token
+     is a heavy 1px-solid-ink "Level 1" component hairline (buttons,
+     inputs, cards) -- too heavy for internal table/list row dividers,
+     which the brief has no token for. Flagged in WI.H's docs. */
+  --color-divider: #d6dbd1;
+}
+
+/* shadcn's real semantic-color contract: @theme inline re-exposes the
+   raw :root/.dark values below as Tailwind theme keys (bg-background,
+   text-foreground, etc) so utility classes stay theme-aware without a
+   .dark class needing separate Tailwind config. */
+@theme inline {
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  /* chart categorical palette -- built from positive/warning/negative/
+     accent-orange/accent-cyan/mute. Never --color-primary: the brief is
+     explicit that lime is the sole CTA identity colour and must never be
+     repurposed as a status/series colour ("never repurpose Wise green as
+     success indicator since it IS the brand CTA") -- extended here to
+     charts, since the brief defines no dataviz sequence of its own. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+}
+
+:root {
+  /* surface contrast IS elevation (the brief's own model): background =
+     canvas-soft, card = canvas. No shadows anywhere in this system. */
+  --background: #e8ebe6;
+  --foreground: #0e0f0c;
+  --card: #ffffff;
+  --card-foreground: #0e0f0c;
+  --popover: #ffffff;
+  --popover-foreground: #0e0f0c;
+  --primary: #9fe870;
+  --primary-foreground: #0e0f0c;
+  --secondary: #e8ebe6;
+  --secondary-foreground: #0e0f0c;
+  --muted: #e2f6d5;
+  --muted-foreground: #868685;
+  --accent: #e2f6d5;
+  --accent-foreground: #0e0f0c;
+  --destructive: #d03238;
+  --destructive-foreground: #ffffff;
+  --border: #0e0f0c;
+  --input: #0e0f0c;
+  --ring: #9fe870;
+  --chart-1: #2ead4b;
+  --chart-2: #38c8ff;
+  --chart-3: #ffc091;
+  --chart-4: #ffd11a;
+  --chart-5: #868685;
+  --chart-6: #d03238;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e0f0c;
+  --sidebar-primary: #9fe870;
+  --sidebar-primary-foreground: #0e0f0c;
+  --sidebar-accent: #e2f6d5;
+  --sidebar-accent-foreground: #0e0f0c;
+  --sidebar-border: #0e0f0c;
+  --sidebar-ring: #9fe870;
+}
+
+/* Dark mode still deferred -- same stance every prior redesign in this
+   app has taken. Mirrors :root rather than shipping an unfinished/
+   untested dark palette; nothing in the app currently toggles .dark. */
+.dark {
+  --background: #e8ebe6;
+  --foreground: #0e0f0c;
+  --card: #ffffff;
+  --card-foreground: #0e0f0c;
+  --popover: #ffffff;
+  --popover-foreground: #0e0f0c;
+  --primary: #9fe870;
+  --primary-foreground: #0e0f0c;
+  --secondary: #e8ebe6;
+  --secondary-foreground: #0e0f0c;
+  --muted: #e2f6d5;
+  --muted-foreground: #868685;
+  --accent: #e2f6d5;
+  --accent-foreground: #0e0f0c;
+  --destructive: #d03238;
+  --destructive-foreground: #ffffff;
+  --border: #0e0f0c;
+  --input: #0e0f0c;
+  --ring: #9fe870;
+  --chart-1: #2ead4b;
+  --chart-2: #38c8ff;
+  --chart-3: #ffc091;
+  --chart-4: #ffd11a;
+  --chart-5: #868685;
+  --chart-6: #d03238;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e0f0c;
+  --sidebar-primary: #9fe870;
+  --sidebar-primary-foreground: #0e0f0c;
+  --sidebar-accent: #e2f6d5;
+  --sidebar-accent-foreground: #0e0f0c;
+  --sidebar-border: #0e0f0c;
+  --sidebar-ring: #9fe870;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

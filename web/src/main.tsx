@@ -1,11 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MotionConfig } from 'motion/react'
-import '@fontsource-variable/ibm-plex-sans'
-import '@fontsource/ibm-plex-mono/400.css'
-import '@fontsource/ibm-plex-mono/500.css'
-import '@fontsource/ibm-plex-mono/600.css'
-import './index.css'
+import '@fontsource-variable/manrope'
+import '@fontsource-variable/inter'
+import '@fontsource-variable/jetbrains-mono'
+// Legacy Carbon stylesheet is pulled in from inside tailwind.css itself,
+// wrapped in a low-priority @layer so it still styles every page not yet
+// migrated to the Wise-inspired redesign (WI.B-WI.E2) without its plain
+// unlayered selectors beating Tailwind's own utility classes -- see the
+// comment at the top of tailwind.css for why layering (not import order)
+// is what actually decides that. Deleted once the migration sweep is
+// done (WI.G).
+import './styles/tailwind.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

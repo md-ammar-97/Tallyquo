@@ -2,28 +2,28 @@ import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  Add,
-  ChartBar,
-  Dashboard as DashboardIcon,
-  Document,
-  Logout,
-  Notification,
+  Plus,
+  BarChart3,
+  LayoutDashboard as DashboardIcon,
+  FileText,
+  LogOut,
+  Bell,
   Receipt,
   Settings as SettingsIcon,
-  UserAvatar,
-  UserMultiple,
-  Help,
-} from '@carbon/icons-react'
+  CircleUser,
+  Users,
+  HelpCircle,
+} from 'lucide-react'
 import { logout } from '../api'
 import logo from '../assets/logo.svg'
 import { duration, ease, pageTransition, shellEntrance } from '../motion/tokens'
 
 const NAV_ITEMS = [
   { to: '/', end: true, label: 'Dashboard', icon: DashboardIcon },
-  { to: '/invoices', label: 'Invoices', icon: Document },
+  { to: '/invoices', label: 'Invoices', icon: FileText },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
-  { to: '/clients', label: 'Clients', icon: UserMultiple },
-  { to: '/reports', label: 'Reports', icon: ChartBar },
+  { to: '/clients', label: 'Clients', icon: Users },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
@@ -83,7 +83,7 @@ export default function Shell() {
           <img src={logo} alt="Tallyquo" className="brand-mark" />
         </div>
         <button type="button" className="primary sidebar-cta" onClick={() => navigate('/expenses?new=1')}>
-          <Add size={16} />
+          <Plus size={16} />
           Add Expense
         </button>
         <div className="sidebar-nav">
@@ -96,7 +96,7 @@ export default function Shell() {
         </div>
         <div className="sidebar-footer">
           <button type="button" onClick={handleLogout}>
-            <Logout size={16} className="nav-icon" />
+            <LogOut size={16} className="nav-icon" />
             Sign out
           </button>
         </div>
@@ -115,10 +115,10 @@ export default function Shell() {
               Create Invoice
             </button>
             <button type="button" className="icon-button" title="Notifications (coming soon)">
-              <Notification size={18} />
+              <Bell size={18} />
             </button>
             <button type="button" className="icon-button" title="Help (coming soon)">
-              <Help size={18} />
+              <HelpCircle size={18} />
             </button>
             <div className="avatar-menu">
               <button
@@ -127,12 +127,12 @@ export default function Shell() {
                 onClick={() => setAvatarOpen((o) => !o)}
                 aria-label="Account menu"
               >
-                <UserAvatar size={16} />
+                <CircleUser size={16} />
               </button>
               {avatarOpen && (
                 <div className="avatar-dropdown">
                   <button type="button" onClick={handleLogout}>
-                    <Logout size={14} className="nav-icon" />
+                    <LogOut size={14} className="nav-icon" />
                     Sign out
                   </button>
                 </div>

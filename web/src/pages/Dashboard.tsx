@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { WarningAltFilled } from '@carbon/icons-react'
+import { TriangleAlert } from 'lucide-react'
 import { api, ApiError } from '../api'
 import { staggerContainer, tileEntrance } from '../motion/tokens'
 import KpiTile from '../components/dashboard/KpiTile'
@@ -426,7 +426,7 @@ export default function Dashboard() {
               }}
             >
               <div className="block-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <WarningAltFilled size={18} color="var(--color-status-overdue)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <TriangleAlert size={18} color="var(--color-status-overdue)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
                   <strong style={{ color: 'var(--color-status-overdue)' }}>Quarterly instalment warning</strong>
                   <p className="caption" style={{ marginTop: 4 }}>

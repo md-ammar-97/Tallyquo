@@ -1,4 +1,4 @@
-import { Checkmark } from '@carbon/icons-react'
+import { Check } from 'lucide-react'
 
 // design.md's Compliance Checklist: "a vertical stepper used during
 // invoice creation. Incomplete items use Text-muted; completed items
@@ -69,7 +69,7 @@ export default function ComplianceChecklist({ profile, client, taxReady }: Props
           {items.map((item) => (
             <li key={item.label} className={item.done ? 'done' : ''}>
               <span className="compliance-checklist-icon">
-                {item.done ? <Checkmark size={14} /> : <span className="compliance-checklist-dot" />}
+                {item.done ? <Check size={14} /> : <span className="compliance-checklist-dot" />}
               </span>
               <span>
                 <strong>{item.label}</strong>
