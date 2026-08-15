@@ -288,6 +288,7 @@ components:
 
 ---
 
+> **2026-08-15:** This spec has been merged into `docs/design.md` as the living design system — that document now reflects what actually shipped, including deliberate deviations from what's specced here (e.g. Manrope substitutes for the proprietary `Wise Sans` at the token's own literal `Wise Sans, Inter, ...` fallback chain; `--color-mute`'s literal `#868685` was darkened to `#5f5e5a` after a real WCAG contrast failure; a self-hosted monospace face was added for tabular money figures, which this brief doesn't name). This file is kept as the original source reference, not a second spec to maintain in sync by hand going forward.
 
 ## Overview
 

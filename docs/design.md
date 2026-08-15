@@ -1,231 +1,220 @@
 # Design System
 
 **Companion to:** `problem-statement.md`, `architecture.md`, `datamodel.md`
-**Direction:** IBM Carbon Design System v11 — zero-radius flat structure, Financial Blue + Set-aside Gold as the two retained brand accents, Carbon's real Support Green/Red for financial polarity, a full Framer Motion cinematic layer
-**Status:** Shipped 2026-08-11 (`implementation_plan.md` §8's IBM Carbon redesign, phases CB.A-CB.K)
+**Direction:** Wise-inspired — lime-green `#9fe870` as the sole brand accent, near-black ink on a sage-tinted canvas, white cards as the only elevation cue (no shadows anywhere), a 24px pill radius on every card and button, heavy Manrope display type paired with Inter body text. Built on Tailwind CSS v4 + shadcn/ui, replacing every prior redesign's hand-rolled CSS custom properties.
+**Status:** Shipped 2026-08-15 (`implementation_plan.md` §9's Wise-inspired redesign, phases WI.A-WI.H)
 
-**2026-08-11 note:** This document previously specified "Sovereign Ledger" (financial-blue/compliance-green/set-aside-gold, 4-8px radius, block-based composition), which shipped 2026-08-10 and ran in production. It has since been fully replaced by the **IBM Carbon** redesign described below. Sovereign Ledger's own token brief lived in `docs/screens/DESIGN.md`; this redesign's dashboard brief lives in `docs/screens/dashboard_design.md`, now marked merged/superseded-but-kept at its own header. This document is the merged, living spec — sections below reflect what actually shipped, including deliberate deviations from both Carbon's own conventions and this redesign's own plan (noted inline with ⚠️, matching this file's long-standing convention).
+**2026-08-15 note:** This document previously specified "IBM Carbon" (zero-radius flat structure, Financial Blue + Set-aside Gold, a Framer Motion cinematic layer), which shipped 2026-08-11 and ran in production. It has since been fully replaced by the **Wise-inspired** redesign described below. Carbon's own token brief is no longer a separate file (it lived directly in this document, §2-§5 of the prior revision); this redesign's brief lives in `docs/screens/DESIGN (2).md`, now marked merged/superseded-but-kept at its own header, same convention as `DESIGN.md` and `dashboard_design.md` before it. This document is the merged, living spec — sections below reflect what actually shipped, including deliberate deviations from both the brief's own literal values and this redesign's own plan (noted inline with ⚠️, matching this file's long-standing convention).
 
 ---
 
 ## 1. Design thesis
 
-The product still handles money that isn't the user's, on documents that are legal records — that thesis hasn't changed. What changed is the visual language expressing it. Sovereign Ledger read as "precision instrument" through soft rounded blocks and a single blue-green-gold palette; Carbon reads the same intent through a harder, more literal structural honesty — **zero border-radius everywhere** (the one visual trait that most immediately signals "this is Carbon, not a generic SaaS dashboard"), flat bordered panels with no shadow, IBM Plex's slightly technical typographic voice, and colour applied with Carbon's own systematic discipline rather than a bespoke three-hue system.
+The product still handles money that isn't the user's, on documents that are legal records — that thesis hasn't changed across three redesigns now. What changed again is the visual language expressing it, and this time also the *foundation* it's built on. Sovereign Ledger read as "precision instrument" through soft rounded blocks; Carbon read the same intent through zero-radius structural honesty. This redesign reads it through Wise's own real-world identity: a vivid lime-green CTA against a sage-tinted canvas, white cards whose only elevation cue is contrast against that canvas (no shadow anywhere in the system, a genuinely different elevation philosophy than Carbon's hairline-border approach), a generous 24px pill radius on every card and button, and an unusually heavy Manrope 900 display face carrying every headline.
 
-The user's explicit brief for this redesign was two things at once, in tension: **"do not make everything black and white"** (keep real brand colour) and **make it "extremely polished, smooth, cinematic"** via animation. Both survive as first-class constraints below, not just the zero-radius structural change:
+**This is also the first redesign to change the app's styling foundation, not just its token values.** Sovereign Ledger and Carbon were both hand-rolled CSS custom properties consumed by plain classes (`.block`, `.badge`, `table`/`th`/`td`). This one moves onto **Tailwind CSS v4 + shadcn/ui** — utility classes inlined in JSX plus self-contained component source files, pulling several components from **Watermelon UI** (`ui.watermelon.sh`, a shadcn-compatible registry, confirmed real and reachable by the actual `shadcn` CLI, not assumed from its marketing site). This is a real, structural consequence for how the redesign itself had to be executed: Sovereign Ledger's own class-reuse architecture is what let Carbon's CB.H page-sweep cost **zero code changes** — every page already flowed through shared classes, so a token rewrite cascaded automatically. Tailwind's model doesn't cascade that way. **Every page's markup changed this time** (WI.E1/E2), not just its stylesheet.
 
-**Two brand accents survive Carbon's own neutral palette.** Financial Blue `#1A365D` replaces Carbon's default Blue 60 everywhere an accent appears — buttons, focus rings, links, active nav, the primary chart series — because it's the one hue tied to the actual product logo. Set-aside Gold `#B7791F` is *also* kept, not converted to Carbon's own (yellow) warning colour, because it already carries a specific "tax liability held aside" meaning distinct from Carbon's generic warning concept (§2.3). Genuine Carbon Green 50 / Red 60 carry financial polarity throughout — profit/loss, receivable/payable — exactly the "relevant numbers" the brief called out by name.
+**Two brand-new surfaces exist for the first time, not just re-skinned ones.** A public marketing homepage (`/`, WI.B) — the app went straight to `/login` before, with no page describing the product to a logged-out visitor. And a from-scratch, multi-stage OTP verification animation (WI.C) — on Verify, the six digit boxes animate into a circle and revolve together as a bespoke loading state, then either converge into a single checkmark box or un-circle into a red shake, confirmed directly with the user beyond the standard "type code, get zero or one shake" genre convention.
 
-**Motion is real, not decorative, and it is Carbon-timed.** Every animation in the app — route transitions, staggered tile entrance, KPI count-ups, chart draw-ins, hover/press feedback — sources its duration and easing from `@carbon/motion`'s actual published tokens (§10), not hand-picked values. This is a real reversal of the prior system's explicit "never animate numbers from zero" rule (§10's history note) — the user asked for cinematic polish this time, and got it, deliberately and by name.
-
-**Charts exist for the first time.** Every prior Dashboard iteration was 100% text/table/progress-bar. This redesign adds Recharts-based visualisation throughout — trend lines, a waterfall, donuts, aging/concentration bars — hand-themed to Carbon tokens rather than the heavier `@carbon/charts-react` package (§6's chart section explains why).
+**Lime is the sole accent, and it is never repurposed.** Unlike Carbon's two retained accents (Financial Blue + Set-aside Gold) or Sovereign Ledger's three-hue system, this palette has exactly one brand colour — lime `#9fe870` — and the brief is explicit that it must never stand in for a status or dataviz colour, since it *is* the CTA identity. That rule is applied more broadly here than the brief itself spells out: it extends to every chart series (§6's chart section) and to `Progress`'s default fill (§12 — the stock shadcn default, `bg-primary`, violated this rule and was fixed during the WI.G reconciliation).
 
 ---
 
 ## 2. Colour tokens
 
-### 2.1 Foundation — Carbon Gray neutrals
+### 2.1 Foundation — the brief's own tokens, plus shadcn's semantic re-export
 
-Pulled directly from `@carbon/themes`' White theme and `@carbon/colors`, verified via `node -e "require('@carbon/themes')..."` against the actually-installed packages during implementation — not hand-transcribed from memory or from a screenshot.
-
-```
---color-bg-default        #FFFFFF   panel/card surfaces
---color-bg-secondary      #F4F4F4   page background behind panels (Carbon Gray 10)
---color-bg-tertiary       #E8E8E8   input wells, hover fills, disabled fills
---color-bg-hover          #E8E8E8   row and button hover
---color-bg-pressed        #C6C6C6
---color-bg-selected       #E6ECF3   selected row (Financial-Blue-tinted, not Carbon Gray)
-
---color-border-default    #E0E0E0   the workhorse hairline
---color-border-strong     #8D8D8D   input borders
---color-border-focus      #1A365D   focus ring (Financial Blue, not Carbon Blue 60)
---color-border-subtle     #E0E0E0   internal table rules
-
---color-text-primary      #161616   headings, values, amounts
---color-text-secondary    #525252   labels, metadata, helper text
---color-text-tertiary     #8D8D8D   placeholders, disabled
---color-text-caption      #525252   helper text, timestamps
---color-text-onbrand      #FFFFFF
---color-text-link         #1A365D
-```
-
-This is a genuinely different neutral scale from Sovereign Ledger's, not a re-hex of the same values — Carbon's Gray 10 (`#F4F4F4`) reads distinctly flatter/cooler than Sovereign Ledger's `#F8FAFC`, and it shows: the PWA manifest's `background_color` needed a real update to match (§7, CB.J), not just the CSS tokens.
-
-### 2.2 Accent — Financial Blue (unchanged from Sovereign Ledger, replacing Carbon Blue 60)
+Wise-inspired values from `docs/screens/DESIGN (2).md`, defined once in `web/src/styles/tailwind.css`'s `@theme` block and then re-exposed a second time under shadcn's own naming convention (`--background`/`--card`/`--primary`/etc., in a `:root` block plus a separate `@theme inline` block) so shadcn- and Watermelon-sourced components resolve them correctly — this two-layer structure is what shadcn's own generator produces, not a simplification this app chose to skip.
 
 ```
---color-accent-default    #1A365D   primary actions, focus, selection, active nav
---color-accent-hover      #15294A
---color-accent-pressed    #0F1D36
---color-accent-subtle     #E6ECF3   backgrounds for accent surfaces
---color-accent-border     #B8C7DA
+--color-canvas         #ffffff   card surfaces
+--color-canvas-soft    #e8ebe6   page background behind cards (sage-tinted)
+--color-ink            #0e0f0c   headings, values, primary text
+--color-ink-deep       #163300   —
+--color-body           #454745   secondary body text
+--color-mute           #5f5e5a   captions, labels, secondary table columns — see the ⚠️ below
+--color-divider        #d6dbd1   internal table/list row dividers — net-addition, see below
 ```
 
-Identical hex values to Sovereign Ledger's accent — this is the one token family the redesign deliberately left untouched, confirmed via the user's own AskUserQuestion selection ("Keep Financial Blue #1A365D") rather than assumed. It now also covers the sidebar's active-nav tint (§7), which Sovereign Ledger had assigned to green — green is no longer available for that role once it means something specific (positive financial polarity) everywhere else in the app.
+**⚠️ `--color-mute` is not the brief's literal value.** `DESIGN (2).md` specifies `#868685`; WI.G's real WCAG contrast re-check found that value fails AA as text against *both* app backgrounds (3.64:1 on the white card, 3.03:1 on the sage canvas — need 4.5:1), and it's used almost everywhere in the app as caption/secondary text, not as a fill. Darkened to `#5f5e5a` (5.40:1 / 6.49:1), the nearest value clearing AA on both surfaces with real margin — full numbers in §12.
 
-### 2.3 Semantic assignments — genuine Carbon Support colours, plus one retained deviation
+**`--color-divider` is a net-addition beyond the literal brief.** The brief's only border token is a heavy 1px-solid-ink "Level 1" hairline meant for buttons/inputs/cards — too heavy for internal table row dividers or chart gridlines, which the brief has no dedicated token for. `#d6dbd1` is a softer tint used exactly there.
 
-| Token | Hex | Source | Assigned meaning |
-|---|---|---|---|
-| `--color-secondary-default` / `--color-status-paid` / `--color-state-taxable` | `#24A148` | Carbon Support **Green 50**, real/unmodified | **Positive financial outcome** — net income ≥ 0, safe-to-spend, paid, taxable/active tax position |
-| `--color-status-overdue` | `#DA1E28` | Carbon Support **Red 60**, real/unmodified | **Negative financial outcome** — overdue, net income < 0, cancelled |
-| `--color-tertiary-default` / `--color-status-attention` / `--color-state-zero-rated` | `#B7791F` | **Set-aside Gold, kept — not Carbon's actual (yellow) warning colour** | Tax liability held aside, threshold/attention escalation, zero-rated export |
-| `--color-state-unregistered` | `#525252` | Carbon Gray 90 | Not registered, exempt, draft — deliberately grey, the absence of a position |
-
-**⚠️ The gold-for-warning deviation is deliberate and was decided without a separate user round-trip** (documented in the redesign's own plan as low-stakes): Carbon's actual Support "warning" colour is yellow (`#F1C21B`), not gold. Gold was kept because it already carries a specific, established "tax liability being set aside" meaning in this product (§8.1's Tax + CPP reserve tile) that Carbon's generic warning concept doesn't have a name for, and the user's own "keep some brand colours" instruction reads as plural, not limited to just blue. This is the one place the palette isn't "authentic Carbon" by the letter, done knowingly.
-
-**The colour-polarity rule, stated once here since it governs every subsequent screen:** Green 50 / Red 60 are reserved **strictly** for genuine positive/negative financial *outcomes* — net income's sign, safe-to-spend, overdue amounts. They are never applied to neutral-magnitude figures that merely got bigger or smaller without a value judgment attached — GST/HST collected, the threshold percentage, or tax/CPP deductions (which use gold, since they're expected obligations, not errors). A user reading the Dashboard's eight hero tiles should be able to tell at a glance which four are "outcomes" and which four are "facts," purely from colour.
-
-### 2.4 Chart categorical palette (new — no equivalent in Sovereign Ledger)
+shadcn's own semantic layer, real hex values (not just references — the shipped `:root` block, verbatim):
 
 ```
---color-chart-1  #8A3FFC     --color-chart-4  #D02670
---color-chart-2  #0072C3     --color-chart-5  #BA4E00
---color-chart-3  #007D79     --color-chart-6  #6F6F6F
+--background: #e8ebe6      --card: #ffffff
+--foreground: #0e0f0c      --card-foreground: #0e0f0c
+--primary: #9fe870         --primary-foreground: #0e0f0c
+--secondary: #e8ebe6       --secondary-foreground: #0e0f0c
+--muted: #e2f6d5           --muted-foreground: #868685
+--accent: #e2f6d5          --accent-foreground: #0e0f0c
+--destructive: #d03238     --destructive-foreground: #ffffff
+--border: #0e0f0c          --input: #0e0f0c
+--ring: #9fe870
 ```
 
-Carbon's actual published dataviz categorical sequence (`@carbon/colors`), used **only** for neutral multi-category series — expense-by-category and revenue-by-client donuts/bars — where no category is inherently "good" or "bad" relative to another. Never mixed with the polarity rule above.
+`--background`/`--card` is a genuinely good structural fit for the brief's own "surface contrast IS elevation" model — sage canvas behind, white cards on top, nothing else needed to read depth.
+
+### 2.2 Accent — lime, sole and non-negotiable
+
+```
+--color-primary-active   #cdffad   pale lime, chart fill only — never a button
+--color-primary-neutral  #c5edab
+--color-primary-pale     #e2f6d5   same value as --muted, tint backgrounds
+```
+
+Unlike both prior redesigns, there is exactly one brand hue here. Lime `#9fe870` (shadcn's `--primary`) is the CTA identity — primary buttons, the active-nav tint's foreground pairing, focus rings. **It is never used as a status, chart-series, or progress-indicator colour** (§6, §12) — a rule stated once here since it governs the rest of this document, extending the brief's own explicit instruction ("never repurpose Wise green as a success indicator since it IS the brand CTA") further than the brief itself applies it.
+
+### 2.3 Semantic assignments — the colour-polarity rule, unchanged in spirit across all three redesigns
+
+| Token | Hex | Assigned meaning |
+|---|---|---|
+| `--color-positive` / `--color-positive-deep` | `#2ead4b` / `#054d28` | **Positive financial outcome** — net income ≥ 0, safe-to-spend, paid invoices, on-track progress |
+| `--color-negative` / `--color-negative-deep` | `#d03238` / `#a72027` | **Negative financial outcome** — overdue, net income < 0, cancelled |
+| `--color-warning` / `--color-warning-deep` / `--color-warning-content` | `#ffd11a` / `#b86700` / `#4a3b1c` | Tax/CPP liability held aside, threshold/attention escalation — an expected obligation, not an error |
+| `--color-accent-orange` / `--color-accent-cyan` | `#ffc091` / `#38c8ff` | Neutral chart-series colours only — never polarity |
+
+**The colour-polarity rule, same as both prior redesigns:** positive/negative are reserved strictly for genuine financial *outcomes*. Neutral-magnitude figures — GST/HST collected, the threshold percentage — never carry them.
+
+**⚠️ Every one of these tokens has a `-deep` (or `-content`) sibling specifically because the base tone fails contrast as text or as a small icon fill, and this redesign uses the base tone for fills/large-surface use and the deep sibling for anything text-sized or icon-sized.** This is a genuine, deliberate pattern this redesign follows more strictly than either prior one — see §12 for the real numbers that drove it.
+
+### 2.4 Chart categorical palette
+
+```
+--color-chart-1  #2ead4b (positive)      --color-chart-4  #ffd11a (warning)
+--color-chart-2  #38c8ff (accent-cyan)   --color-chart-5  #868685 (mute, unshifted -- decorative fill only)
+--color-chart-3  #ffc091 (accent-orange) --color-chart-6  #d03238 (negative)
+```
+
+Built from the semantic tokens above, **deliberately never `--color-primary`** — lime is the one hue this palette withholds from dataviz, per §2.2's rule. Two extra neutral shades (`--color-ink-deep`, `--color-body`) extend a sequence past six categories without repeating or falling back to lime.
+
+**⚠️ Real bug found and fixed (WI.D3):** Recharts' pie-sector entrance animation runs `fill` through `react-smooth`'s colour interpolator, which cannot parse CSS custom properties — it silently resolves `var(--color-chart-2)` etc. to black once the animation settles, even though the SVG `fill` *attribute* still shows the correct `var()` string. Bar/Line charts never animate colour (only size/position), so `var()` renders correctly there via the browser's own CSS engine; only the two Pie-based donuts (Invoice status, Expenses by category) hit this. Fixed with literal hex values in those two components specifically — every other chart still references the CSS custom properties directly.
 
 ### 2.5 Dark mode
 
-Still deferred, same as Sovereign Ledger — tokens stay named so it's a value swap later, not a rewrite. The invoice **document** still never inverts (§9, unchanged).
+Still deferred, same stance as both prior redesigns — `.dark` currently mirrors `:root` exactly. The invoice **document** still never inverts (§9, unchanged across all three redesigns).
 
 ---
 
 ## 3. Typography
 
-**IBM Plex Sans** for the interface, **IBM Plex Mono** for data — Carbon's own type family, replacing Inter/JetBrains Mono. Both self-hosted via `@fontsource-variable/ibm-plex-sans` and `@fontsource/ibm-plex-mono` (same self-hosted-fontsource pattern the app already used, no external network dependency — verified, not assumed).
+**Manrope** (display, weight 800/900) + **Inter** (body/UI, 400/600) — two faces, preserving the brief's own stated "brand's typographic story" contrast rather than collapsing to one face, per a direct decision with the user (Manrope substitutes for the brief's proprietary, unlicensable `Wise Sans`, at that token's own literal fallback chain of `Wise Sans, Inter, system-ui, ...`). Both self-hosted via `@fontsource-variable/manrope` / `@fontsource-variable/inter`, replacing IBM Plex Sans.
 
 ```
---font-ui        'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif
---font-mono      'IBM Plex Mono', ui-monospace, monospace
+--font-display   'Manrope Variable', 'Manrope', system-ui, sans-serif
+--font-sans      'Inter Variable', 'Inter', system-ui, sans-serif
+--font-mono      'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace
 ```
 
-Plex Sans has a visibly different x-height and letterform than Inter at the same point sizes — the type scale below was re-verified to still read correctly in the new face rather than assuming the old point sizes transfer unchanged; no sizes actually needed to move.
+**A self-hosted monospace face is a net-addition beyond the literal brief**, which names no monospace token at all — added for tabular-nums money figures in dense tables, reused from the Sovereign Ledger era's own font choice.
 
-### Type scale (unchanged sizes/weights from Sovereign Ledger; only the face changed)
+### Type scale (verbatim from the brief's own token values)
 
-| Concept | Size / line | Weight | Use |
+| Token | Size / line | Weight | Use |
 |---|---|---|---|
-| `--text-display` | 32 / 40 | **700** | Dashboard hero KPI figures — now eight tiles, not one (§8.1) |
-| `h1` | 32 / 40 | 700 | Page title |
-| `h2` | 18 / 24 | 600 | Block header |
-| body | 13 / 20 | 400 | Default body, table cells |
-| `label` | 11 / 16 | 500 | Field labels |
-| `.caption` | 11 / 16 | 400 | Helper text, timestamps |
+| `--text-display-mega` | 126 / 107.1px | 900 | reserved, unused at current screen sizes |
+| `--text-display-xxl` | 96 / 81.6px | 900 | reserved |
+| `--text-display-xl` | 64 / 54.4px | 900 | reserved |
+| `--text-display-lg` | 47 / 70.5px | 400 | reserved |
+| `--text-display-md` | 40 / 34px | 900 | reserved |
+| `--text-display-sm` | 32 / 38.4px | 600 | page-level `h1` (e.g. Dashboard's "How much is mine?") |
+| `--text-display-xs` | 24 / 31.2px | 600 | card-level heading (e.g. "Welcome back", every `CardTitle`) |
+| `--text-body-lg` | 20 / 30px | — | — |
+| `--text-body-md` | 16 / 24px | — | default body |
+| `--text-body-sm` | 14 / 20px | — | table cells, labels, most UI text |
+| `--text-caption` | 12 / 16px | — | secondary/helper text, timestamps |
+| `--text-button-md` | 16 / 24px | 600 | button label |
 
-13px body stays deliberate for the same reason as before — it reads as a tool, not a website.
+Only `display-sm` and `display-xs` see real use at current screen sizes — the brief's larger display steps (mega/xxl/xl/lg/md) are specced for a marketing-site scale this app's own homepage hero doesn't reach for; kept in the token set rather than pruned, since the homepage may grow into them later.
 
 ### Numeric typography — unchanged rules, still non-negotiable
 
-All money/quantities use tabular figures, right-aligned, `CAD 7,200.00` not `$7,200.00`, negative amounts use a minus sign plus Red 60 (never parentheses, never colour alone), tax rates render to true precision. None of this changed with the redesign.
+All money/quantities use tabular figures, right-aligned, `CAD 7,200.00` not `$7,200.00`, negative amounts use a minus sign plus the negative token (never parentheses, never colour alone), tax rates render to true precision. Unchanged across all three redesigns.
 
 ### Label case
 
-Sentence case throughout — unchanged. Carbon's own convention (Tag components, buttons) is also sentence case, so this needed no reconciliation between the two systems.
+Sentence case throughout — unchanged.
 
 ---
 
 ## 4. Spacing, radius, elevation
 
-### Carbon's real 2px-based spacing scale
+### Spacing — Tailwind's stock scale, no override needed
+
+The brief's own 4px-based scale already lands exactly on Tailwind's default numeric spacing scale (`p-1` = 4px, `p-4` = 16px, etc.) — the only redesign of the three where this needed zero token work.
+
+### Radius — a fixed per-component scale, the brief's defining trait
 
 ```
---space-1   4px     --space-5   24px
---space-2   8px     --space-6   32px
---space-3   12px    --space-7   40px
---space-4   16px
+--radius-none  0px
+--radius-sm    8px
+--radius-md    12px    text-input specifically, not the canonical pill
+--radius-lg    16px
+--radius-xl    24px    canonical/signature -- every Card and Button
+--radius-pill  9999px
+--radius-full  9999px
 ```
 
-Verified, not shifted: Sovereign Ledger's existing 4/8/12/16/24/32px values already land exactly on Carbon's `spacing-02` through `spacing-07`, so `--space-1..6` carried over unchanged. `--space-7` extends the range to Carbon's `spacing-08` (40px, was 48px under Sovereign Ledger) for the one place that needed it.
+**24px on every card and button is the single biggest visual departure from Carbon's zero-radius signature** — the whole point of "Wise-inspired" as a request. shadcn's own default component radius (`rounded-lg`, a smaller `calc()`-derived value) was overridden site-wide: `button.tsx`, `input.tsx`, `textarea.tsx` all patched from their stock `rounded-lg` down to `rounded-md` (12px, the brief's own text-input spec) or up to `rounded-xl` depending on component, rather than leaving shadcn's own defaults in place.
 
-### Radius — zero everywhere, Carbon's single defining trait
+### Elevation — surface contrast IS elevation, no shadows anywhere
 
-```
---radius-xs    0
---radius-sm    0
---radius-md    0
---radius-lg    0
---radius-badge var(--radius-full)   Tags, the one real rounding exception
---radius-full  9999px               avatars, circular icon buttons
-```
-
-This is the single biggest visual departure from Sovereign Ledger, and the whole point of "IBM Carbon" as a request rather than just a colour change: buttons, inputs, panels, modals — all flat rectangles now. Carbon's actual rounding exceptions are Tags and circular elements (avatars, checklist dots), which is why `--radius-badge` reuses `--radius-full` rather than getting its own small value — verified against Carbon's real `_tag.scss` source (16px), which renders identically to a full pill at this app's 24px Tag height.
-
-### Elevation — borders first, shadows last (unchanged philosophy — a genuine continuity point)
-
-Blocks/panels sit flat with a single hairline border, no shadow — this was already Carbon-authentic in Sovereign Ledger before this redesign existed, so it needed no change. Modals/dropdowns still use inline `box-shadow` for genuine floating surfaces; `--elev-*` tokens still don't exist as CSS custom properties (unchanged gap, not new).
+A genuinely different philosophy than either prior redesign's hairline-border-on-white-background approach: the sage canvas (`--background`) sits behind everything, and every card is a plain white surface (`--card`) with **no border, no shadow** — the colour contrast between the two is the entire depth cue. `Card`'s own shadcn styling (`ring-1 ring-foreground/10`) is the one visible seam, deliberately subtle. Modals (`Dialog`) are the one place a real elevation affordance still matters functionally (distinguishing an overlay from the page beneath it) and use a backdrop blur/dim instead of a shadow, matching Radix's own Dialog primitive default.
 
 ---
 
-## 5. Motion tokens (new — @carbon/motion, replacing the never-implemented Sovereign Ledger values)
+## 5. Motion tokens
 
 ```
---motion-fast-01      70ms    hover/press micro-feedback
---motion-fast-02      110ms
---motion-moderate-01  150ms
---motion-moderate-02  240ms   tile/panel entrance
---motion-slow-01      400ms   page transitions, count-ups, chart draw-in
---motion-slow-02      700ms
+--duration-fast01      0.07s    --duration-moderate01  0.15s
+--duration-fast02      0.11s    --duration-moderate02  0.24s
+--duration-slow01      0.4s     --duration-slow02      0.7s
 
---motion-ease-standard  cubic-bezier(0.2, 0, 0.38, 0.9)
---motion-ease-entrance  cubic-bezier(0, 0, 0.38, 0.9)
---motion-ease-exit      cubic-bezier(0.2, 0, 1, 0.9)
+ease.standard.productive   cubic-bezier(0.2, 0, 0.38, 0.9)
+ease.entrance.productive   cubic-bezier(0, 0, 0.38, 0.9)
+ease.exit.productive       cubic-bezier(0.2, 0, 1, 0.9)
 ```
 
-These are `@carbon/motion`'s actual published values (`durationFast01` etc. and `easings.standard/entrance/exit.productive`), verified via `node -e "require('@carbon/motion')..."` against the installed package, not invented. Unlike Sovereign Ledger's equivalent tokens — which were specified in this document but **never actually implemented** as CSS custom properties, with the handful of shipped transitions using plain `0.15s ease` instead — these are real, live in `index.css`'s `:root`, and are the literal source both the CSS-side hover transitions and the JS/Framer Motion layer (`web/src/motion/tokens.ts`) draw from. Full behaviour described in §10.
+**Decoupled from `@carbon/motion` (WI.D1), same numeric values.** `web/src/motion/tokens.ts`'s `duration`/`ease` are now static literals rather than reading from the `@carbon/motion` npm package (removed from `package.json` in WI.G, confirmed zero other imports first) — the actual millisecond/easing values are unchanged from what shipped under Carbon, since there was no reason to also re-tune timing while re-tuning colour and shape.
+
+**The OTP verification animation (WI.C) is the one genuinely bespoke technique this redesign added**, not sourced from Watermelon or any off-the-shelf component: on Verify, each of the six digit boxes' `x`/`y` position is computed via `cos`/`sin` offsets around a shared centre point and animated into a circular arrangement, then the whole group revolves as one unit for the verifying state — built with the existing `motion` package's primitives, not a new dependency.
 
 ---
 
 ## 6. Component specifications
 
-### Buttons
+**shadcn/ui primitives, not hand-rolled component CSS** — the structural shift from both prior redesigns. Every component below is real source code living in `web/src/components/ui/`, generated by the `shadcn` CLI and then edited in place (shadcn's own philosophy: installed components are owned code, not a black-box dependency) rather than a CSS class defined once in a shared stylesheet.
 
-Same four variants as Sovereign Ledger (Primary/Secondary/Ghost/Danger), radius now 0 instead of `--radius-sm`'s old 4px. **New:** every button now has a real Carbon-timed hover/press transition (`background-color`/`border-color`/`color` at `--motion-fast-02`, plus a `scale(0.97)` press feedback at `--motion-fast-01`) — previously buttons snapped instantly with no `transition` property at all anywhere in the stylesheet.
+### Button, Input, Label, Textarea
 
-### Inputs
+Radius-patched from shadcn's own defaults to the brief's fixed scale (§4). `destructive` variant's text colour patched from shadcn's stock `text-destructive` to `text-negative-deep` — WI.G's contrast re-check found the stock pairing fails AA at 4.33:1 (§12).
 
-32px height, 0 radius (was `--radius-xs`'s 2px), 1px `--color-border-strong`, unchanged otherwise.
+### Badge
 
-### Tags — real Carbon proportions, not a re-skinned badge
+Four variants in active use: `default` (lime, reserved for the one place brand-CTA-as-badge makes sense), `secondary` (canvas-soft, the default for tax-treatment/status tags), `destructive` (same negative-deep patch as Button), and an ad-hoc `bg-positive/15 text-positive-deep` override for "paid"/"active"/"verified" states — shadcn's default variant is lime, which stays reserved for the CTA identity per §2.2, so a genuinely positive status needs its own override rather than reusing `default`.
 
-Height 24px (was 20px), 8px horizontal padding (was 6px), **sentence case, not uppercase** (`Taxable`, not `TAXABLE`), `label-01` type style (12px/16px, weight 400, not the old bold-uppercase treatment), pill radius via `--radius-badge`. These exact proportions were verified against Carbon's actual `_tag.scss` source fetched from unpkg during implementation, not assumed to match the old badge's dimensions.
+A shared `web/src/components/InvoiceBadges.tsx` (`InvoiceStatusBadge`, `TaxTreatmentBadge`) de-duplicates this logic — it was about to repeat identically across six files (Dashboard, Ledger, ClientDetail, PublicInvoice, InvoiceDetail, plus the invoice builder's success state).
 
-```
-● Taxable / Paid          Green 50   #24A148 on #DEFBE6
-● Zero-rated / Attention  Gold       #B7791F on #FBF0DF
-○ Not registered / Draft  Gray 90    #525252 on #E8E8E8
-● Overdue                 Red 60     #DA1E28 on #FFF1F1
-```
+### Table
 
-**⚠️ Two of these four combinations fail WCAG AA at Tag text size — see §12, re-verified with real numbers as part of this reconciliation, not assumed to pass because the hexes are "official IBM."**
+shadcn's standard `Table`/`TableHeader`/`TableBody`/`TableRow`/`TableHead`/`TableCell` installed in WI.D3 specifically to de-duplicate four repeated raw `<table>` blocks in `Dashboard.tsx`, then reused across every other page's tables in WI.E1/E2 rather than hand-styling `<table>` per page.
 
-### Tables — dropped zebra striping
+### Progress
 
-Real Carbon DataTables use hairline row dividers plus a hover state only, **no periodic zebra tint**. Sovereign Ledger's `tbody tr:nth-child(5n)` shading was removed — a deliberate, flagged behaviour change, not a silent regression. Table row hover now also has a real transition (`--motion-fast-02`) where previously — like buttons — there was none.
+**⚠️ Patched from shadcn's stock default.** The installed component's indicator defaults to `bg-primary` (lime) — this both violates §2.2's "lime is never a status colour" rule and, WI.G's contrast re-check found, is nearly invisible against the `bg-muted` track regardless (1.29:1, need 3:1 — a light, high-luminance fill has poor contrast against almost any light track, not a track-color-specific problem). Patched to `bg-positive-deep` by default (8.76:1), with `bg-negative`/`bg-warning-deep` conditional overrides for escalation states (Tax reserve progress, Threshold tracker, Accountant readiness) — full numbers in §12.
 
-### Charts (new section — no equivalent existed before this redesign)
+### Dialog
 
-**Library: Recharts, hand-themed to Carbon tokens** — not `@carbon/charts-react`, decided directly with the user via AskUserQuestion before implementation. `@carbon/charts-react` was rejected for three concrete reasons: no native waterfall chart type (the Dashboard needed one — see below), a heavier D3-based runtime, and materially more limited animation control than a "cinematic" brief calls for. Recharts' SVG elements accept CSS custom properties directly as `fill`/`stroke` props and resolve them correctly (`getComputedStyle` confirmed, not assumed) — the same token system styles both plain CSS and every chart.
+Replaces the hand-rolled `.modal-backdrop`/`.modal`/`.modal-footer` pattern (InvoiceDetail's email-invoice modal, the only modal in the app) with shadcn's Radix-based `Dialog` — a real focus trap, ESC-to-close, and ARIA semantics that the hand-rolled version never had.
 
-**Eight chart components ship, all under `web/src/components/dashboard/`:**
+### Chart
 
-| Chart | Type | Colour treatment |
-|---|---|---|
-| Business performance | Composed (bar + line) | Revenue/Expenses bars neutral (Blue/Gray), Net income line neutral dashed — a single stroke can't change colour mid-line if it crosses zero across the year |
-| Where your revenue goes | Custom waterfall | Start/end bars Financial Blue, deduction bars Gold (an expected obligation, not an error — not Red) |
-| Actual vs. projected revenue | Line + reference line | Financial Blue actual (solid) + projected (dashed continuation) |
-| GST/HST control center | Bar | Neutral Blue/Gray — collected and ITCs are magnitudes, not outcomes |
-| Accounts receivable aging | Horizontal bar | Neutral buckets except 90+ days (Red 60) — the one bucket signalling a real collection problem |
-| Invoice status | Donut | Per-status semantic colour (paid=Green, overdue=Red, draft=Gray, etc.) |
-| Revenue by client | Horizontal bar | Neutral Financial Blue — which client bills most isn't a polarity question |
-| Expenses by category | Donut | Categorical chart palette (§2.4) — no category is inherently good/bad |
+`web/src/components/ui/chart.tsx`, shadcn's official Recharts wrapper (confirmed to be exactly what Watermelon's own `chart.json` registry item installs) — `ChartContainer`/`ChartConfig`/`ChartTooltip`/`ChartTooltipContent`/`ChartLegend`/`ChartLegendContent`, replacing hand-themed raw Recharts. **⚠️ Patched for a real Recharts v2-vs-v3 type incompatibility**: the vendored file's `ChartTooltipContent`/`ChartLegendContent` prop types were written against Recharts v2's `Tooltip`/`Legend` type signatures, which flowed `payload`/`label`/`active` through `React.ComponentProps<typeof RechartsPrimitive.Tooltip>` directly. Recharts v3 (this app's installed version, `^3.10.1`) splits that into a separate `TooltipContentProps` type meant for the render-prop path — `ComponentProps<typeof Tooltip>` no longer carries those fields at all. Fixed by retyping against `RechartsPrimitive.TooltipContentProps`/`DefaultLegendContentProps` directly, and switching a `key={item.dataKey}` to a precomputed string key (`DataKey<any>` in v3 can be a function, not assignable to React's `Key` type). Not all charts use `ChartContainer` — the simpler single-series/waterfall charts (`SafeToSpendWaterfall`, `ActualVsProjectedChart`, `GstQuarterlyChart`, `AgingChart`, `RevenueByClientChart`) stay on plain `ResponsiveContainer`, since there's no legend/multi-series config to gain from the wrapper.
 
-**The waterfall has no native Recharts type.** Built via the standard technique: two stacked `<Bar>` elements sharing a `stackId`, an invisible "base" bar (transparent fill, `isAnimationActive={false}`) floats a visible "value" bar to the correct height, with per-step `<Cell>` colouring.
+### Select, radio, checkbox, file input
 
-**⚠️ The waterfall's basis deliberately deviates from `dashboard_design.md` §5's own 5-step example**, which starts from raw Revenue. This app's waterfall starts from Net Business Income instead (Revenue → Federal tax → Provincial tax → CPP → Safe to spend, one fewer step) because `GET /projection`'s tax/CPP figures are computed from the *active projected annual* net-income basis, and there is no projected-annual-*expenses* figure available to bridge Revenue down to that same basis consistently — starting from net income keeps every step on one basis rather than forcing numbers that wouldn't actually reconcile.
-
-**Every chart's `animationDuration`/`animationEasing` props are re-pointed at the same `@carbon/motion` tokens** (`src/motion/tokens.ts`'s `rechartsDurationMs`/`rechartsEasing` — 400ms, Carbon's entrance-expressive curve) rather than Recharts' own defaults, so chart draw-ins read as part of the same motion system as everything else, not a visually separate library's timing.
+Left as styled native `<select>`/`<input type="radio">`/`<input type="checkbox">`/`<input type="file">` elements rather than installing shadcn's `Select`/`RadioGroup`/`Checkbox` primitives — a deliberate scope decision, not an oversight: none of the forms in this app need a custom-styled dropdown's affordances (multi-line options, icons, search), and installing three more primitives for markup that Tailwind utility classes already style adequately (`h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm`) would be net-new surface area without matching need. Revisit if a future form genuinely needs it.
 
 ---
 
@@ -236,9 +225,9 @@ Real Carbon DataTables use hairline row dividers plus a hover state only, **no p
 │  Logo      │  Topbar — page title · Create Invoice · 🔔 ? 👤   │
 │            ├──────────────────────────────────────────────────┤
 │ +Add       │                                                  │
-│  Expense   │   Page background #F4F4F4 (Carbon Gray 10)       │
+│  Expense   │   Page background sage canvas-soft #e8ebe6        │
 │            │   ┌────────────────────────────────────────────┐ │
-│  Dashboard │   │  flat 0-radius panel                        │ │
+│  Dashboard │   │  white 24px-radius card, no border/shadow   │ │
 │  Invoices  │   └────────────────────────────────────────────┘ │
 │  Expenses  │                                                  │
 │  Clients   │                                                  │
@@ -248,188 +237,161 @@ Real Carbon DataTables use hairline row dividers plus a hover state only, **no p
 └────────────┴──────────────────────────────────────────────────┘
 ```
 
-Layout/structure unchanged from Sovereign Ledger (Settings hub, nav item set, mobile slide-in). Three real changes:
+Layout/structure unchanged from both prior redesigns (Settings hub, nav item set, mobile slide-in drawer). Active-nav tint is `bg-primary-pale text-positive-deep` — not lime itself (§2.2's rule), and not Carbon's Financial-Blue-subtle either, since that accent no longer exists in this palette.
 
-1. **Icons: `@carbon/icons-react` replaces `lucide-react`** throughout (16 icon usages across `Shell.tsx`, `Dashboard.tsx`, `Settings.tsx`, `ComplianceChecklist.tsx`) — decided directly with the user, `lucide-react` having been the prior redesign's own first-ever icon library for this app.
-2. **Active-nav tint moved from Compliance Green to Financial-Blue-subtle.** Green is no longer available for "current nav item" once it means something specific and load-bearing (positive financial polarity) throughout the rest of the app — Carbon's own convention for "current" is the interactive/accent colour anyway, not the success colour, so this is a correction toward Carbon-authenticity as much as a polarity-conflict fix.
-3. **Sidebar/topbar entrance animation on load** (§10) — new, via the motion layer.
-
-⚠️ Same pre-existing gaps as Sovereign Ledger, untouched by this redesign: no persistent tax-registration-status chip in the topbar, Bell/Help remain inert visual placeholders (`title="...(coming soon)"`, no backend to wire to).
+⚠️ Same pre-existing gaps as both prior redesigns, untouched by this one: no persistent tax-registration-status chip in the topbar, Bell/Help remain inert visual placeholders.
 
 ---
 
 ## 8. Key screens
 
-### 8.1 Dashboard — full rebuild against `docs/screens/dashboard_design.md`
+### 8.1 Homepage (`/`) — new surface, WI.B
 
-The single largest deliverable of this redesign, shipped across three phases (CB.E/F/G) matching the one-phase-per-commit discipline the prior redesign used. Went from 100% text/table/progress-bar to a real charted financial control centre, per the brief's own ~30-section spec — most sections needed **zero new backend work** (`GET /projection` already carried the data), a handful needed new aggregate endpoints (§8.1.1).
+Logged-out visitors previously had no page at all — the app went straight to `/login`. Composition: `NavBar` (logo + Login/Sign up, both pointing at the existing unified email-OTP flow) → hero band (sage canvas, Manrope 900 headline, a real product-mockup card — not the AI-document-parsing graphic originally attached to the request, whose own messaging describes a generic document-comprehension product rather than what Tallyquo does, confirmed directly with the user) → `FeatureGrid` (four cards varying tint per the brief's own "Do" guidance — sage/lime/dark/sage — covering the product's real capabilities) → dark `Footer` band. A `RootGate` component branches the literal `/` path between this page (logged out) and `Shell` (logged in) — see `implementation_plan.md` WI.B for why a repurposed auth guard wasn't the right shape for this.
 
-**Hero KPI row** (`dashboard_design.md` §3): eight tiles across two rows — Revenue, Expenses, Net income, Safe to spend, Tax + CPP reserve, GST/HST owing, Outstanding, Projected annual revenue. Colour-polarity rule (§2.3) applied narrowly: only Net income, Safe to spend, and Outstanding carry Green/Red; GST/HST owing and the reserve/projected figures stay neutral even though `dashboard_design.md` itself doesn't explicitly forbid colouring them — this app's own polarity rule (stated once, §2.3) is stricter than the brief requires, deliberately.
+### 8.2 Login + OTP verification — WI.C
 
-A real UX gap was caught and fixed during CB.E's own browser verification, not by a later audit: "Safe to spend" (full-year-*projected*-income basis) originally sat directly next to "Net income" (year-to-date-*actual* basis) with Safe-to-spend counterintuitively showing higher — both figures were individually correct but juxtaposed with no distinguishing caption, reading as a bug. Fixed by adding a clarifying sub-caption ("full-year projected income, after recommended tax + CPP reserve") rather than leaving two correct-but-confusing numbers unexplained.
+Two-stage form: large email input → six-box OTP entry. The OTP animation is this redesign's single most novel deliverable — three real states, not just a neutral typing state:
+1. **Typing**: each box glows/scale-pulses as its digit is entered.
+2. **Verifying**: on Verify click, before the API responds, the six boxes animate from their row layout into a circle and revolve together as one unit — a bespoke loading state built from the boxes themselves, not a separate spinner element.
+3. **Resolution**: success collapses the circle into a single box with a checkmark (all boxes, including the surviving one, animate to the same shared centre point — an early bug had the surviving box stay at its own row position instead, breaking the centering); failure un-circles into the same red-shake treatment a mistyped code gets, so there's one consistent "wrong" animation regardless of *why* it failed.
 
-**Business performance** (§6 above): 12-month Revenue/Expenses/Net-income chart, from the new `GET /reports/pnl` JSON endpoint (a thin wrapper around already-existing `reporting/service.py: pnl_rows`, zero new aggregation).
+Respects `<MotionConfig reducedMotion="user">` — verified the circle-revolve state collapses to instant under reduced motion while the end state (tick or shake) stays reachable.
 
-**Where your revenue goes / Actual vs. projected revenue**: the waterfall and actual-vs-target line described in §6, both fully derivable from `GET /projection`'s existing fields.
+### 8.3 Dashboard — full rebuild, WI.D1-D3
 
-**Tax Reserve progress**: recommended (existing `set_aside` figure) vs. actually-reserved, a genuinely new user-enterable field (`tax_reserve` table, migration 0022, RLS-scoped exactly like `income_declaration`).
+Same ~30-section spec as the prior redesign's own Dashboard build (`dashboard_design.md`, still the underlying source brief — the *visual* system changed, the *information architecture* didn't), now on shadcn primitives throughout. Hero KPI tiles restyled onto `Card`; `useCountUp`'s "never animate a figure from zero on first mount" rule carried through unchanged. Every chart migrated per §6/§2.4's chart-library and colour-palette rules. Tax reserve/Threshold tracker/Accountant readiness use `Progress` with the patched default indicator colour (§6, §12).
 
-**GST/HST control center + AR aging + Invoice status**: GST/HST and threshold tracker restyled from Sovereign Ledger's existing tiles plus a new quarterly chart; AR aging from a new `tenant_aging_summary` aggregate that adds a "not yet due" bucket the prior `tenant_aging_report` never surfaced (a real gap: `_aging_bucket()` returned `None`, silently excluded, for anything not yet past due); Invoice status is a **client-side tally** of the already-fetched `GET /invoices` list, deliberately not a new endpoint.
+### 8.4 Everything else — a real per-page sweep, not a free cascade (WI.E1/E2)
 
-**Revenue by client / Expenses by category / Receipt completeness / Recurring revenue / Accountant readiness / Business momentum / Year-over-year / Needs your attention / Recent activity**: each backed by either a small new aggregate endpoint (§8.1.1) or a client-side composition over data already fetched elsewhere on the page — no duplicate fetching. **Accountant Readiness is computed client-side** from already-fetched pieces (receipt completeness, profile/registration completeness) rather than an opaque server-computed score, a deliberate choice so "why is my score X%" is always answerable by reading the component, not a black box.
+**⚠️ Unlike Carbon's CB.H, this sweep was not free.** Sovereign Ledger's own class-reuse architecture (`.block`, `.badge`, shared `table`/`th`/`td`) is what let Carbon's token rewrite cascade with zero code changes — Tailwind's utility-classes-in-JSX model doesn't cascade that way. Every page's markup changed: Settings, Reports, Ledger, Recurring, Clients, ClientDetail, EmailAccounts, Profile, PublicInvoice (WI.E1); ComplianceChecklist, InvoiceBuilder, InvoiceDetail, TemplateEditor (WI.E2); and **Expenses.tsx**, found missing from the original page inventory during WI.G's own pre-deletion grep sweep and migrated then rather than silently deleting the stylesheet it still depended on.
 
-#### 8.1.1 New backend endpoints (CB.D)
-
-| Endpoint | Backing |
-|---|---|
-| `GET /reports/pnl` (JSON) | Wraps existing `pnl_rows`, no new logic |
-| `GET /reports/aging/summary` | New `tenant_aging_summary`, adds the not-due bucket |
-| `GET /reports/revenue-by-client` | New `tenant_revenue_by_client` |
-| `GET /expenses/by-category` | New `expenses_by_category` |
-| `GET /expenses/receipt-completeness` | New, sibling to existing `unprocessed_receipts()` |
-| `GET /projection/recurring-forecast` | Refactor of existing `scheduled_recurring_income()` into period-bucketed rows |
-| `GET /reports/payment-speed` | New `average_days_to_payment` — **v1 scope**: tenant-wide average only |
-| `GET/PUT /projection/tax-reserve/{year}` | New `tax_reserve` table |
-
-⚠️ **Deliberately deferred, not built**: payment-speed's trend sparkline and fastest/slowest-paying-client breakdown — both need real additional complexity (historical-period computation, a minimum-sample-size guard) beyond what a v1 tenant-wide average needed.
-
-### 8.2-8.9 Everything else — cascaded automatically, verified not assumed
-
-Every other page (Ledger, ClientDetail, Clients, InvoiceBuilder, Settings, Profile, TemplateEditor, EmailAccounts, Recurring, InvoiceDetail, PublicInvoice, Login) needed **zero code changes** for the Carbon re-skin (CB.H) — Sovereign Ledger's own class-reuse architecture (everything flows through shared classes like `.block`, `.badge`, `table`/`th`/`td` rather than bespoke per-page CSS) meant the token/class rewrite in §2-6 cascaded automatically. This was verified, not assumed: every page was grepped for hardcoded hex colours (found: 2, both the intentional `#1A365D` invoice-template default, correctly out of Carbon's scope) and for colour-bearing inline `style={{}}` props (confirmed: 100% already `var(--color-*)`-driven), then walked through in a real browser with seeded data before being marked done with no diff.
-
-Business logic on every one of these pages is unchanged from whatever Sovereign Ledger or an earlier phase shipped — this redesign is a visual-system replacement, not a feature phase.
+Business logic on every one of these pages is unchanged from whatever the prior redesign or an earlier functional phase shipped — this redesign is a visual-system-and-foundation replacement, not a feature phase.
 
 ---
 
-## 9. Invoice document design — unchanged, deliberately out of scope
+## 9. Invoice document design — unchanged boundary, now genuinely self-contained
 
-The generated invoice document (`InvoiceDocument.tsx`, `pdf_renderer.py`) remains **a separate design system from the app, sharing only tokens** — same principle Sovereign Ledger's own §9 established, carried forward unchanged. Carbon's flat 0-radius software-UI language does not belong on a printed business document sent to clients; the document keeps its own print-appropriate rounded/serif-adjacent treatment. The two `#1A365D` hex literals found during CB.H's audit (`TemplateEditor.tsx`, `Profile.tsx`) are this document's intentional default accent colour, correctly untouched by the Carbon token rewrite.
+The generated invoice document (`InvoiceDocument.tsx`, `pdf_renderer.py`) remains **a separate design system from the app, sharing only tokens** — the same principle all three redesigns have carried forward from Sovereign Ledger's own original §9. Flat, high-contrast, print-appropriate — Wise's pill-radius/lime-accent software-UI language does not belong on a printed business document sent to clients, same reasoning that kept Carbon's zero-radius language off it too.
+
+**⚠️ Genuinely new this round: the document's styling is now fully self-contained**, not sharing a stylesheet with the app at all. Both prior redesigns' `InvoiceDocument.tsx` read two classes (`.amount`, `.caption`) plus a dozen `.invoice-document*` rules from the same app-wide `index.css` every other page used — a real, if narrow, coupling. WI.G deleted `index.css` entirely (every page had migrated off it by then), which would have silently broken the document's rendering had its styling not been extracted first. It now lives in its own `web/src/components/InvoiceDocument.css`, imported directly by the component, with the *exact* frozen values (not `var()` references into a stylesheet that no longer exists) the document has always used — same fonts (already fallen back to `system-ui` since IBM Plex Sans/Mono were removed in WI.A, a pre-existing state, not newly introduced here), same spacing, same zero border-radius, same colours. Pixel-verified identical before/after the extraction via a real browser screenshot comparison.
+
+This is a deliberate three-redesigns-running invariant, not an oversight: an invoice a client receives shouldn't change appearance every time the vendor's own dashboard gets re-skinned.
 
 ---
 
-## 10. Motion — the cinematic layer (CB.I)
+## 10. Motion — the cinematic layer, carried forward
 
-This section was previously named "Motion" and specified `--motion-*` tokens that were **never actually implemented** as CSS custom properties or real transitions anywhere in the app, with an explicit rule against animating numbers from zero. Both of those are now different: the tokens are real (§5), and the "never animate from zero" rule is **deliberately overridden** per this redesign's own explicit brief — the user asked for "extremely polished, smooth, cinematic," which a Sovereign-Ledger-era instrument aesthetic doesn't deliver on its own.
+Every animation category Carbon's own CB.I established still exists and still works the same way, just re-pointed at the decoupled tokens (§5): route transitions, staggered tile/panel entrance, KPI count-ups that never animate from zero on first mount, chart draw-ins, hover/press feedback. `prefers-reduced-motion: reduce` still implemented in the same two layers — `<MotionConfig reducedMotion="user">` (`main.tsx`) plus a global CSS fallback, now living in `styles/tailwind.css`'s own rules rather than `index.css` (carried forward explicitly during WI.G's cleanup, not lost when `index.css` was deleted — it's a universal `*` selector guard covering every plain-CSS `transition`, including this redesign's own Tailwind `transition-colors`/`transition-all` utility classes, not just Carbon-era ones).
 
-**Library: `motion`** (the current npm package name for what was `framer-motion`), decided directly with the user via AskUserQuestion as a "full cinematic pass," not a restrained one.
-
-**What actually animates**, all timed against `@carbon/motion`'s real tokens (§5), implemented in `web/src/motion/tokens.ts`:
-
-- **Route transitions**: `AnimatePresence` in `Shell.tsx`, keyed on `location.pathname`, wrapping `<Outlet />` — fade + 8px vertical offset, `slow-01`/`entrance-productive` in, `moderate-01`/`exit-productive` out.
-- **Shell entrance**: sidebar and topbar fade+slide in once on load.
-- **Staggered tile/panel entrance**: every hero KPI tile, chart card, and metric tile across the Dashboard's CB.E/F/G sections, orchestrated from a single root `staggerContainer` per major section rather than each tile carrying its own `initial`/`animate` — Framer Motion's variant propagation cascades the timing down automatically.
-- **KPI count-ups** (`useCountUp`, `web/src/motion/useCountUp.ts`): a tile's figure animates from its previously-displayed value to a newly-arrived one. **Deliberately does not animate on first mount** — the hook jumps straight to the real figure the first time it renders, since callers only mount it once real data exists. A money figure never climbs from zero or from a placeholder; it only ever tweens between two real, already-fetched values (e.g. after a period-selector change triggers a refetch).
-- **Chart draw-ins**: every Recharts `animationDuration`/`animationEasing` re-pointed at the shared tokens (§6).
-- **Hover/press feedback**: spring `whileHover`/`whileTap` on `KpiTile` (the shared dashboard-tile wrapper); plain-CSS Carbon-timed transitions on buttons, table rows, sidebar nav, and settings cards, which previously had no `transition` property at all and snapped instantly.
-
-**`prefers-reduced-motion: reduce` — implemented for the first time in this app's history**, in two layers:
-1. `<MotionConfig reducedMotion="user">` wraps the whole app (`main.tsx`), which every `motion.*` component and hook reads automatically.
-2. A global CSS media-query fallback in `index.css` collapses every plain-CSS `transition`/`animation` to near-zero duration.
-
-**⚠️ Verified nuance, not a bug:** under `reducedMotion="user"`, Framer Motion disables animation only for *positional* properties (`x`/`y`/`scale`/`rotate` — the actual vestibular-motion trigger WCAG 2.3.3 is concerned with) and deliberately **still animates simple opacity fades** at full duration — confirmed by reading Motion's own source (`motion-dom`'s `shouldReduceMotion && positionalKeys.has(key)` gate) after an initial screenshot comparison looked identical between reduced and non-reduced captures at the same early timestamp. This is Motion's own considered accessibility design, not an oversight this redesign introduced or failed to catch — a full opacity-and-transform-both-instant approach would arguably be *less* correct against the letter of the guideline, not more.
+**What's genuinely new is §5's OTP orbit animation** — the one place this redesign built a bespoke motion technique rather than reusing the existing tile-entrance/count-up/chart-draw-in vocabulary.
 
 ---
 
 ## 11. Voice and copy
 
-Unchanged from Sovereign Ledger — error copy, empty states, and the "every estimated figure is labelled" rule all carry forward verbatim. This redesign touched visual language and motion, not product copy.
+Unchanged across all three redesigns — error copy, empty states, and the "every estimated figure is labelled" rule all carry forward verbatim. This redesign touched visual language, foundation, and two new surfaces, not product copy.
 
 ---
 
 ## 12. Accessibility
 
-WCAG 2.1 AA as a floor, unchanged. **Re-verified 2026-08-11 against the actual shipped Carbon values** (computed via the WCAG relative-luminance formula, not estimated, not assumed to pass because the hexes are "official IBM colours") — this is the same discipline the Sovereign Ledger reconciliation used, which is what caught two real AA failures nobody had checked before that redesign. This pass caught different, also-real ones:
+WCAG 2.1 AA as a floor, unchanged. **Re-verified 2026-08-15 against the actual shipped values** (computed via the WCAG relative-luminance formula, not estimated, not assumed to pass because the values come from a real brand's own design language) — the same discipline both prior redesigns' own reconciliation passes used, which is what caught real failures each time. This pass caught different, also-real ones:
 
-- `--color-accent-default` `#1A365D` on white: **12.14:1** — unchanged from Sovereign Ledger (same hex).
-- `--color-text-primary` `#161616` on white: **18.10:1**. `--color-text-secondary` `#525252` on white: **7.81:1** — both comfortably clear AA, an improvement over Sovereign Ledger's tighter 4.76:1 secondary-text margin.
-- **⚠️ Tag/badge text-on-tint, re-checked against the real Carbon hexes, not assumed to pass:**
-  - Green 50 `#24A148` on its own paired Green-10-equivalent tint `#DEFBE6`: **3.04:1** — fails AA's 4.5:1 floor for the Tag's 12px/400 text, and is **worse** than Sovereign Ledger's already-failing Compliance Green (4.00:1). Carbon's real "50" and "10" steps, paired directly, simply don't clear AA at Tag text size — this is a property of the authentic Carbon palette itself, not a mistake in choosing it.
-  - Gold `#B7791F` on `#FBF0DF`: **3.23:1** — still fails, an unchanged carry-over from Sovereign Ledger (same token, same failure, not newly introduced).
-  - Red 60 `#DA1E28` on `#FFF1F1`: **4.55:1** — passes, though by a narrower margin than Sovereign Ledger's Error Red (4.70:1).
-  - Recommendation for a follow-up pass, not applied in this reconciliation (review-only phase, per this redesign's own plan): darken the Green/Gold *text* colour specifically when paired with their light tint backgrounds, rather than reusing the same "default" token for both fill-on-white and text-on-tint roles — a real Carbon pattern elsewhere in IBM's own product UIs.
-- **⚠️ New finding, outside the Tag component entirely:** Green 50 and Gold used as plain body/table text directly on white (not on a tint) fall under the *normal-text* 4.5:1 threshold, not the 3:1 *large-text* threshold the KPI hero figures get to use (§8.1's 32px/700 display type passes at 3.35:1/5.00:1). Two real usages fail at normal size: the Business Momentum table's year-over-year `%change` cells (Green 50 on white, **3.35:1**) and the "Needs your attention" list's medium-severity items (Gold on white, **3.64:1**). Both are genuine, previously-unchecked AA failures surfaced by this reconciliation's contrast pass, not by assumption. Flagged for the same follow-up as the Tag issue above, not fixed in this phase.
-- Never colour alone: unchanged — every tax Tag, status, and error still carries a text label.
-- Touch targets, focus rings, `aria-describedby` form-error association: unchanged from Sovereign Ledger.
+- `--color-ink` `#0e0f0c` on white: **19.8:1**. `--color-body` `#454745` on canvas-soft: **7.79:1** — both comfortably clear AA.
+- **⚠️ `--color-mute`, the brief's own literal `#868685`, fails AA as text against both app backgrounds**: 3.64:1 on the white card, 3.03:1 on the sage canvas (need 4.5:1) — and this token is used almost everywhere in the app as caption/secondary text (KPI sub-labels, empty-state copy, secondary table columns), not as a fill. Darkened to `#5f5e5a`: **6.49:1 / 5.40:1**, comfortable margin on both surfaces. This is the headline finding of this pass — a pervasive, previously-unchecked failure, not an isolated one.
+- **⚠️ shadcn's stock `destructive` variant** (`text-destructive` on `bg-destructive/10`, used by both `Button` and `Badge`) fails at **4.33:1**. Patched to `text-negative-deep` on the same tint: **6.30:1**.
+- **⚠️ `--color-positive` as text or a small icon fill** — not as a large fill — fails the relevant threshold everywhere it was tried: KPI hero figures (2.92:1 against the 4.5:1 text floor), the Business Momentum table's %-change cells (same), the Compliance checklist's done-icon circle (2.92:1 against the 3:1 non-text-UI floor), and the OTP success checkmark (same). All four now use `--color-positive-deep` instead: **10.01:1** in every case. `--color-positive` itself is untouched for large-surface fills (waterfall chart bars, the Actual-vs-projected line) where it already passes the non-text threshold comfortably.
+- **⚠️ `--color-warning-deep` as text** fails at **4.22:1** (Needs-your-attention's medium-severity items, the FX-conversion-unavailable notice on non-CAD invoices). `--color-warning-content` instead: **10.86:1**.
+- **⚠️ `Progress`'s stock default indicator** (`bg-primary`, lime) fails the 3:1 non-text floor against the muted track at **1.29:1** — and separately violates §2.2's "lime is never a status colour" rule. Default indicator patched to `bg-positive-deep`: **8.76:1**. The warning-escalation override (`bg-warning`) also failed at **1.28:1**; patched to `bg-warning-deep`: **3.69:1**. The negative-escalation override (`bg-negative`) already passed at 4.38:1 and was left as-is.
+- **Reviewed and accepted, not fixed**: the Tax+CPP reserve card's decorative left-accent border (`border-l-warning`, 1.46:1) and `--color-divider` itself (1.41:1) — both purely decorative, non-text elements not required to identify or operate a UI component (WCAG 1.4.11's own exception for decorative content), same category as a plain divider line.
+- Never colour alone: unchanged — every status/tax badge still carries a text label.
+- Touch targets, focus rings, `aria-describedby` form-error association: unchanged.
+
+All fixed pairs re-verified by recomputing every ratio after the change (all pass with real margin, not knife-edge) and via a real browser walkthrough confirming no visual regressions.
 
 ---
 
 ## 13. Token reference
 
-**Copied verbatim from the shipped `web/src/index.css` `:root` rule (2026-08-11), not re-derived.**
+**Copied verbatim from the shipped `web/src/styles/tailwind.css` `@theme` block (2026-08-15, post-WI.G contrast fixes), not re-derived.**
 
 ```css
+@theme {
+  --radius-none: 0px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+
+  --font-display: 'Manrope Variable', 'Manrope', system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-display-mega: 126px; --text-display-mega--line-height: 107.1px; --text-display-mega--font-weight: 900;
+  --text-display-xxl: 96px;   --text-display-xxl--line-height: 81.6px;  --text-display-xxl--font-weight: 900;
+  --text-display-xl: 64px;    --text-display-xl--line-height: 54.4px;  --text-display-xl--font-weight: 900;
+  --text-display-lg: 47px;    --text-display-lg--line-height: 70.5px;  --text-display-lg--font-weight: 400;
+  --text-display-md: 40px;    --text-display-md--line-height: 34px;    --text-display-md--font-weight: 900;
+  --text-display-sm: 32px;    --text-display-sm--line-height: 38.4px;  --text-display-sm--font-weight: 600;
+  --text-display-xs: 24px;    --text-display-xs--line-height: 31.2px;  --text-display-xs--font-weight: 600;
+
+  --text-body-lg: 20px;   --text-body-lg--line-height: 30px;
+  --text-body-md: 16px;   --text-body-md--line-height: 24px;
+  --text-body-sm: 14px;   --text-body-sm--line-height: 20px;
+  --text-caption: 12px;   --text-caption--line-height: 16px;
+  --text-button-md: 16px; --text-button-md--line-height: 24px; --text-button-md--font-weight: 600;
+
+  /* brand -- verbatim from the brief except --color-mute, see the ⚠️ in §2.1/§12 */
+  --color-primary-active: #cdffad;
+  --color-primary-neutral: #c5edab;
+  --color-primary-pale: #e2f6d5;
+  --color-ink: #0e0f0c;
+  --color-ink-deep: #163300;
+  --color-body: #454745;
+  --color-mute: #5f5e5a;
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #e8ebe6;
+  --color-positive: #2ead4b;
+  --color-positive-deep: #054d28;
+  --color-warning: #ffd11a;
+  --color-warning-deep: #b86700;
+  --color-warning-content: #4a3b1c;
+  --color-negative: #d03238;
+  --color-negative-deep: #a72027;
+  --color-negative-darkest: #a7000d;
+  --color-negative-bg: #320707;
+  --color-accent-orange: #ffc091;
+  --color-accent-cyan: #38c8ff;
+
+  /* net-addition, see §2.1 */
+  --color-divider: #d6dbd1;
+}
+
+/* shadcn semantic layer -- :root, re-exposed via a separate @theme inline block */
 :root {
-  /* surface */
-  --color-bg-default: #ffffff;
-  --color-bg-secondary: #f4f4f4;
-  --color-bg-tertiary: #e8e8e8;
-  --color-bg-hover: #e8e8e8;
-  --color-bg-pressed: #c6c6c6;
-  --color-bg-selected: #e6ecf3;
-
-  /* border */
-  --color-border-default: #e0e0e0;
-  --color-border-strong: #8d8d8d;
-  --color-border-subtle: #e0e0e0;
-  --color-border-focus: #1a365d;
-
-  /* text */
-  --color-text-primary: #161616;
-  --color-text-secondary: #525252;
-  --color-text-tertiary: #8d8d8d;
-  --color-text-caption: #525252;
-  --color-text-link: #1a365d;
-  --color-text-onbrand: #ffffff;
-
-  /* accent -- Financial Blue, unchanged from Sovereign Ledger */
-  --color-accent-default: #1a365d;
-  --color-accent-hover: #15294a;
-  --color-accent-pressed: #0f1d36;
-  --color-accent-subtle: #e6ecf3;
-  --color-accent-border: #b8c7da;
-
-  /* secondary (Carbon Green 50) / tertiary (Set-aside Gold, kept) -- see §2.3 */
-  --color-secondary-default: #24a148;
-  --color-secondary-subtle: #defbe6;
-  --color-tertiary-default: #b7791f;
-  --color-tertiary-subtle: #fbf0df;
-
-  /* tax + status semantics */
-  --color-state-taxable: #24a148;       --color-state-taxable-bg: #defbe6;
-  --color-state-zero-rated: #b7791f;    --color-state-zero-rated-bg: #fbf0df;
-  --color-state-unregistered: #525252;  --color-state-unregistered-bg: #e8e8e8;
-  --color-status-paid: #24a148;         --color-status-paid-bg: #defbe6;
-  --color-status-overdue: #da1e28;      --color-status-overdue-bg: #fff1f1;
-  --color-status-attention: #b7791f;    --color-status-attention-bg: #fbf0df;
-
-  /* chart categorical palette -- Carbon's real dataviz sequence, see §2.4 */
-  --color-chart-1: #8a3ffc;  --color-chart-2: #0072c3;  --color-chart-3: #007d79;
-  --color-chart-4: #d02670;  --color-chart-5: #ba4e00;  --color-chart-6: #6f6f6f;
-
-  /* type */
-  --font-ui: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --text-display: 700 32px/40px var(--font-ui);
-
-  /* space -- Carbon's real 2px-based scale */
-  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
-  --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 40px;
-
-  /* radius -- zero everywhere except Tags/circular elements, Carbon's defining trait */
-  --radius-xs: 0; --radius-sm: 0; --radius-md: 0; --radius-lg: 0;
-  --radius-badge: var(--radius-full); --radius-full: 9999px;
-
-  /* motion -- @carbon/motion's real tokens, see §5/§10 */
-  --motion-fast-01: 70ms;     --motion-fast-02: 110ms;
-  --motion-moderate-01: 150ms; --motion-moderate-02: 240ms;
-  --motion-slow-01: 400ms;    --motion-slow-02: 700ms;
-  --motion-ease-standard: cubic-bezier(0.2, 0, 0.38, 0.9);
-  --motion-ease-entrance: cubic-bezier(0, 0, 0.38, 0.9);
-  --motion-ease-exit: cubic-bezier(0.2, 0, 1, 0.9);
+  --background: #e8ebe6;      --foreground: #0e0f0c;
+  --card: #ffffff;            --card-foreground: #0e0f0c;
+  --popover: #ffffff;         --popover-foreground: #0e0f0c;
+  --primary: #9fe870;         --primary-foreground: #0e0f0c;
+  --secondary: #e8ebe6;       --secondary-foreground: #0e0f0c;
+  --muted: #e2f6d5;           --muted-foreground: #868685;
+  --accent: #e2f6d5;          --accent-foreground: #0e0f0c;
+  --destructive: #d03238;     --destructive-foreground: #ffffff;
+  --border: #0e0f0c;          --input: #0e0f0c;
+  --ring: #9fe870;
+  --chart-1: #2ead4b; --chart-2: #38c8ff; --chart-3: #ffc091;
+  --chart-4: #ffd11a; --chart-5: #868685; --chart-6: #d03238;
+  --sidebar: #ffffff; --sidebar-foreground: #0e0f0c;
+  --sidebar-primary: #9fe870; --sidebar-primary-foreground: #0e0f0c;
+  --sidebar-accent: #e2f6d5;  --sidebar-accent-foreground: #0e0f0c;
+  --sidebar-border: #0e0f0c;  --sidebar-ring: #9fe870;
 }
 ```
 
-Template `theme` JSON is unchanged — still a constrained subset of these tokens, still defaults new templates to `#1A365D`.
+Template `theme` JSON is unchanged — still a constrained subset of tokens, still defaults new templates to `#1A365D` (the invoice document's own frozen accent, §9 — outside this redesign's scope by design).
 
 ---
 
@@ -437,7 +399,8 @@ Template `theme` JSON is unchanged — still a constrained subset of these token
 
 Stated plainly, matching this document's own long-standing convention of an honest record over a flattering one:
 
-- **No frontend CI workflow exists in this repo.** `.github/workflows/` only has `api-ci.yml` (path-filtered to `api/**`) plus two scheduled jobs. Every frontend-only phase of this redesign (CB.A, B, C, E, F, G, H, I, J) was verified via local `npm run build`/`npm run lint` plus real Playwright browser walkthroughs with seeded data and screenshots read back — never a CI gate. Pre-existing gap, not introduced or fixed here.
-- **Tag/badge and plain-text Green/Gold-on-white contrast failures** (§12) — flagged, not fixed; this redesign's own plan scoped the reconciliation phase as review-only.
-- **Topbar tax-registration-status chip, Bell/Help notification backends** — unchanged gaps from Sovereign Ledger (§7).
-- **Payment-speed trend sparkline and fastest/slowest-client breakdown** (§8.1.1) — deliberately deferred v1 scoping, not a cut feature.
+- **No frontend CI workflow exists in this repo.** `.github/workflows/` only has `api-ci.yml` (path-filtered to `api/**`) plus two scheduled jobs. Every frontend-only phase of this redesign was verified via local `npm run build`/`npm run lint` plus real Playwright browser walkthroughs with seeded data and screenshots read back — never a CI gate. Pre-existing gap across all three redesigns, not introduced or fixed here.
+- **Native `<select>`/checkbox/radio/file-input elements stay unstyled shadcn primitives** (§6) — a deliberate scope decision, revisit if a future form's needs outgrow plain Tailwind-styled native controls.
+- **Topbar tax-registration-status chip, Bell/Help notification backends** — unchanged gaps carried from Sovereign Ledger through Carbon through this redesign (§7).
+- **Payment-speed trend sparkline and fastest/slowest-client breakdown** — deliberately deferred v1 scoping from Carbon's own CB.D, untouched here.
+- **Dark mode** — still deferred (§2.5), `.dark` still mirrors `:root`.
