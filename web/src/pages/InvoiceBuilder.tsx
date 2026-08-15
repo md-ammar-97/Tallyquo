@@ -352,7 +352,7 @@ export default function InvoiceBuilder() {
           )}
           {preview?.warnings.map((w, i) => (
             <Card key={i} className="border-l-4 border-l-warning">
-              <CardContent className="text-body-sm text-warning-deep">{w}</CardContent>
+              <CardContent className="text-body-sm text-warning-content">{w}</CardContent>
             </Card>
           ))}
 

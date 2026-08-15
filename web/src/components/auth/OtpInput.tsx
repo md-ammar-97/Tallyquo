@@ -124,7 +124,7 @@ function Slots({
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-                className="text-positive"
+                className="text-positive-deep"
               >
                 <Check className="h-6 w-6" strokeWidth={3} />
               </motion.span>

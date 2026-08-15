@@ -71,7 +71,11 @@ export default function ComplianceChecklist({ profile, client, taxReady }: Props
             <li key={item.label} className="flex items-start gap-3">
               <span
                 className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${
-                  item.done ? 'bg-positive text-canvas' : 'border border-divider'
+                  // bg-positive-deep, not bg-positive: WI.G's contrast
+                  // re-check found the white checkmark icon fails the 3:1
+                  // non-text UI threshold on the base positive fill
+                  // (2.92:1) -- positive-deep clears it comfortably.
+                  item.done ? 'bg-positive-deep text-canvas' : 'border border-divider'
                 }`}
               >
                 {item.done ? <Check size={13} /> : null}

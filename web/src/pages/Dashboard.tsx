@@ -684,7 +684,7 @@ export default function Dashboard() {
                     return (
                       <>
                         <p className="font-display text-display-xs text-ink">{pct.toFixed(0)}%</p>
-                        <Progress value={pct} className={pct < 100 ? '[&_[data-slot=progress-indicator]]:bg-warning' : undefined} />
+                        <Progress value={pct} className={pct < 100 ? '[&_[data-slot=progress-indicator]]:bg-warning-deep' : undefined} />
                         <p className="mt-1 text-caption text-mute">
                           CAD {reserved.toFixed(2)} reserved of CAD {recommended.toFixed(2)} recommended
                           {shortfall > 0.01 && ` -- CAD ${shortfall.toFixed(2)} below the recommended amount`}
@@ -734,7 +734,7 @@ export default function Dashboard() {
                   <p className="font-display text-display-xs text-ink">{projection.threshold.pct_of_threshold}%</p>
                   <Progress
                     value={Math.min(100, Number(projection.threshold.pct_of_threshold))}
-                    className={projection.threshold.escalation === 'overdue' ? '[&_[data-slot=progress-indicator]]:bg-negative' : projection.threshold.escalation === 'attention' ? '[&_[data-slot=progress-indicator]]:bg-warning' : undefined}
+                    className={projection.threshold.escalation === 'overdue' ? '[&_[data-slot=progress-indicator]]:bg-negative' : projection.threshold.escalation === 'attention' ? '[&_[data-slot=progress-indicator]]:bg-warning-deep' : undefined}
                   />
                   <p className="mt-1 text-caption text-mute">
                     {Number(projection.threshold.threshold) - Number(projection.threshold.rolling_revenue) > 0
@@ -894,7 +894,7 @@ export default function Dashboard() {
                   <CardContent className="flex flex-col gap-1">
                     <p className="text-body-sm font-semibold text-mute">Accountant readiness</p>
                     <p className="font-display text-display-xs text-ink">{readinessPct}%</p>
-                    <Progress value={readinessPct} className={readinessPct < 100 ? '[&_[data-slot=progress-indicator]]:bg-warning' : undefined} />
+                    <Progress value={readinessPct} className={readinessPct < 100 ? '[&_[data-slot=progress-indicator]]:bg-warning-deep' : undefined} />
                     <div className="mt-1 flex flex-col gap-0.5">
                       {readinessFactors
                         .filter((f) => !f.done)
@@ -944,7 +944,7 @@ export default function Dashboard() {
                             <TableCell className="text-right">CAD {current.toFixed(2)}</TableCell>
                             <TableCell className="text-right">CAD {prior.toFixed(2)}</TableCell>
                             <TableCell
-                              className={`text-right ${pctChange != null && pctChange >= 0 ? 'text-positive' : pctChange != null ? 'text-negative' : ''}`}
+                              className={`text-right ${pctChange != null && pctChange >= 0 ? 'text-positive-deep' : pctChange != null ? 'text-negative' : ''}`}
                             >
                               {pctChange != null ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(0)}%` : '—'}
                             </TableCell>
@@ -1010,7 +1010,11 @@ export default function Dashboard() {
                           item.level === 'high'
                             ? 'text-body-sm text-negative'
                             : item.level === 'medium'
-                              ? 'text-body-sm text-warning-deep'
+                              ? // text-warning-content, not text-warning-deep: WI.G's
+                                // contrast re-check found warning-deep fails WCAG AA
+                                // as text on the card at 4.22:1; warning-content
+                                // clears it at 10.86:1.
+                                'text-body-sm text-warning-content'
                               : 'text-body-sm text-ink'
                         }
                       >

@@ -351,7 +351,7 @@ export default function InvoiceDetail() {
                   CAD {invoice.total_cad} at {invoice.fx_rate_to_cad} ({invoice.fx_rate_date})
                 </>
               ) : (
-                <span className="text-warning-deep">
+                <span className="text-warning-content">
                   No CAD conversion available -- the FX rate source was unavailable at issue. Needs review.
                 </span>
               )}

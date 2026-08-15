@@ -1,9 +1,5 @@
 /* Wise-inspired design tokens (docs/screens/DESIGN (2).md), Tailwind v4
    @theme block -- verbatim hex/size values from the brief, not re-derived.
-   This coexists with the legacy Carbon ../index.css during the phased
-   rollout (WI.A-WI.G); index.css is deleted once every page has migrated
-   off it (WI.G). Kept as a separate file specifically so that deletion
-   is a clean one-file diff at the end, not a partial unwind.
 
    Structure follows shadcn's own generated convention (raw values in
    :root/.dark, re-exposed as Tailwind theme keys via `@theme inline`)
@@ -11,17 +7,14 @@
    Watermelon-sourced components are actually built to reference, and
    keeps dark-mode-ready infrastructure available for free even though,
    same as every prior redesign in this app, dark mode itself stays
-   deferred (.dark currently just mirrors :root). */
-/* Pre-register cascade layer order (lowest to highest priority) before
-   Tailwind's own @import establishes theme/base/components/utilities --
-   CSS layer priority is fixed by first mention, so this line has to run
-   before Tailwind's internal layer declaration, not after. Without this,
-   legacy-carbon's plain unlayered selectors (e.g. index.css's bare
-   `button { ... }`) would beat ANY Tailwind utility class regardless of
-   specificity -- unlayered CSS always wins over layered CSS, full stop,
-   independent of selector specificity or source order. */
-@layer legacy-carbon, theme, base, components, utilities;
-@import '../index.css' layer(legacy-carbon);
+   deferred (.dark currently just mirrors :root).
+
+   The legacy Carbon index.css this file used to coexist with (via a
+   legacy-carbon cascade layer, for the phased WI.A-WI.F rollout) is
+   retired in WI.G -- every page has migrated off it. The one exception,
+   InvoiceDocument.tsx, was never on this stylesheet's layer system in
+   the first place: it now carries its own fully self-contained
+   InvoiceDocument.css (see that file's own header comment for why). */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -96,7 +89,14 @@
   --color-ink: #0e0f0c;
   --color-ink-deep: #163300;
   --color-body: #454745;
-  --color-mute: #868685;
+  /* WI.G contrast re-check: the brief's own literal value (#868685) fails
+     WCAG AA (4.5:1) as text against both app backgrounds -- 3.64:1 on
+     the white card, 3.03:1 on the sage canvas -- and this token is used
+     almost exclusively as text (captions, sub-labels, secondary table
+     columns), not fills. Darkened to the nearest value clearing 4.5:1 on
+     both surfaces with real margin (6.49:1 / 5.40:1); flagged in WI.H,
+     a deliberate deviation from the brief's literal hex, not silent. */
+  --color-mute: #5f5e5a;
   --color-canvas: #ffffff;
   --color-canvas-soft: #e8ebe6;
   --color-positive: #2ead4b;
@@ -250,5 +250,22 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* prefers-reduced-motion support for every plain-CSS transition in the
+   app (button/link/card hover, Progress bars) -- carried over from the
+   retired index.css verbatim, since it's a universal `*` guard with no
+   Carbon-specific selectors to drop. The JS/Framer Motion layer
+   (src/motion/) has its own equivalent guard via
+   <MotionConfig reducedMotion="user"> in main.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

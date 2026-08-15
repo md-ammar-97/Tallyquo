@@ -6,6 +6,7 @@
 // or POST /invoices/preview-document, all of which return the same
 // shape from the backend's assemble_invoice_document/
 // assemble_preview_document (api/src/tallyquo/billing/invoices_service.py).
+import './InvoiceDocument.css'
 
 export interface DocumentLineItem {
   description: string

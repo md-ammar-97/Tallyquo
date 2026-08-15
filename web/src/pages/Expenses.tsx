@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, ApiError, API_BASE_URL, downloadFile } from '../api'
 import { todayLocal } from '../dateUtils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+const selectClass = 'h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm'
+const fieldCol = 'flex flex-1 flex-col gap-1.5'
 
 interface Category {
   id: string
@@ -136,12 +145,11 @@ export default function Expenses() {
   const lowConfidence = ocr?.confidence !== null && ocr?.confidence !== undefined && ocr.confidence < 0.6
 
   return (
-    <div>
-      <h1>Expenses</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">Expenses</h1>
 
       {!showConfirm && !showManual && (
-        <div
-          className="block"
+        <Card
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
@@ -153,84 +161,76 @@ export default function Expenses() {
             if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
           }}
         >
-          <div
-            className="block-body"
-            style={{
-              textAlign: 'center',
-              padding: 48,
-              border: dragOver ? '2px dashed var(--color-accent-default)' : '2px dashed var(--color-border-strong)',
-              borderRadius: 'var(--radius-md)',
-              margin: 16,
-              cursor: 'pointer',
-            }}
-            onClick={() => fileInput.current?.click()}
-          >
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,application/pdf"
-              style={{ display: 'none' }}
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
-            <input
-              ref={cameraInput}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
-            <p style={{ fontWeight: 600, marginBottom: 4 }}>{uploading ? 'Uploading…' : '⇪ Drop a receipt'}</p>
-            <p className="caption">
-              or{' '}
-              <a
-                href="#"
-                style={{ color: 'var(--color-text-link)' }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  e.preventDefault()
-                  cameraInput.current?.click()
-                }}
-              >
-                take a photo
-              </a>{' '}
-              ·{' '}
-              <a
-                href="#"
-                style={{ color: 'var(--color-text-link)' }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  e.preventDefault()
-                  setShowManual(true)
-                }}
-              >
-                enter manually
-              </a>
-            </p>
-          </div>
-          {error && (
-            <p className="error-text" style={{ padding: '0 16px 16px' }}>
-              {error}
-            </p>
-          )}
-        </div>
+          <CardContent className="flex flex-col gap-2">
+            <div
+              className={`cursor-pointer rounded-md border-2 border-dashed p-12 text-center ${dragOver ? 'border-ink' : 'border-divider'}`}
+              onClick={() => fileInput.current?.click()}
+            >
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,application/pdf"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+              />
+              <input
+                ref={cameraInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+              />
+              <p className="mb-1 text-body-sm font-semibold text-ink">{uploading ? 'Uploading…' : '⇪ Drop a receipt'}</p>
+              <p className="text-body-sm text-mute">
+                or{' '}
+                <a
+                  href="#"
+                  className="font-medium text-ink underline underline-offset-2 hover:text-mute"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    cameraInput.current?.click()
+                  }}
+                >
+                  take a photo
+                </a>{' '}
+                ·{' '}
+                <a
+                  href="#"
+                  className="font-medium text-ink underline underline-offset-2 hover:text-mute"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    setShowManual(true)
+                  }}
+                >
+                  enter manually
+                </a>
+              </p>
+            </div>
+            {error && <p className="text-body-sm text-negative">{error}</p>}
+          </CardContent>
+        </Card>
       )}
 
       {(showConfirm || showManual) && (
-        <div className="block">
-          <div className="block-header">
-            <h2>{showConfirm ? 'Confirm receipt details' : 'New expense'}</h2>
-          </div>
-          <div className="block-body">
-            <form onSubmit={handleSave}>
-              <div className="field-row">
-                <div className="field">
-                  <label>Vendor</label>
-                  <input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} />
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">
+              {showConfirm ? 'Confirm receipt details' : 'New expense'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSave} className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-4">
+                <div className={fieldCol}>
+                  <Label>Vendor</Label>
+                  <Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} />
                 </div>
-                <div className="field">
-                  <label>Date</label>
-                  <input
+                <div className={fieldCol}>
+                  <Label>Date</Label>
+                  <Input
                     type="date"
                     required
                     value={form.expense_date}
@@ -238,36 +238,25 @@ export default function Expenses() {
                   />
                 </div>
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Amount (total paid)</label>
-                  <input
+              <div className="flex flex-wrap gap-4">
+                <div className={fieldCol}>
+                  <Label>Amount (total paid)</Label>
+                  <Input
                     required
                     value={form.amount_total}
                     onChange={(e) => setForm({ ...form, amount_total: e.target.value })}
                     placeholder="0.00"
-                    style={
-                      showConfirm && lowConfidence
-                        ? { borderColor: 'var(--color-status-attention)', background: 'var(--color-status-attention-bg)' }
-                        : undefined
-                    }
+                    className={showConfirm && lowConfidence ? 'border-warning-deep bg-warning/10' : undefined}
                   />
                 </div>
-                <div className="field">
-                  <label>Tax amount</label>
-                  <input
-                    value={form.tax_amount}
-                    onChange={(e) => setForm({ ...form, tax_amount: e.target.value })}
-                    placeholder="0.00"
-                  />
+                <div className={fieldCol}>
+                  <Label>Tax amount</Label>
+                  <Input value={form.tax_amount} onChange={(e) => setForm({ ...form, tax_amount: e.target.value })} placeholder="0.00" />
                 </div>
               </div>
-              <div className="field">
-                <label>Category</label>
-                <select
-                  value={form.category_id}
-                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                >
+              <div className={fieldCol}>
+                <Label>Category</Label>
+                <select className={selectClass} value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
                   <option value="">Uncategorized</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -277,62 +266,67 @@ export default function Expenses() {
                   ))}
                 </select>
               </div>
-              {error && <p className="error-text">{error}</p>}
-              <button type="submit" className="primary" disabled={saving}>
-                {saving ? 'Saving…' : 'Save expense'}
-              </button>{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowConfirm(false)
-                  setShowManual(false)
-                  setForm(emptyForm)
-                  setReceiptId(null)
-                  setOcr(null)
-                }}
-              >
-                Cancel
-              </button>
+              {error && <p className="text-body-sm text-negative">{error}</p>}
+              <div className="flex gap-3">
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save expense'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowConfirm(false)
+                    setShowManual(false)
+                    setForm(emptyForm)
+                    setReceiptId(null)
+                    setOcr(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </form>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="block">
-        <div className="block-header">
-          <h2>All expenses</h2>
-          <button onClick={() => downloadFile('/expenses/export.csv', 'expenses.csv')}>Export CSV</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Vendor</th>
-              <th>Category</th>
-              <th className="amount">Amount</th>
-              <th>ITC</th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.map((exp) => (
-              <tr key={exp.id}>
-                <td>{exp.expense_date}</td>
-                <td>{exp.vendor ?? '—'}</td>
-                <td>{exp.category_name ?? '—'}</td>
-                <td className="amount">CAD {exp.amount_total}</td>
-                <td>{exp.itc_eligible ? <span className="badge taxable">ITC</span> : ''}</td>
-              </tr>
-            ))}
-            {expenses.length === 0 && (
-              <tr>
-                <td colSpan={5} className="caption" style={{ padding: 24 }}>
-                  No expenses logged yet. Drop a receipt above, or enter one manually.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">All expenses</CardTitle>
+          <Button variant="outline" onClick={() => downloadFile('/expenses/export.csv', 'expenses.csv')}>Export CSV</Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Vendor</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>ITC</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expenses.map((exp) => (
+                <TableRow key={exp.id}>
+                  <TableCell>{exp.expense_date}</TableCell>
+                  <TableCell>{exp.vendor ?? '—'}</TableCell>
+                  <TableCell>{exp.category_name ?? '—'}</TableCell>
+                  <TableCell className="text-right">CAD {exp.amount_total}</TableCell>
+                  <TableCell>{exp.itc_eligible ? <Badge variant="secondary">ITC</Badge> : ''}</TableCell>
+                </TableRow>
+              ))}
+              {expenses.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-body-sm text-mute">
+                    No expenses logged yet. Drop a receipt above, or enter one manually.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

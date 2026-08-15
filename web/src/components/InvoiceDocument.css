@@ -1,0 +1,149 @@
+/* Invoice document (design.md §9): "a separate design system from the
+   app, sharing only tokens -- a printed business document, not a web
+   page." Deliberately untouched by all three redesigns this app has
+   been through (Sovereign Ledger -> IBM Carbon -> this Wise-inspired
+   one) -- an invoice a client receives shouldn't change appearance
+   every time the vendor's own dashboard gets re-skinned. Self-contained
+   on purpose: index.css (the app-wide stylesheet every prior redesign
+   used) is retired in WI.G, so these are the exact values it used to
+   read from that file's :root, now frozen locally instead of tracking
+   whatever the app's current tokens happen to be. Fonts already fell
+   back to system-ui in WI.A (the ibm-plex-sans/mono packages were
+   removed then, well before this file existed) -- that was already
+   true in production and isn't a new change here. */
+
+.invoice-document {
+  --doc-color-bg: #ffffff;
+  --doc-color-bg-secondary: #f4f4f4;
+  --doc-color-bg-hover: #e8e8e8;
+  --doc-color-border: #e0e0e0;
+  --doc-color-border-strong: #8d8d8d;
+  --doc-color-border-subtle: #e0e0e0;
+  --doc-color-text: #161616;
+  --doc-color-text-secondary: #525252;
+  --doc-color-text-caption: #525252;
+  --doc-color-accent-subtle: #e6ecf3;
+  --doc-space-2: 8px;
+  --doc-space-3: 12px;
+  --doc-space-4: 16px;
+  --doc-space-5: 24px;
+  --doc-space-6: 32px;
+  --doc-font-ui: 'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --doc-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  background: var(--doc-color-bg);
+  border-radius: 0;
+  padding: 40px;
+  font-size: 13px;
+  color: var(--doc-color-text);
+}
+
+.invoice-document table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.invoice-document th {
+  text-align: left;
+  font: 600 11px/16px var(--doc-font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--doc-color-text-secondary);
+  background: var(--doc-color-bg-secondary);
+  padding: var(--doc-space-3);
+  border-bottom: 1px solid var(--doc-color-border);
+}
+.invoice-document td {
+  padding: var(--doc-space-3);
+  border-bottom: 1px solid var(--doc-color-border-subtle);
+}
+.invoice-document tbody tr:hover {
+  background: var(--doc-color-bg-hover);
+}
+.invoice-document .amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.invoice-document .caption {
+  font: 400 11px/16px var(--doc-font-ui);
+  color: var(--doc-color-text-caption);
+}
+
+.invoice-document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--doc-space-4);
+  margin-bottom: var(--doc-space-6);
+}
+.invoice-document-title {
+  font: 700 24px/1 var(--doc-font-ui);
+  letter-spacing: -0.01em;
+  color: var(--doc-color-text);
+  margin-bottom: var(--doc-space-3);
+}
+.invoice-document-meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.invoice-document-meta > div {
+  display: flex;
+  gap: var(--doc-space-2);
+}
+.invoice-document-meta dt {
+  width: 100px;
+  color: var(--doc-color-text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.invoice-document-meta dd {
+  margin: 0;
+  font-family: var(--doc-font-mono);
+}
+.invoice-document-supplier {
+  text-align: right;
+  line-height: 1.5;
+}
+.invoice-document-billto {
+  margin-bottom: var(--doc-space-5);
+  line-height: 1.5;
+}
+.invoice-document-lines {
+  margin-bottom: var(--doc-space-4);
+}
+.invoice-document-lines th {
+  background: transparent;
+  border-bottom: 1px solid var(--doc-color-border-strong);
+}
+.invoice-document-totals {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--doc-space-6);
+}
+.invoice-document-totals table {
+  width: 280px;
+}
+.invoice-document-totals td {
+  border-bottom: none;
+  padding: 4px var(--doc-space-2);
+  font-family: var(--doc-font-mono);
+}
+.invoice-document-total-due {
+  background: var(--doc-color-accent-subtle);
+  font-weight: 700;
+}
+.invoice-document-total-due td {
+  font-weight: 700;
+  padding-top: var(--doc-space-2);
+  padding-bottom: var(--doc-space-2);
+}
+.invoice-document-payment,
+.invoice-document-notes {
+  border-top: 1px solid var(--doc-color-border-subtle);
+  padding-top: var(--doc-space-4);
+  margin-top: var(--doc-space-4);
+  line-height: 1.6;
+}

@@ -24,8 +24,11 @@ interface Props {
   children?: React.ReactNode
 }
 
+// positive-deep, not positive: WI.G's contrast re-check found the base
+// --color-positive fails WCAG AA (2.92:1) as text on the white card --
+// --color-negative already clears AA (5.01:1) as-is.
 const POLARITY_CLASS: Record<Polarity, string> = {
-  positive: 'text-positive',
+  positive: 'text-positive-deep',
   negative: 'text-negative',
   neutral: 'text-ink',
 }
