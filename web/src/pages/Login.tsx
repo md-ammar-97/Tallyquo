@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { requestOtp, verifyOtp, ApiError } from '../api'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { isAuthenticated, requestOtp, verifyOtp, ApiError } from '../api'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -9,6 +9,11 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  // Pre-existing gap, not introduced by this redesign: a logged-in user
+  // could still load /login and see the form again. Closed here since
+  // this file is already being touched for WI.B's routing inversion.
+  if (isAuthenticated()) return <Navigate to="/" replace />
 
   async function handleRequestOtp(e: React.FormEvent) {
     e.preventDefault()
