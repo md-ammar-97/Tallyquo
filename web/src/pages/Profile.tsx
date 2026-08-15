@@ -1,6 +1,16 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, downloadFile } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+const selectClass = 'h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm'
+const fieldRow = 'flex flex-wrap gap-4'
+const fieldCol = 'flex flex-1 flex-col gap-1.5'
 
 interface BusinessProfile {
   legal_name: string
@@ -226,39 +236,31 @@ export default function Profile() {
   }
 
   return (
-    <div>
-      <h1>Business profile</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">Business profile</h1>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Identity &amp; address</h2>
-        </div>
-        <div className="block-body">
-          <form onSubmit={handleSave}>
-            <div className="field">
-              <label>Legal name</label>
-              <input
-                required
-                value={form.legal_name}
-                onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
-              />
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Identity &amp; address</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="flex flex-col gap-4">
+            <div className={fieldCol}>
+              <Label>Legal name</Label>
+              <Input required value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} />
             </div>
-            <div className="field">
-              <label>Address</label>
-              <input
-                required
-                value={form.address_line1}
-                onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
-              />
+            <div className={fieldCol}>
+              <Label>Address</Label>
+              <Input required value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} />
             </div>
-            <div className="field-row">
-              <div className="field">
-                <label>City</label>
-                <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+            <div className={fieldRow}>
+              <div className={fieldCol}>
+                <Label>City</Label>
+                <Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
               </div>
-              <div className="field">
-                <label>Province</label>
-                <input
+              <div className={fieldCol}>
+                <Label>Province</Label>
+                <Input
                   required
                   placeholder="ON"
                   value={form.region_code}
@@ -266,32 +268,28 @@ export default function Profile() {
                 />
               </div>
             </div>
-            <div className="field">
-              <label>Postal code</label>
-              <input
-                required
-                value={form.postal_code}
-                onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
-              />
+            <div className={fieldCol}>
+              <Label>Postal code</Label>
+              <Input required value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} />
             </div>
-            {message && <p className="caption">{message}</p>}
-            <button type="submit" className="primary" disabled={saving}>
+            {message && <p className="text-body-sm text-mute">{message}</p>}
+            <Button type="submit" disabled={saving} className="self-start">
               {saving ? 'Saving…' : 'Save'}
-            </button>
+            </Button>
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {profile && (
-        <div className="block">
-          <div className="block-header">
-            <h2>GST/HST registration</h2>
-          </div>
-          <div className="block-body">
-            <form onSubmit={handleRegistrationSave}>
-              <div className="field">
-                <label>Status</label>
-                <select value={regStatus} onChange={(e) => setRegStatus(e.target.value)}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">GST/HST registration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleRegistrationSave} className="flex flex-col gap-4">
+              <div className={fieldCol}>
+                <Label>Status</Label>
+                <select className={selectClass} value={regStatus} onChange={(e) => setRegStatus(e.target.value)}>
                   <option value="not_registered">Not registered</option>
                   <option value="registration_pending">Registration pending</option>
                   <option value="registered">Registered</option>
@@ -299,141 +297,123 @@ export default function Profile() {
               </div>
               {regStatus === 'registered' && (
                 <>
-                  <div className="field">
-                    <label>GST/HST number</label>
-                    <input
-                      required
-                      placeholder="123456789RT0001"
-                      value={gstNumber}
-                      onChange={(e) => setGstNumber(e.target.value)}
-                    />
+                  <div className={fieldCol}>
+                    <Label>GST/HST number</Label>
+                    <Input required placeholder="123456789RT0001" value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} />
                   </div>
-                  <div className="field">
-                    <label>Effective date</label>
-                    <input
-                      required
-                      type="date"
-                      value={regDate}
-                      onChange={(e) => setRegDate(e.target.value)}
-                    />
+                  <div className={fieldCol}>
+                    <Label>Effective date</Label>
+                    <Input required type="date" value={regDate} onChange={(e) => setRegDate(e.target.value)} />
                   </div>
                 </>
               )}
-              {regError && <p className="error-text">{regError}</p>}
-              <button type="submit" className="primary" disabled={regSaving}>
+              {regError && <p className="text-body-sm text-negative">{regError}</p>}
+              <Button type="submit" disabled={regSaving} className="self-start">
                 {regSaving ? 'Saving…' : 'Save'}
-              </button>
+              </Button>
             </form>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Payment instructions</h2>
-        </div>
-        <div className="block-body">
-          <p className="caption" style={{ marginBottom: 12 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Payment instructions</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-body-sm text-mute">
             Shown on issued invoices so clients know how to pay you. The default account is frozen onto each invoice
             at the moment it's issued -- changing it here never alters an invoice already sent.
           </p>
           {payInstructions.length > 0 && (
-            <table style={{ marginBottom: 16 }}>
-              <thead>
-                <tr>
-                  <th>Label</th>
-                  <th>Method</th>
-                  <th>Currency</th>
-                  <th></th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Label</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Currency</TableHead>
+                  <TableHead></TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {payInstructions.map((p) => (
                   <Fragment key={p.id}>
-                    <tr>
-                      <td>
-                        {p.label} {p.is_default && <span className="badge paid">default</span>}
-                      </td>
-                      <td>{p.method}</td>
-                      <td>{p.currency}</td>
-                      <td>
-                        <button type="button" className="link-button" onClick={() => handleReveal(p.id)}>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2">
+                        {p.label} {p.is_default && <Badge variant="secondary" className="bg-positive/15 text-positive-deep">default</Badge>}
+                      </TableCell>
+                      <TableCell>{p.method}</TableCell>
+                      <TableCell>{p.currency}</TableCell>
+                      <TableCell>
+                        <button
+                          type="button"
+                          className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                          onClick={() => handleReveal(p.id)}
+                        >
                           {revealed[p.id] ? 'Hide' : 'Reveal'}
                         </button>
-                      </td>
-                      <td>
-                        <button type="button" className="link-button" onClick={() => handleArchivePaymentInstruction(p.id)}>
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          type="button"
+                          className="text-body-sm font-medium text-negative underline underline-offset-2 hover:text-negative-deep"
+                          onClick={() => handleArchivePaymentInstruction(p.id)}
+                        >
                           Remove
                         </button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                     {revealed[p.id] && (
-                      <tr>
-                        <td colSpan={5}>
-                          <p className="caption">
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <p className="text-body-sm text-mute">
                             {Object.entries(revealed[p.id])
                               .map(([k, v]) => `${k}: ${v}`)
                               .join(' · ') || '(no additional fields)'}
                           </p>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
                   </Fragment>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
-          <form onSubmit={handleAddPaymentInstruction}>
-            <div className="field-row">
-              <div className="field">
-                <label>Label</label>
-                <input
-                  required
-                  placeholder="Main account"
-                  value={payForm.label}
-                  onChange={(e) => setPayForm({ ...payForm, label: e.target.value })}
-                />
+          <form onSubmit={handleAddPaymentInstruction} className="flex flex-col gap-4">
+            <div className={fieldRow}>
+              <div className={fieldCol}>
+                <Label>Label</Label>
+                <Input required placeholder="Main account" value={payForm.label} onChange={(e) => setPayForm({ ...payForm, label: e.target.value })} />
               </div>
-              <div className="field">
-                <label>Method</label>
-                <select value={payForm.method} onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}>
+              <div className={fieldCol}>
+                <Label>Method</Label>
+                <select className={selectClass} value={payForm.method} onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}>
                   {PAYMENT_METHODS.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
               </div>
             </div>
-            <div className="field-row">
-              <div className="field">
-                <label>Provider (optional)</label>
-                <input
-                  placeholder="e.g. RBC, Interac"
-                  value={payForm.provider}
-                  onChange={(e) => setPayForm({ ...payForm, provider: e.target.value })}
-                />
+            <div className={fieldRow}>
+              <div className={fieldCol}>
+                <Label>Provider (optional)</Label>
+                <Input placeholder="e.g. RBC, Interac" value={payForm.provider} onChange={(e) => setPayForm({ ...payForm, provider: e.target.value })} />
               </div>
-              <div className="field">
-                <label>Currency</label>
-                <input
-                  required
-                  value={payForm.currency}
-                  onChange={(e) => setPayForm({ ...payForm, currency: e.target.value.toUpperCase() })}
-                />
+              <div className={fieldCol}>
+                <Label>Currency</Label>
+                <Input required value={payForm.currency} onChange={(e) => setPayForm({ ...payForm, currency: e.target.value.toUpperCase() })} />
               </div>
             </div>
-            <div className="field">
-              <label>Account holder (optional)</label>
-              <input
-                value={payForm.account_holder}
-                onChange={(e) => setPayForm({ ...payForm, account_holder: e.target.value })}
-              />
+            <div className={fieldCol}>
+              <Label>Account holder (optional)</Label>
+              <Input value={payForm.account_holder} onChange={(e) => setPayForm({ ...payForm, account_holder: e.target.value })} />
             </div>
-            <div className="field">
-              <label>Details (e.g. e-transfer email, account number)</label>
+            <div className="flex flex-col gap-2">
+              <Label>Details (e.g. e-transfer email, account number)</Label>
               {payFields.map((f, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                  <input
+                <div key={i} className="flex gap-2">
+                  <Input
                     placeholder="Field name"
                     value={f.key}
                     onChange={(e) => {
@@ -442,7 +422,7 @@ export default function Profile() {
                       setPayFields(next)
                     }}
                   />
-                  <input
+                  <Input
                     placeholder="Value"
                     value={f.value}
                     onChange={(e) => {
@@ -451,116 +431,127 @@ export default function Profile() {
                       setPayFields(next)
                     }}
                   />
-                  <button type="button" className="link-button" onClick={() => setPayFields(payFields.filter((_, j) => j !== i))}>
+                  <button
+                    type="button"
+                    className="px-2 text-body-sm text-mute hover:text-ink"
+                    onClick={() => setPayFields(payFields.filter((_, j) => j !== i))}
+                  >
                     &times;
                   </button>
                 </div>
               ))}
-              <button type="button" className="link-button" onClick={() => setPayFields([...payFields, { key: '', value: '' }])}>
+              <button
+                type="button"
+                className="self-start text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                onClick={() => setPayFields([...payFields, { key: '', value: '' }])}
+              >
                 + Add field
               </button>
             </div>
-            <div className="field">
-              <label>
-                <input
-                  type="checkbox"
-                  style={{ width: 'auto', marginRight: 8 }}
-                  checked={payForm.is_default}
-                  onChange={(e) => setPayForm({ ...payForm, is_default: e.target.checked })}
-                />{' '}
-                Set as default (used on new invoices)
-              </label>
-            </div>
-            {payError && <p className="error-text">{payError}</p>}
-            <button type="submit" className="primary" disabled={paySaving}>
+            <label className="flex items-center gap-2 text-body-sm text-ink">
+              <input
+                type="checkbox"
+                className="size-4 accent-ink"
+                checked={payForm.is_default}
+                onChange={(e) => setPayForm({ ...payForm, is_default: e.target.checked })}
+              />
+              Set as default (used on new invoices)
+            </label>
+            {payError && <p className="text-body-sm text-negative">{payError}</p>}
+            <Button type="submit" disabled={paySaving} className="self-start">
               {paySaving ? 'Saving…' : 'Add payment instruction'}
-            </button>
+            </Button>
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Invoice template</h2>
-        </div>
-        <div className="block-body">
-          <p className="caption" style={{ marginBottom: 12 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Invoice template</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-body-sm text-mute">
             Choose which template new invoices use, or build your own: reorder the payment/notes sections, pick a
             font size, upload a logo. Import a template package (.json) someone shared with you, or export one of
             yours to share or back up.
           </p>
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Name</th>
-                <th>Accent</th>
-                <th></th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead></TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Accent</TableHead>
+                <TableHead></TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {templates.map((t) => (
-                <tr key={t.id}>
-                  <td>
+                <TableRow key={t.id}>
+                  <TableCell>
                     <input
                       type="radio"
                       name="default_template"
+                      className="size-4 accent-ink"
                       checked={defaultTemplateId === t.id}
                       disabled={templateSaving !== null}
                       onChange={() => handleSetDefaultTemplate(t.id)}
                     />
-                  </td>
-                  <td>
-                    {t.name} {t.is_system && <span className="caption">(system)</span>}
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
+                    {t.name} {t.is_system && <span className="text-caption text-mute">(system)</span>}
+                  </TableCell>
+                  <TableCell>
                     <span
-                      style={{
-                        display: 'inline-block',
-                        width: 14,
-                        height: 14,
-                        borderRadius: 3,
-                        background: t.theme.accent_color || '#1A365D',
-                        verticalAlign: 'middle',
-                      }}
+                      className="inline-block size-3.5 rounded-sm align-middle"
+                      style={{ background: t.theme.accent_color || '#1A365D' }}
                     />
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     <button
                       type="button"
-                      className="link-button"
+                      className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
                       onClick={() => downloadFile(`/templates/${t.id}/export`, `${t.name}.tallyquo-template.json`)}
                     >
                       Export
                     </button>
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {t.is_system ? (
-                      <Link className="link-button" to={`/settings/templates/new?clone=${t.id}`}>
+                      <Link
+                        className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                        to={`/settings/templates/new?clone=${t.id}`}
+                      >
                         Customize
                       </Link>
                     ) : (
-                      <Link className="link-button" to={`/settings/templates/${t.id}/edit`}>
+                      <Link
+                        className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                        to={`/settings/templates/${t.id}/edit`}
+                      >
                         Edit
                       </Link>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-          {templateError && <p className="error-text">{templateError}</p>}
-          <div style={{ marginTop: 12, display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link className="link-button" to="/settings/templates/new">
+            </TableBody>
+          </Table>
+          {templateError && <p className="text-body-sm text-negative">{templateError}</p>}
+          <div className="flex items-center gap-4">
+            <Link className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute" to="/settings/templates/new">
               + New custom template
             </Link>
-            <label>
-              <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportTemplate} />
-            </label>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              onChange={handleImportTemplate}
+              className="text-body-sm text-mute file:mr-3 file:h-8 file:rounded-md file:border file:border-ink file:bg-canvas file:px-3 file:text-body-sm file:font-medium"
+            />
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 interface Rule {
   id: string
@@ -33,63 +37,61 @@ export default function Recurring() {
   }
 
   return (
-    <div>
-      <h1>Recurring invoices</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">Recurring invoices</h1>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>All rules</h2>
-        </div>
-        {error && (
-          <p className="error-text" style={{ padding: '0 16px' }}>
-            {error}
-          </p>
-        )}
-        <table>
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Cadence</th>
-              <th>Next run</th>
-              <th>Auto-issue</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.map((rule) => (
-              <tr key={rule.id}>
-                <td>{rule.client_name ?? '—'}</td>
-                <td>{rule.cadence}</td>
-                <td>{rule.next_run_date}</td>
-                <td>{rule.auto_issue ? 'Yes' : 'No, drafts only'}</td>
-                <td>
-                  <span className={`badge ${rule.is_paused ? 'draft' : 'issued'}`}>
-                    {rule.is_paused ? 'paused' : 'active'}
-                  </span>
-                </td>
-                <td style={{ display: 'flex', gap: 8 }}>
-                  {rule.is_paused ? (
-                    <button onClick={() => act(rule.id, 'resume')}>Resume</button>
-                  ) : (
-                    <>
-                      <button onClick={() => act(rule.id, 'skip')}>Skip next</button>
-                      <button onClick={() => act(rule.id, 'pause')}>Pause</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {rules.length === 0 && (
-              <tr>
-                <td colSpan={6} className="caption" style={{ padding: 24 }}>
-                  No recurring rules yet. Open an invoice and choose "Make recurring" to set one up.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">All rules</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && <p className="mb-3 text-body-sm text-negative">{error}</p>}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Client</TableHead>
+                <TableHead>Cadence</TableHead>
+                <TableHead>Next run</TableHead>
+                <TableHead>Auto-issue</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rules.map((rule) => (
+                <TableRow key={rule.id}>
+                  <TableCell>{rule.client_name ?? '—'}</TableCell>
+                  <TableCell>{rule.cadence}</TableCell>
+                  <TableCell>{rule.next_run_date}</TableCell>
+                  <TableCell>{rule.auto_issue ? 'Yes' : 'No, drafts only'}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className={`capitalize ${!rule.is_paused ? 'bg-positive/15 text-positive-deep' : ''}`}>
+                      {rule.is_paused ? 'paused' : 'active'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="flex gap-2">
+                    {rule.is_paused ? (
+                      <Button variant="outline" size="sm" onClick={() => act(rule.id, 'resume')}>Resume</Button>
+                    ) : (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => act(rule.id, 'skip')}>Skip next</Button>
+                        <Button variant="outline" size="sm" onClick={() => act(rule.id, 'pause')}>Pause</Button>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {rules.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-6 text-center text-body-sm text-mute">
+                    No recurring rules yet. Open an invoice and choose "Make recurring" to set one up.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

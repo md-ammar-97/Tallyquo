@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 interface EmailAccount {
   id: string
@@ -78,74 +84,57 @@ export default function EmailAccounts() {
   }
 
   return (
-    <div>
-      <h1>Email accounts</h1>
-      <p className="caption" style={{ marginBottom: 16 }}>
-        Invoices are emailed through your own mail server, never a shared sender identity — add the account you
-        want to send from below.
-      </p>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="font-display text-display-sm text-ink">Email accounts</h1>
+        <p className="text-body-sm text-mute">
+          Invoices are emailed through your own mail server, never a shared sender identity — add the account you
+          want to send from below.
+        </p>
+      </div>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Configured accounts</h2>
-          <button className="primary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? 'Cancel' : 'Add account'}
-          </button>
-        </div>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Configured accounts</CardTitle>
+          <Button onClick={() => setShowForm((s) => !s)}>{showForm ? 'Cancel' : 'Add account'}</Button>
+        </CardHeader>
         {showForm && (
-          <div className="block-body" style={{ borderBottom: '1px solid var(--color-border-default)' }}>
-            <form onSubmit={handleCreate}>
-              <div className="field-row">
-                <div className="field">
-                  <label>Label</label>
-                  <input
-                    required
-                    placeholder="My Gmail"
-                    value={form.label}
-                    onChange={(e) => setForm({ ...form, label: e.target.value })}
-                  />
+          <CardContent className="border-b border-divider pb-6">
+            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label>Label</Label>
+                  <Input required placeholder="My Gmail" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
                 </div>
-                <div className="field">
-                  <label>From name</label>
-                  <input
-                    required
-                    value={form.from_name}
-                    onChange={(e) => setForm({ ...form, from_name: e.target.value })}
-                  />
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label>From name</Label>
+                  <Input required value={form.from_name} onChange={(e) => setForm({ ...form, from_name: e.target.value })} />
                 </div>
               </div>
-              <div className="field">
-                <label>From address</label>
-                <input
-                  required
-                  type="email"
-                  value={form.from_address}
-                  onChange={(e) => setForm({ ...form, from_address: e.target.value })}
-                />
+              <div className="flex flex-col gap-1.5">
+                <Label>From address</Label>
+                <Input required type="email" value={form.from_address} onChange={(e) => setForm({ ...form, from_address: e.target.value })} />
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>SMTP host</label>
-                  <input
+              <div className="flex flex-wrap gap-4">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label>SMTP host</Label>
+                  <Input
                     required
                     placeholder="smtp.gmail.com"
                     value={form.smtp_host}
                     onChange={(e) => setForm({ ...form, smtp_host: e.target.value })}
                   />
                 </div>
-                <div className="field">
-                  <label>Port</label>
-                  <input
-                    required
-                    value={form.smtp_port}
-                    onChange={(e) => setForm({ ...form, smtp_port: e.target.value })}
-                  />
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label>Port</Label>
+                  <Input required value={form.smtp_port} onChange={(e) => setForm({ ...form, smtp_port: e.target.value })} />
                 </div>
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Security</label>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label>Security</Label>
                   <select
+                    className="h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm"
                     value={form.smtp_security}
                     onChange={(e) => setForm({ ...form, smtp_security: e.target.value })}
                   >
@@ -154,92 +143,83 @@ export default function EmailAccounts() {
                     <option value="none">None</option>
                   </select>
                 </div>
-                <div className="field">
-                  <label>Username</label>
-                  <input
-                    required
-                    value={form.smtp_username}
-                    onChange={(e) => setForm({ ...form, smtp_username: e.target.value })}
-                  />
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label>Username</Label>
+                  <Input required value={form.smtp_username} onChange={(e) => setForm({ ...form, smtp_username: e.target.value })} />
                 </div>
               </div>
-              <div className="field">
-                <label>Password (or app password)</label>
+              <div className="flex flex-col gap-1.5">
+                <Label>Password (or app password)</Label>
+                <Input required type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              </div>
+              <label className="flex items-center gap-2 text-body-sm text-ink">
                 <input
-                  required
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  type="checkbox"
+                  className="size-4 accent-ink"
+                  checked={form.is_default}
+                  onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
                 />
-              </div>
-              <div className="field">
-                <label>
-                  <input
-                    type="checkbox"
-                    style={{ width: 'auto', marginRight: 8 }}
-                    checked={form.is_default}
-                    onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
-                  />
-                  Use as default sending account
-                </label>
-              </div>
-              {error && <p className="error-text">{error}</p>}
-              <button type="submit" className="primary" disabled={saving}>
+                Use as default sending account
+              </label>
+              {error && <p className="text-body-sm text-negative">{error}</p>}
+              <Button type="submit" disabled={saving} className="self-start">
                 {saving ? 'Saving…' : 'Add account'}
-              </button>
+              </Button>
             </form>
-          </div>
+          </CardContent>
         )}
-        <table>
-          <thead>
-            <tr>
-              <th>Label</th>
-              <th>From</th>
-              <th>Server</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((a) => (
-              <tr key={a.id}>
-                <td>
-                  {a.label} {a.is_default && <span className="badge taxable">default</span>}
-                </td>
-                <td>
-                  {a.from_name} &lt;{a.from_address}&gt;
-                </td>
-                <td>
-                  {a.smtp_host}:{a.smtp_port} ({a.smtp_security})
-                </td>
-                <td>
-                  {a.verified_at ? (
-                    <span className="badge paid">verified</span>
-                  ) : (
-                    <span className="badge draft">unverified</span>
-                  )}
-                  {verifyMessage[a.id] && <div className="caption">{verifyMessage[a.id]}</div>}
-                </td>
-                <td style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => handleVerify(a.id)} disabled={verifying === a.id}>
-                    {verifying === a.id ? 'Testing…' : 'Test'}
-                  </button>
-                  <button className="danger" onClick={() => handleArchive(a.id)}>
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {accounts.length === 0 && (
-              <tr>
-                <td colSpan={5} className="caption" style={{ padding: 24 }}>
-                  No email accounts yet. Add one to send invoices from your own address.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Label</TableHead>
+                <TableHead>From</TableHead>
+                <TableHead>Server</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell className="flex items-center gap-2">
+                    {a.label} {a.is_default && <Badge variant="secondary">default</Badge>}
+                  </TableCell>
+                  <TableCell>
+                    {a.from_name} &lt;{a.from_address}&gt;
+                  </TableCell>
+                  <TableCell>
+                    {a.smtp_host}:{a.smtp_port} ({a.smtp_security})
+                  </TableCell>
+                  <TableCell>
+                    {a.verified_at ? (
+                      <Badge variant="secondary" className="bg-positive/15 text-positive-deep">verified</Badge>
+                    ) : (
+                      <Badge variant="secondary">unverified</Badge>
+                    )}
+                    {verifyMessage[a.id] && <div className="mt-1 text-caption text-mute">{verifyMessage[a.id]}</div>}
+                  </TableCell>
+                  <TableCell className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleVerify(a.id)} disabled={verifying === a.id}>
+                      {verifying === a.id ? 'Testing…' : 'Test'}
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleArchive(a.id)}>
+                      Remove
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {accounts.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-body-sm text-mute">
+                    No email accounts yet. Add one to send invoices from your own address.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

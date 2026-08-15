@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, downloadFile } from '../api'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { InvoiceStatusBadge, TaxTreatmentBadge } from '../components/InvoiceBadges'
 
 interface Invoice {
   id: string
@@ -22,14 +26,18 @@ export default function Ledger() {
   }, [statusFilter])
 
   return (
-    <div>
-      <h1>Invoices</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">Invoices</h1>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Ledger</h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+      <Card>
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-display-xs font-semibold text-ink">Ledger</h2>
+          <div className="flex items-center gap-2">
+            <select
+              className="h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="">All statuses</option>
               <option value="draft">Draft</option>
               <option value="issued">Issued</option>
@@ -38,62 +46,64 @@ export default function Ledger() {
               <option value="overdue">Overdue</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            <button onClick={() => downloadFile('/invoices/export.csv', 'invoices.csv')}>Export CSV</button>
-            <Link to="/invoices/new">
-              <button className="primary">New invoice</button>
-            </Link>
+            <Button variant="outline" onClick={() => downloadFile('/invoices/export.csv', 'invoices.csv')}>
+              Export CSV
+            </Button>
+            <Button asChild>
+              <Link to="/invoices/new">New invoice</Link>
+            </Button>
           </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Number</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Tax</th>
-              <th className="amount">Total</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td>
-                  <Link to={`/invoices/${inv.id}`}>{inv.number ?? '(draft)'}</Link>
-                </td>
-                <td>{inv.invoice_date ?? '—'}</td>
-                <td>
-                  <span className={`badge ${inv.status}`}>{inv.status.replace(/_/g, ' ')}</span>
-                </td>
-                <td>
-                  {inv.tax_treatment_snapshot && (
-                    <span className={`badge ${inv.tax_treatment_snapshot}`}>
-                      {inv.tax_treatment_snapshot.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                </td>
-                <td className="amount">
-                  {inv.currency} {inv.total}
-                </td>
-                <td>
-                  {inv.status !== 'draft' && (
-                    <button onClick={() => downloadFile(`/invoices/${inv.id}/pdf`, `${inv.number}.pdf`)}>
-                      PDF
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {invoices.length === 0 && (
-              <tr>
-                <td colSpan={6} className="caption" style={{ padding: 24 }}>
-                  No invoices yet. Add a client, then bill them -- most people are done in about two minutes.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Number</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Tax</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((inv) => (
+                <TableRow key={inv.id}>
+                  <TableCell>
+                    <Link className="text-ink underline underline-offset-2 hover:text-mute" to={`/invoices/${inv.id}`}>
+                      {inv.number ?? '(draft)'}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{inv.invoice_date ?? '—'}</TableCell>
+                  <TableCell>
+                    <InvoiceStatusBadge status={inv.status} />
+                  </TableCell>
+                  <TableCell>
+                    {inv.tax_treatment_snapshot && <TaxTreatmentBadge treatment={inv.tax_treatment_snapshot} />}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {inv.currency} {inv.total}
+                  </TableCell>
+                  <TableCell>
+                    {inv.status !== 'draft' && (
+                      <Button variant="outline" size="sm" onClick={() => downloadFile(`/invoices/${inv.id}/pdf`, `${inv.number}.pdf`)}>
+                        PDF
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {invoices.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-6 text-center text-body-sm text-mute">
+                    No invoices yet. Add a client, then bill them -- most people are done in about two minutes.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

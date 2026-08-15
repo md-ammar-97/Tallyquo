@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { api, ApiError, downloadFile } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default function Reports() {
   const [pnlGroupBy, setPnlGroupBy] = useState('month')
@@ -27,67 +29,70 @@ export default function Reports() {
     }
   }
 
-  return (
-    <div>
-      <h1>Reports</h1>
+  const selectClass = 'h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm'
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Profit &amp; loss</h2>
-        </div>
-        <div className="block-body" style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label>P&amp;L grouped by</label>
-            <select value={pnlGroupBy} onChange={(e) => setPnlGroupBy(e.target.value)}>
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">Reports</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Profit &amp; loss</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-body-sm font-medium text-mute">P&amp;L grouped by</label>
+            <select className={selectClass} value={pnlGroupBy} onChange={(e) => setPnlGroupBy(e.target.value)}>
               <option value="month">Month</option>
               <option value="quarter">Quarter</option>
               <option value="year">Year</option>
             </select>
           </div>
-          <button onClick={() => downloadFile(`/reports/pnl.csv?group_by=${pnlGroupBy}`, 'pnl.csv')}>
+          <Button variant="outline" onClick={() => downloadFile(`/reports/pnl.csv?group_by=${pnlGroupBy}`, 'pnl.csv')}>
             Download P&amp;L CSV
-          </button>
-        </div>
-      </div>
+          </Button>
+        </CardContent>
+      </Card>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Year-end accountant pack</h2>
-        </div>
-        <div className="block-body" style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label>Year</label>
-            <select value={packYear} onChange={(e) => setPackYear(e.target.value)}>
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Year-end accountant pack</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-body-sm font-medium text-mute">Year</label>
+              <select className={selectClass} value={packYear} onChange={(e) => setPackYear(e.target.value)}>
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button onClick={handleGeneratePack} disabled={packGenerating}>
+              {packGenerating ? 'Generating…' : 'Generate pack'}
+            </Button>
+            {packResult && (
+              <a
+                className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute"
+                href={packResult.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Download {packResult.filename} ({(packResult.byte_size / 1024).toFixed(0)} KB)
+              </a>
+            )}
           </div>
-          <button onClick={handleGeneratePack} disabled={packGenerating}>
-            {packGenerating ? 'Generating…' : 'Generate pack'}
-          </button>
+          {packError && <p className="text-body-sm text-negative">{packError}</p>}
           {packResult && (
-            <a href={packResult.url} target="_blank" rel="noreferrer">
-              Download {packResult.filename} ({(packResult.byte_size / 1024).toFixed(0)} KB)
-            </a>
-          )}
-        </div>
-        {packError && (
-          <div className="block-body" style={{ paddingTop: 0 }}>
-            <p className="error-text">{packError}</p>
-          </div>
-        )}
-        {packResult && (
-          <div className="block-body" style={{ paddingTop: 0 }}>
-            <p className="caption">
+            <p className="text-body-sm text-mute">
               Invoice PDFs, expenses (T2125-mapped), receipt images, GST/HST quarterly summary, and P&amp;L, zipped.
               This link works for 7 days from generation -- not tax advice, a record of what's in Tallyquo.
             </p>
-          </div>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

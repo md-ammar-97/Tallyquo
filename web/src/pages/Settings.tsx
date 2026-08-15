@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Building2, Mail, RefreshCw } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
 const SETTINGS_LINKS = [
   {
@@ -24,16 +25,20 @@ const SETTINGS_LINKS = [
 
 export default function Settings() {
   return (
-    <div>
-      <h1>Settings</h1>
-      <div className="settings-grid">
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">Settings</h1>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SETTINGS_LINKS.map(({ to, icon: Icon, label, description }) => (
-          <Link key={to} to={to} className="settings-card">
-            <Icon size={20} className="nav-icon" />
-            <div>
-              <strong>{label}</strong>
-              <p className="caption">{description}</p>
-            </div>
+          <Link key={to} to={to}>
+            <Card className="h-full transition-colors hover:bg-primary-pale/40">
+              <CardContent className="flex items-start gap-3">
+                <Icon size={20} className="mt-0.5 shrink-0 text-ink" />
+                <div>
+                  <strong className="text-body-sm font-semibold text-ink">{label}</strong>
+                  <p className="mt-1 text-body-sm text-mute">{description}</p>
+                </div>
+              </CardContent>
+            </Card>
           </Link>
         ))}
       </div>

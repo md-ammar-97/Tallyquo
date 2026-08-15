@@ -7,8 +7,8 @@ import { staggerContainer, tileEntrance } from '../motion/tokens'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { InvoiceStatusBadge, TaxTreatmentBadge } from '../components/InvoiceBadges'
 import KpiTile from '../components/dashboard/KpiTile'
 import RevenueExpenseChart, { type PnlRow } from '../components/dashboard/RevenueExpenseChart'
 import SafeToSpendWaterfall from '../components/dashboard/SafeToSpendWaterfall'
@@ -1075,22 +1075,13 @@ export default function Dashboard() {
                   </TableCell>
                   <TableCell>{inv.invoice_date ?? '—'}</TableCell>
                   <TableCell>
-                    {inv.tax_treatment_snapshot && (
-                      <Badge variant="secondary" className="capitalize">
-                        {inv.tax_treatment_snapshot.replace(/_/g, ' ')}
-                      </Badge>
-                    )}
+                    {inv.tax_treatment_snapshot && <TaxTreatmentBadge treatment={inv.tax_treatment_snapshot} />}
                   </TableCell>
                   <TableCell className="text-right">
                     {inv.currency} {inv.total}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={inv.status === 'overdue' ? 'destructive' : 'secondary'}
-                      className={`capitalize ${inv.status === 'paid' ? 'bg-positive/15 text-positive-deep' : ''}`}
-                    >
-                      {inv.status.replace(/_/g, ' ')}
-                    </Badge>
+                    <InvoiceStatusBadge status={inv.status} />
                   </TableCell>
                 </TableRow>
               ))}

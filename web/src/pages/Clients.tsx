@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, downloadFile } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 
 interface Client {
   id: string
@@ -101,38 +107,31 @@ export default function Clients() {
   const to = Math.min(total, (page + 1) * PAGE_SIZE)
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1>Clients</h1>
-          <p className="caption" style={{ marginTop: -8, marginBottom: 16 }}>
-            Manage your active clients, jurisdictions, and standard tax treatments.
-          </p>
+          <h1 className="font-display text-display-sm text-ink">Clients</h1>
+          <p className="text-body-sm text-mute">Manage your active clients, jurisdictions, and standard tax treatments.</p>
         </div>
-        <button className="primary" onClick={() => setShowForm((s) => !s)}>
-          {showForm ? 'Cancel' : '+ Add Client'}
-        </button>
+        <Button onClick={() => setShowForm((s) => !s)}>{showForm ? 'Cancel' : '+ Add Client'}</Button>
       </div>
 
       {showForm && (
-        <div className="block">
-          <div className="block-header">
-            <h2>Add client</h2>
-          </div>
-          <div className="block-body">
-            <form onSubmit={handleCreate}>
-              <div className="field">
-                <label>Legal name</label>
-                <input
-                  required
-                  value={form.legal_name}
-                  onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
-                />
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-display-xs font-semibold text-ink">Add client</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Legal name</Label>
+                <Input required value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} />
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Country</label>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Country</Label>
                   <select
+                    className="h-9 rounded-md border border-ink bg-canvas px-3 text-body-sm"
                     value={form.country_code}
                     onChange={(e) => setForm({ ...form, country_code: e.target.value })}
                   >
@@ -141,9 +140,9 @@ export default function Clients() {
                   </select>
                 </div>
                 {form.country_code === 'CA' && (
-                  <div className="field">
-                    <label>Province</label>
-                    <input
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Province</Label>
+                    <Input
                       required
                       placeholder="ON"
                       value={form.region_code}
@@ -152,101 +151,97 @@ export default function Clients() {
                   </div>
                 )}
               </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Address (optional)</label>
-                  <input
-                    value={form.address_line1}
-                    onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
-                  />
+              <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Address (optional)</Label>
+                  <Input value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} />
                 </div>
-                <div className="field">
-                  <label>City (optional)</label>
-                  <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                <div className="flex flex-col gap-1.5">
+                  <Label>City (optional)</Label>
+                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                 </div>
               </div>
-              <p className="caption" style={{ marginBottom: 12 }}>
+              <p className="text-body-sm text-mute">
                 {form.country_code === 'CA'
                   ? 'Tax rate is derived from this province, not your own location.'
                   : 'Non-resident clients are zero-rated exports by default -- 0% tax, but still counts toward your $30,000 registration threshold.'}
               </p>
-              {error && <p className="error-text">{error}</p>}
-              <button type="submit" className="primary" disabled={saving}>
+              {error && <p className="text-body-sm text-negative">{error}</p>}
+              <Button type="submit" disabled={saving} className="self-start">
                 {saving ? 'Saving…' : 'Add client'}
-              </button>
+              </Button>
             </form>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="block">
-        <div className="block-header">
-          <h2>All clients</h2>
-          <button onClick={() => downloadFile('/clients/export.csv', 'clients.csv')}>Export CSV</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Legal name</th>
-              <th>Jurisdiction</th>
-              <th>Default tax treatment</th>
-              <th>Outstanding</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <Link to={`/clients/${c.id}`}>{c.legal_name}</Link>
-                </td>
-                <td>
-                  {c.region_code ? `${c.region_code}, ` : ''}
-                  {c.country_code}
-                </td>
-                <td>
-                  <span className={`badge ${c.tax_treatment}`}>{taxLabel(c)}</span>
-                </td>
-                <td className="amount" style={{ fontFamily: 'var(--font-mono)' }}>
-                  <span style={c.has_overdue ? { color: 'var(--color-status-overdue)' } : undefined}>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">All clients</CardTitle>
+          <Button variant="outline" onClick={() => downloadFile('/clients/export.csv', 'clients.csv')}>Export CSV</Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Legal name</TableHead>
+                <TableHead>Jurisdiction</TableHead>
+                <TableHead>Default tax treatment</TableHead>
+                <TableHead className="text-right">Outstanding</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clients.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Link className="text-ink underline underline-offset-2 hover:text-mute" to={`/clients/${c.id}`}>
+                      {c.legal_name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {c.region_code ? `${c.region_code}, ` : ''}
+                    {c.country_code}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{taxLabel(c)}</Badge>
+                  </TableCell>
+                  <TableCell className={`text-right font-mono ${c.has_overdue ? 'text-negative' : ''}`}>
                     {formatMoney(c.outstanding_cad)}
-                  </span>
-                </td>
-                <td>
-                  <Link className="link-button" to={`/clients/${c.id}`}>
-                    View
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {clients.length === 0 && (
-              <tr>
-                <td colSpan={5} className="caption" style={{ padding: 24 }}>
-                  No clients yet. Add the people you bill -- we'll work out the right tax treatment for each one.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        {total > 0 && (
-          <div
-            className="block-body"
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}
-          >
-            <span className="caption">
-              Showing {from}-{to} of {total} clients
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                ← Previous
-              </button>
-              <button disabled={to >= total} onClick={() => setPage((p) => p + 1)}>
-                Next →
-              </button>
+                  </TableCell>
+                  <TableCell>
+                    <Link className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute" to={`/clients/${c.id}`}>
+                      View
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {clients.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-body-sm text-mute">
+                    No clients yet. Add the people you bill -- we'll work out the right tax treatment for each one.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {total > 0 && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-body-sm text-mute">
+                Showing {from}-{to} of {total} clients
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                  ← Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled={to >= total} onClick={() => setPage((p) => p + 1)}>
+                  Next →
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

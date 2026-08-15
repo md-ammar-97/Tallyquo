@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { API_BASE_URL } from '../api'
 import InvoiceDocument, { type InvoiceDocumentData } from '../components/InvoiceDocument'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { InvoiceStatusBadge, TaxTreatmentBadge } from '../components/InvoiceBadges'
 
 interface Invoice {
   id: string
@@ -55,41 +58,37 @@ export default function PublicInvoice() {
 
   if (notFound) {
     return (
-      <main style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="block" style={{ width: 400 }}>
-          <div className="block-body">
-            <p>This link is no longer valid, or the invoice doesn't exist.</p>
-          </div>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="w-[400px]">
+          <CardContent>
+            <p className="text-body-sm text-mute">This link is no longer valid, or the invoice doesn't exist.</p>
+          </CardContent>
+        </Card>
       </main>
     )
   }
   if (!invoice) return null
 
   return (
-    <main style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-6) var(--space-4)' }}>
-      <div style={{ width: '100%', maxWidth: 720 }}>
-        <h1>{invoice.number}</h1>
-        <div className="block">
-          <div className="block-body">
-            <p style={{ marginBottom: 8 }}>
-              <span className={`badge ${invoice.status}`}>{invoice.status.replace(/_/g, ' ')}</span>{' '}
-              {invoice.tax_treatment_snapshot && (
-                <span className={`badge ${invoice.tax_treatment_snapshot}`}>
-                  {invoice.tax_treatment_snapshot.replace(/_/g, ' ')}
-                </span>
-              )}
-            </p>
-            <p className="caption">
+    <main className="flex min-h-screen justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-[720px]">
+        <h1 className="mb-4 font-display text-display-sm text-ink">{invoice.number}</h1>
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              <InvoiceStatusBadge status={invoice.status} />
+              {invoice.tax_treatment_snapshot && <TaxTreatmentBadge treatment={invoice.tax_treatment_snapshot} />}
+            </div>
+            <p className="text-body-sm text-mute">
               Invoice date: {invoice.invoice_date ?? '—'} · Due: {invoice.due_date ?? '—'} · Paid: {invoice.currency}{' '}
               {invoice.amount_paid}
             </p>
-            <button className="primary" style={{ margin: '16px 0' }} onClick={handleDownload}>
+            <Button onClick={handleDownload} className="self-start">
               Download PDF
-            </button>
+            </Button>
             {doc && <InvoiceDocument data={doc} />}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </main>
   )

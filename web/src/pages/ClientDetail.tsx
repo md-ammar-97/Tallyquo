@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { InvoiceStatusBadge } from '../components/InvoiceBadges'
 
 interface Client {
   id: string
@@ -67,9 +71,11 @@ export default function ClientDetail() {
 
   if (notFound) {
     return (
-      <div>
-        <h1>Client not found</h1>
-        <Link to="/clients">Back to clients</Link>
+      <div className="flex flex-col gap-4">
+        <h1 className="font-display text-display-sm text-ink">Client not found</h1>
+        <Link className="text-body-sm font-medium text-ink underline underline-offset-2 hover:text-mute" to="/clients">
+          Back to clients
+        </Link>
       </div>
     )
   }
@@ -80,120 +86,130 @@ export default function ClientDetail() {
     : 0
 
   return (
-    <div>
-      <h1>{client.legal_name}</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="font-display text-display-sm text-ink">{client.legal_name}</h1>
 
-      <div className="block">
-        <div className="block-body">
-          <p className="caption" style={{ marginBottom: 4 }}>
+      <Card>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-body-sm text-mute">
             {[client.address_line1, client.city, client.region_code, client.country_code]
               .filter(Boolean)
               .join(', ') || 'No address on file'}
           </p>
-          <span className={`badge ${client.tax_treatment}`}>{client.tax_treatment.replace(/_/g, ' ')}</span>
-        </div>
-      </div>
+          <Badge variant="secondary" className="w-fit capitalize">
+            {client.tax_treatment.replace(/_/g, ' ')}
+          </Badge>
+        </CardContent>
+      </Card>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Period roll-up</h2>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Month</th>
-              <th className="amount">Invoices</th>
-              <th className="amount">Billed</th>
-              <th className="amount">Collected</th>
-              <th className="amount">Outstanding</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rollup?.periods.map((p) => (
-              <tr key={p.period}>
-                <td>{p.period.slice(0, 7)}</td>
-                <td className="amount">{p.invoice_count}</td>
-                <td className="amount">CAD {p.billed_cad}</td>
-                <td className="amount">CAD {p.collected_cad}</td>
-                <td className="amount">CAD {p.outstanding_cad}</td>
-              </tr>
-            ))}
-            {rollup && rollup.periods.length === 0 && (
-              <tr>
-                <td colSpan={5} className="caption" style={{ padding: 24 }}>
-                  No issued invoices for this client yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="block">
-        <div className="block-header">
-          <h2>Aging</h2>
-          <span className="caption">Total outstanding: CAD {totalOutstanding.toFixed(2)}</span>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              {AGING_LABELS.map(([, label]) => (
-                <th key={label} className="amount">
-                  {label}
-                </th>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Period roll-up</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Month</TableHead>
+                <TableHead className="text-right">Invoices</TableHead>
+                <TableHead className="text-right">Billed</TableHead>
+                <TableHead className="text-right">Collected</TableHead>
+                <TableHead className="text-right">Outstanding</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rollup?.periods.map((p) => (
+                <TableRow key={p.period}>
+                  <TableCell>{p.period.slice(0, 7)}</TableCell>
+                  <TableCell className="text-right">{p.invoice_count}</TableCell>
+                  <TableCell className="text-right">CAD {p.billed_cad}</TableCell>
+                  <TableCell className="text-right">CAD {p.collected_cad}</TableCell>
+                  <TableCell className="text-right">CAD {p.outstanding_cad}</TableCell>
+                </TableRow>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              {AGING_LABELS.map(([key]) => (
-                <td key={key} className="amount">
-                  CAD {rollup?.aging[key] ?? '0.00'}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              {rollup && rollup.periods.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-body-sm text-mute">
+                    No issued invoices for this client yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      <div className="block">
-        <div className="block-header">
-          <h2>Invoices</h2>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Number</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th className="amount">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td>
-                  <Link to={`/invoices/${inv.id}`}>{inv.number ?? '(draft)'}</Link>
-                </td>
-                <td>{inv.invoice_date ?? '—'}</td>
-                <td>
-                  <span className={`badge ${inv.status}`}>{inv.status.replace(/_/g, ' ')}</span>
-                </td>
-                <td className="amount">
-                  {inv.currency} {inv.total}
-                </td>
-              </tr>
-            ))}
-            {invoices.length === 0 && (
-              <tr>
-                <td colSpan={4} className="caption" style={{ padding: 24 }}>
-                  No invoices for this client yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Aging</CardTitle>
+          <span className="text-body-sm text-mute">Total outstanding: CAD {totalOutstanding.toFixed(2)}</span>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {AGING_LABELS.map(([, label]) => (
+                  <TableHead key={label} className="text-right">
+                    {label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                {AGING_LABELS.map(([key]) => (
+                  <TableCell key={key} className="text-right">
+                    CAD {rollup?.aging[key] ?? '0.00'}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-display-xs font-semibold text-ink">Invoices</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Number</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((inv) => (
+                <TableRow key={inv.id}>
+                  <TableCell>
+                    <Link className="text-ink underline underline-offset-2 hover:text-mute" to={`/invoices/${inv.id}`}>
+                      {inv.number ?? '(draft)'}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{inv.invoice_date ?? '—'}</TableCell>
+                  <TableCell>
+                    <InvoiceStatusBadge status={inv.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {inv.currency} {inv.total}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {invoices.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-6 text-center text-body-sm text-mute">
+                    No invoices for this client yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }
